@@ -1,0 +1,68 @@
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+import jwt
+from jwt import InvalidTokenError
+from passlib.context import CryptContext
+
+from app.core.config import settings
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
+
+
+def hash_password(plain_password: str) -> str:
+    """Hash a plain password for storage."""
+    return pwd_context.hash(plain_password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a plain password against a stored hash."""
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def create_access_token(
+    subject: str | int,
+    *,
+    role: str | None = None,
+    extra_claims: dict[str, Any] | None = None,
+) -> str:
+    """Create a signed JWT access token."""
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=settings.jwt_access_token_expire_minutes)
+    payload: dict[str, Any] = {
+        "sub": str(subject),
+        "iat": now,
+        "exp": expire,
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
+    }
+    if role is not None:
+        payload["role"] = role
+    if extra_claims:
+        payload.update(extra_claims)
+    return jwt.encode(
+        payload,
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+
+
+def decode_access_token(token: str) -> dict[str, Any]:
+    """Decode and validate a JWT; raises InvalidTokenError on failure."""
+    return jwt.decode(
+        token,
+        settings.jwt_secret_key,
+        algorithms=[settings.jwt_algorithm],
+        audience=settings.jwt_audience,
+        issuer=settings.jwt_issuer,
+    )
+
+
+__all__ = [
+    "hash_password",
+    "verify_password",
+    "create_access_token",
+    "decode_access_token",
+    "InvalidTokenError",
+    "pwd_context",
+]
