@@ -5,12 +5,13 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.core.config import settings
+from app.core.config import get_database_url_and_connect_args, settings
 from app.db.base import Base
-from app.db.models import User  # noqa: F401 - register models with Base.metadata
+from app.db.models import User, TestResult  # noqa: F401 - register models with Base.metadata
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.database_url)
+_db_url, _ = get_database_url_and_connect_args()
+config.set_main_option("sqlalchemy.url", _db_url)
 target_metadata = Base.metadata
 
 
@@ -34,7 +35,8 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    connectable = create_async_engine(settings.database_url, poolclass=NullPool)
+    _url, _connect_args = get_database_url_and_connect_args()
+    connectable = create_async_engine(_url, poolclass=NullPool, connect_args=_connect_args)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()

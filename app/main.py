@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -6,10 +7,26 @@ from fastapi.responses import JSONResponse
 
 from app.api.v1.routers import router as api_router
 from app.core.config import settings
+from app.core.redis import init_redis, close_redis
+from app.core.queue import get_arq_pool, close_arq_pool
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title=settings.app_name)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup: Redis + Arq pool. Shutdown: close both."""
+    try:
+        await init_redis()
+    except Exception as e:
+        logger.warning("Redis init failed (caching disabled): %s", e)
+    await get_arq_pool()  # no-op if Redis down
+    yield
+    await close_arq_pool()
+    await close_redis()
+
+
+app = FastAPI(title=settings.app_name, lifespan=lifespan)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(

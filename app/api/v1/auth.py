@@ -53,8 +53,12 @@ async def register(
     user = UserModel(
         email=body.email.lower(),
         hashed_password=hashed,
+        name=body.name,
+        date_of_birth=body.date_of_birth,
         is_active=True,
         role="user",
+        is_premium=False,
+        subscription_status="free",
     )
     db.add(user)
     await db.commit()
