@@ -1,5 +1,3 @@
-from datetime import date
-
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -16,5 +14,9 @@ class LoginRequest(BaseModel):
 class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
-    name: str | None = Field(None, max_length=255)
-    date_of_birth: date | None = None
+    name: str = Field(..., min_length=1, max_length=255)
+    birth_year: int = Field(..., ge=1900, le=2100)
+    birth_month: int = Field(..., ge=1, le=12)
+    birth_day: int = Field(..., ge=1, le=31)
+    birth_time: str | None = Field(None, max_length=50)
+    birth_place: str | None = Field(None, max_length=255)

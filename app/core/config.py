@@ -1,7 +1,9 @@
+from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
 
 def get_database_url_and_connect_args() -> tuple[str, dict]:
     """Return (url, connect_args) for create_async_engine. Strips sslmode for asyncpg; use ssl=True for Neon."""
@@ -20,7 +22,7 @@ def get_database_url_and_connect_args() -> tuple[str, dict]:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str((_BACKEND_ROOT / ".env").resolve()),
         env_file_encoding="utf-8",
         extra="ignore",
     )

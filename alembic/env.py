@@ -1,4 +1,17 @@
 import asyncio
+import os
+from pathlib import Path
+
+_backend_root = Path(__file__).resolve().parent.parent
+_env_file = _backend_root / ".env"
+if _env_file.exists():
+    for line in _env_file.read_text().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#") and "=" in line:
+            key, _, value = line.partition("=")
+            key, value = key.strip(), value.strip().strip("'\"")
+            if key and key not in os.environ:
+                os.environ[key] = value
 
 from alembic import context
 from sqlalchemy.engine import Connection
@@ -10,7 +23,7 @@ from app.db.base import Base
 from app.db.models import User, TestResult  # noqa: F401 - register models with Base.metadata
 
 config = context.config
-_db_url, _ = get_database_url_and_connect_args()
+_db_url, _connect_args = get_database_url_and_connect_args()
 config.set_main_option("sqlalchemy.url", _db_url)
 target_metadata = Base.metadata
 
@@ -36,6 +49,9 @@ def do_run_migrations(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     _url, _connect_args = get_database_url_and_connect_args()
+    # Log which DB we're targeting (host only, no credentials)
+    if "neon.tech" in _url:
+        print("Alembic: running migrations against Neon database (neon.tech)")
     connectable = create_async_engine(_url, poolclass=NullPool, connect_args=_connect_args)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

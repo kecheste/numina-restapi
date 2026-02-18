@@ -11,12 +11,14 @@ REST API for Numina: JWT auth, user profiles, tests, and AI refinement (schedule
    - `JWT_SECRET_KEY` — long random string for signing JWTs
    - Optional: `OPENAI_API_KEY` for AI refinement; `STRIPE_*` when you add payments
 
-2. **Database**  
-   From the backend directory:
+2. **Database (create tables on Neon)**  
+   Put `DATABASE_URL` in **`backend/.env`** (same file the API uses). Then, from the **backend** directory, run migrations so the `users` table (and others) are created in your Neon database:
    ```bash
-   uv run alembic upgrade head
+   cd backend
+   .venv/bin/python -m alembic upgrade head
    ```
-   Or with pip: `pip install -r requirements.txt` (or use poetry) then `alembic upgrade head`.
+   You should see: `Alembic: running migrations against Neon database (neon.tech)`.  
+   If you get "relation \"users\" does not exist", the API is using a different database than the one you migrated—ensure there is only one `backend/.env` and that the app is started from the backend directory (or that no other `DATABASE_URL` overrides it).
 
 3. **Run API**  
    ```bash
@@ -35,10 +37,10 @@ REST API for Numina: JWT auth, user profiles, tests, and AI refinement (schedule
 
 ## Authentication (JWT, no Clerk)
 
-- **Register:** `POST /api/v1/auth/register` — body: `{ "email", "password", "name?", "date_of_birth?" }` → `{ "access_token", "token_type": "bearer" }`
+- **Register:** `POST /api/v1/auth/register` — body: `{ "email", "password", "name", "birth_year", "birth_month", "birth_day", "birth_time?", "birth_place?" }` → `{ "access_token", "token_type": "bearer" }`
 - **Login:** `POST /api/v1/auth/login` — `{ "email", "password" }` → same token
 - **Protected routes:** header `Authorization: Bearer <access_token>`
-- **Profile:** `GET /api/v1/users/me` (cached), `PATCH /api/v1/users/me` (name, date_of_birth)
+- **Profile:** `GET /api/v1/users/me` (cached), `PATCH /api/v1/users/me` (name, birth_year, birth_month, birth_day, birth_time, birth_place)
 
 ## Tests
 

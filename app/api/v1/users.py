@@ -36,11 +36,19 @@ async def update_me(
     user: UserModel = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ) -> UserResponse:
-    """Update current user profile (name, date_of_birth). Invalidates profile cache."""
+    """Update current user profile (name, birth fields). Invalidates profile cache."""
     if body.name is not None:
         user.name = body.name
-    if body.date_of_birth is not None:
-        user.date_of_birth = body.date_of_birth
+    if body.birth_year is not None:
+        user.birth_year = body.birth_year
+    if body.birth_month is not None:
+        user.birth_month = body.birth_month
+    if body.birth_day is not None:
+        user.birth_day = body.birth_day
+    if body.birth_time is not None:
+        user.birth_time = body.birth_time
+    if body.birth_place is not None:
+        user.birth_place = body.birth_place
     await db.commit()
     await db.refresh(user)
     await cache_delete(cache_key_user_profile(user.id))

@@ -1,6 +1,4 @@
-from datetime import date
-
-from sqlalchemy import String, DateTime, Boolean, Date, func
+from sqlalchemy import String, DateTime, Boolean, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -18,9 +16,12 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     role: Mapped[str] = mapped_column(String(50), default="user", nullable=False)
 
-    # Profile (frontend-aligned)
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    birth_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    birth_day: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    birth_time: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    birth_place: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     subscription_status: Mapped[str] = mapped_column(
         String(50), default="free", nullable=False
