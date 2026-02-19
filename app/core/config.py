@@ -55,5 +55,7 @@ class Settings(BaseSettings):
     ai_max_tokens_per_request: int = 1024
     ai_max_requests_per_user_per_day: int = 20
 
+    # CORS: comma-separated allowed origins (set CORS_ORIGINS in .env)
+    cors_origins: str
 
 settings = Settings()
