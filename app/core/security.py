@@ -1,23 +1,38 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+import bcrypt
 import jwt
 from jwt import InvalidTokenError
-from passlib.context import CryptContext
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
+BCRYPT_MAX_PASSWORD_BYTES = 72
+BCRYPT_ROUNDS = 12
+
+
+def _password_bytes(plain_password: str) -> bytes:
+    """Encode password to bytes, truncating to 72 bytes for bcrypt."""
+    encoded = plain_password.encode("utf-8")
+    if len(encoded) > BCRYPT_MAX_PASSWORD_BYTES:
+        encoded = encoded[:BCRYPT_MAX_PASSWORD_BYTES]
+    return encoded
 
 
 def hash_password(plain_password: str) -> str:
-    """Hash a plain password for storage."""
-    return pwd_context.hash(plain_password)
+    """Hash a plain password for storage. Uses bcrypt directly (passlib skipped to avoid init bugs on some platforms)."""
+    return bcrypt.hashpw(
+        _password_bytes(plain_password),
+        bcrypt.gensalt(rounds=BCRYPT_ROUNDS),
+    ).decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plain password against a stored hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a plain password against a stored bcrypt hash."""
+    return bcrypt.checkpw(
+        _password_bytes(plain_password),
+        hashed_password.encode("utf-8"),
+    )
 
 
 def create_access_token(
@@ -64,5 +79,4 @@ __all__ = [
     "create_access_token",
     "decode_access_token",
     "InvalidTokenError",
-    "pwd_context",
 ]
