@@ -25,7 +25,7 @@ class TestResult(Base):
         server_default=func.now(),
         nullable=False,
     )
-    answers: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    answers: Mapped[dict | list] = mapped_column(JSONB, nullable=False)  # list of {question_id, prompt, answer_type?, answer} or legacy dict
 
     status: Mapped[str] = mapped_column(
         String(20), default="pending_ai", nullable=False

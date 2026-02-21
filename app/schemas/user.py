@@ -16,6 +16,9 @@ class UserResponse(BaseModel):
     birth_day: int | None
     birth_time: str | None
     birth_place: str | None
+    birth_place_lat: float | None
+    birth_place_lng: float | None
+    birth_place_timezone: str | None
     is_premium: bool
     subscription_status: str
     is_active: bool
@@ -33,3 +36,6 @@ class UserUpdate(BaseModel):
     birth_day: int | None = Field(None, ge=1, le=31)
     birth_time: str | None = Field(None, max_length=50)
     birth_place: str | None = Field(None, max_length=255)
+    birth_place_lat: float | None = None
+    birth_place_lng: float | None = None
+    birth_place_timezone: str | None = Field(None, max_length=64)

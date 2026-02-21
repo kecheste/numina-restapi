@@ -20,3 +20,6 @@ class RegisterRequest(BaseModel):
     birth_day: int = Field(..., ge=1, le=31)
     birth_time: str | None = Field(None, max_length=50)
     birth_place: str | None = Field(None, max_length=255)
+    birth_place_lat: float | None = None
+    birth_place_lng: float | None = None
+    birth_place_timezone: str | None = Field(None, max_length=64)

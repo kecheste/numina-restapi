@@ -1,8 +1,7 @@
-from sqlalchemy import String, DateTime, Boolean, Integer, func
+from sqlalchemy import Float, String, DateTime, Boolean, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
-
 
 class User(Base):
     __tablename__ = "users"
@@ -22,6 +21,9 @@ class User(Base):
     birth_day: Mapped[int | None] = mapped_column(Integer, nullable=True)
     birth_time: Mapped[str | None] = mapped_column(String(50), nullable=True)
     birth_place: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    birth_place_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    birth_place_lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+    birth_place_timezone: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     subscription_status: Mapped[str] = mapped_column(
         String(50), default="free", nullable=False

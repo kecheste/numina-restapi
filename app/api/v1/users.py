@@ -49,6 +49,12 @@ async def update_me(
         user.birth_time = body.birth_time
     if body.birth_place is not None:
         user.birth_place = body.birth_place
+    if body.birth_place_lat is not None:
+        user.birth_place_lat = body.birth_place_lat
+    if body.birth_place_lng is not None:
+        user.birth_place_lng = body.birth_place_lng
+    if body.birth_place_timezone is not None:
+        user.birth_place_timezone = body.birth_place_timezone
     await db.commit()
     await db.refresh(user)
     await cache_delete(cache_key_user_profile(user.id))

@@ -57,6 +57,32 @@ async def get_current_active_user(
     return user
 
 
+async def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> UserModel | None:
+    """Return current user if valid Bearer token present, else None. No 401."""
+    if credentials is None:
+        return None
+    token = credentials.credentials
+    try:
+        payload = decode_access_token(token)
+    except InvalidTokenError:
+        return None
+    sub = payload.get("sub")
+    if not sub:
+        return None
+    try:
+        user_id = int(sub)
+    except (TypeError, ValueError):
+        return None
+    result = await db.execute(select(UserModel).where(UserModel.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        return None
+    return user
+
+
 def require_roles(*allowed_roles: str):
     """Dependency factory: require the current user to have one of the given roles."""
 

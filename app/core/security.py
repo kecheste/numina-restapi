@@ -7,16 +7,33 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=12)
+pwd_context = CryptContext(
+    schemes=["argon2", "bcrypt"],
+    deprecated="auto",
+    argon2__time_cost=2,
+    argon2__memory_cost=65536,
+)
+
+_BCRYPT_MAX_BYTES = 72
+
+
+def _truncate_for_bcrypt(plain_password: str) -> str:
+    """Truncate to 72 bytes for legacy bcrypt verification only."""
+    encoded = plain_password.encode("utf-8")
+    if len(encoded) <= _BCRYPT_MAX_BYTES:
+        return plain_password
+    return encoded[:_BCRYPT_MAX_BYTES].decode("utf-8", errors="replace")
 
 
 def hash_password(plain_password: str) -> str:
-    """Hash a plain password for storage."""
+    """Hash a plain password for storage. Uses Argon2 (no 72-byte limit)."""
     return pwd_context.hash(plain_password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a plain password against a stored hash."""
+    """Verify a plain password against a stored hash. Supports Argon2 and legacy bcrypt."""
+    if hashed_password.startswith(("$2a$", "$2b$", "$2y$")):
+        plain_password = _truncate_for_bcrypt(plain_password)
     return pwd_context.verify(plain_password, hashed_password)
 
 

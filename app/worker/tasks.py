@@ -27,9 +27,19 @@ logger = logging.getLogger(__name__)
 AI_RATE_LIMIT_PREFIX = "user:ai_requests:"
 
 
-def _answer_hash(answers: dict[str, Any]) -> str:
-    """Stable hash of answers for cache key."""
-    return hashlib.sha256(json.dumps(answers, sort_keys=True).encode()).hexdigest()[:16]
+def _answer_hash(answers: list[Any] | dict[str, Any]) -> str:
+    """Stable hash of answers for cache key. Accepts list of question+answer or legacy dict."""
+    if isinstance(answers, list):
+        # Normalize to list of dicts and sort by question_id for stable hash
+        items = [
+            item if isinstance(item, dict) else {"question_id": getattr(item, "question_id", 0), "answer": getattr(item, "answer", item)}
+            for item in answers
+        ]
+        sorted_list = sorted(items, key=lambda x: x.get("question_id", 0))
+        payload = json.dumps(sorted_list, sort_keys=True)
+    else:
+        payload = json.dumps(answers, sort_keys=True)
+    return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
 async def _check_rate_limit(user_id: int) -> bool:
@@ -47,10 +57,25 @@ async def _check_rate_limit(user_id: int) -> bool:
         return True
 
 
+def _format_answers_for_ai(answers: list[Any] | dict[str, Any]) -> str:
+    """Format answers for AI prompt: question+answer pairs or JSON."""
+    if isinstance(answers, list):
+        parts = []
+        for item in answers:
+            d = item if isinstance(item, dict) else {"prompt": getattr(item, "prompt", ""), "answer": getattr(item, "answer", item)}
+            prompt = d.get("prompt", "")
+            answer = d.get("answer", "")
+            if isinstance(answer, list):
+                answer = ", ".join(str(a) for a in answer)
+            parts.append(f"Q: {prompt}\nA: {answer}")
+        return "\n\n".join(parts)[:2000]
+    return json.dumps(answers)[:1500]
+
+
 async def _call_openai_for_insights(
     test_title: str,
     category: str,
-    answers: dict[str, Any],
+    answers: list[Any] | dict[str, Any],
 ) -> dict[str, Any]:
     """Call OpenAI with strict token limit. Returns { score, personality_type, insights, recommendations }."""
     if not settings.openai_api_key:
@@ -72,9 +97,10 @@ async def _call_openai_for_insights(
         from openai import AsyncOpenAI
 
         client = AsyncOpenAI(api_key=settings.openai_api_key)
+        answers_str = _format_answers_for_ai(answers)
         prompt = (
-            f"Test: {test_title} (category: {category}). "
-            f"Answers (JSON): {json.dumps(answers)[:1500]}. "
+            f"Test: {test_title} (category: {category}).\n\n"
+            f"Question and answer pairs:\n{answers_str}\n\n"
             "Respond with ONLY a valid JSON object with keys: score (number 0-10), personality_type (string), insights (array of 2-4 short strings), recommendations (array of 2-4 short strings). No markdown."
         )
         response = await client.chat.completions.create(

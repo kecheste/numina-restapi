@@ -4,30 +4,105 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.tests import TESTS
-from app.core.dependencies import get_current_active_user, get_db
+from app.constants.questions import QUESTIONS_BY_TEST_ID
+from app.constants.tests import TESTS, get_test_id
+from app.core.dependencies import get_current_active_user, get_db, get_optional_current_user
 from app.core.exceptions import not_found
 from app.core.queue import enqueue_refine_test_result
 from app.core.redis import cache_get, cache_set, cache_key_test_list, TEST_LIST_CACHE_TTL
 from app.db.models.user import User as UserModel
 from app.db.models.test_result import TestResult
 from app.schemas.test_result import (
+    AstrologyChartResponse,
+    QuestionOut,
     SubmitTestRequest,
     SubmitTestResponse,
+    TestListItem,
+    TestsListResponse,
     TestResultResponse,
 )
+from app.services.astrology import compute_astrology
 
 router = APIRouter()
 
 
-@router.get("/tests")
-async def list_tests():
-    """Return test catalog (cached). Frontend uses this with completed state from GET /tests/results."""
+@router.get("/tests", response_model=TestsListResponse)
+async def list_tests(
+    user: UserModel | None = Depends(get_optional_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return test catalog with user_is_premium and already_taken. Catalog is cached."""
     cached = await cache_get(cache_key_test_list())
     if cached is not None:
-        return cached
-    await cache_set(cache_key_test_list(), TESTS, ttl_seconds=TEST_LIST_CACHE_TTL)
-    return TESTS
+        catalog = cached
+    else:
+        await cache_set(cache_key_test_list(), TESTS, ttl_seconds=TEST_LIST_CACHE_TTL)
+        catalog = TESTS
+
+    user_is_premium = user.is_premium if user else False
+    completed_test_ids: set[int] = set()
+    if user is not None:
+        result = await db.execute(
+            select(TestResult.test_id).where(
+                TestResult.user_id == user.id,
+                TestResult.status == "completed",
+            )
+        )
+        completed_test_ids = {row[0] for row in result.all()}
+
+    tests = [
+        TestListItem(
+            id=t["id"],
+            slug=t.get("slug") or f"test-{t['id']}",
+            title=t["title"],
+            category=t["category"],
+            category_id=t["category_id"],
+            questions=t["questions"],
+            premium=t.get("premium", False),
+            auto_generated=t.get("auto_generated", False),
+            already_taken=t["id"] in completed_test_ids,
+        )
+        for t in catalog
+    ]
+    return TestsListResponse(user_is_premium=user_is_premium, tests=tests)
+
+
+@router.get("/tests/astrology-chart", response_model=AstrologyChartResponse)
+async def get_astrology_chart(
+    user: UserModel = Depends(get_current_active_user),
+):
+    """
+    Return the current user's astrology chart (sun, moon, rising, elements).
+    Computed from stored birth date, time, and place (lat/lng/timezone).
+    """
+    if (
+        user.birth_year is None
+        or user.birth_month is None
+        or user.birth_day is None
+        or user.birth_place_lat is None
+        or user.birth_place_lng is None
+        or user.birth_place_timezone is None
+    ):
+        raise not_found("Birth data incomplete; need date and place (with coordinates and timezone).")
+
+    result = compute_astrology(
+        birth_year=user.birth_year,
+        birth_month=user.birth_month,
+        birth_day=user.birth_day,
+        birth_time=user.birth_time,
+        birth_place_lat=user.birth_place_lat,
+        birth_place_lng=user.birth_place_lng,
+        birth_place_timezone=user.birth_place_timezone,
+    )
+    if result is None:
+        raise not_found("Could not compute astrology chart for this birth data.")
+
+    return AstrologyChartResponse(
+        sun_sign=result["sun_sign"],
+        moon_sign=result["moon_sign"],
+        rising_sign=result["rising_sign"],
+        element_distribution=result["element_distribution"],
+    )
 
 
 @router.post("/tests/submit", response_model=SubmitTestResponse)
@@ -37,12 +112,13 @@ async def submit_test(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a test result and enqueue AI refinement. Poll GET /tests/results/{result_id} for completion."""
+    answers_data = [item.model_dump() for item in body.answers]
     row = TestResult(
         user_id=user.id,
         test_id=body.test_id,
         test_title=body.test_title,
         category=body.category,
-        answers=body.answers,
+        answers=answers_data,
         status="pending_ai",
     )
     db.add(row)
@@ -89,3 +165,15 @@ async def get_result(
     if not row:
         raise not_found("Test result not found")
     return row
+
+
+@router.get("/tests/{id_or_slug}/questions", response_model=list[QuestionOut])
+async def list_questions(
+    id_or_slug: str,
+    user: UserModel = Depends(get_current_active_user),
+):
+    """Return questions for a test. Accepts numeric id or slug (e.g. chakra-assessment-scan). Returns [] for tests with no questions defined."""
+    test_id = get_test_id(id_or_slug)
+    if test_id is None:
+        raise not_found("Test not found")
+    return QUESTIONS_BY_TEST_ID.get(test_id, [])

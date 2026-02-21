@@ -10,7 +10,6 @@ from app.schemas.auth import LoginRequest, RegisterRequest, Token
 
 router = APIRouter()
 
-
 @router.post("/login", response_model=Token)
 async def login(
     body: LoginRequest,
@@ -50,19 +49,16 @@ async def register(
         raise conflict("Email already registered")
 
     hashed = hash_password(body.password)
+    # Build from request body so birth_place_lat, birth_place_lng, birth_place_timezone are never missed
+    register_data = body.model_dump(exclude={"password", "email"})
     user = UserModel(
         email=body.email.lower(),
         hashed_password=hashed,
-        name=body.name,
-        birth_year=body.birth_year,
-        birth_month=body.birth_month,
-        birth_day=body.birth_day,
-        birth_time=body.birth_time,
-        birth_place=body.birth_place,
         is_active=True,
         role="user",
         is_premium=False,
         subscription_status="free",
+        **register_data,
     )
     db.add(user)
     await db.commit()
