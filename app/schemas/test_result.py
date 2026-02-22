@@ -5,12 +5,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-
-# Answer types aligned with frontend test-flow (QuestionFromApi).
 AnswerType = Literal[
     "text", "date", "time", "single_choice", "multiple_choice", "slider", "color"
 ]
-
 
 class ShowWhen(BaseModel):
     """Show this question only when another question's answer equals value."""
@@ -111,6 +108,7 @@ class TestResultResponse(BaseModel):
     personality_type: str | None
     insights: list[str] | None
     recommendations: list[str] | None
+    narrative: str | None = None  # LLM-generated prose from computed result
 
 
 class SubmitTestRequest(BaseModel):

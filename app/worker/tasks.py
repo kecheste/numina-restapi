@@ -24,9 +24,7 @@ from app.services.result_calculation.mbti import compute_mbti
 
 logger = logging.getLogger(__name__)
 
-# Rate limit key: user:ai_requests:YYYY-MM-DD
 AI_RATE_LIMIT_PREFIX = "user:ai_requests:"
-
 
 def _answer_hash(answers: list[Any] | dict[str, Any]) -> str:
     """Stable hash of answers for cache key. Accepts list of question+answer or legacy dict."""
@@ -42,7 +40,6 @@ def _answer_hash(answers: list[Any] | dict[str, Any]) -> str:
         payload = json.dumps(answers, sort_keys=True)
     return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
-
 async def _check_rate_limit(user_id: int) -> bool:
     """Return True if user is under daily limit."""
     r = get_redis()
@@ -56,7 +53,6 @@ async def _check_rate_limit(user_id: int) -> bool:
         return n <= settings.ai_max_requests_per_user_per_day
     except Exception:
         return True
-
 
 def _format_answers_for_ai(answers: list[Any] | dict[str, Any]) -> str:
     """Format answers for AI prompt: question+answer pairs or JSON."""
@@ -129,6 +125,65 @@ async def _call_openai_for_insights(
         }
 
 
+def _fallback_narrative(computed: dict[str, Any]) -> str:
+    """Build a simple narrative from computed result when no LLM is available."""
+    pt = computed.get("personality_type") or "Unknown"
+    score = computed.get("score")
+    insights = computed.get("insights") or []
+    recs = computed.get("recommendations") or []
+    parts = [f"Your result: {pt}."]
+    if score is not None:
+        parts.append(f"Score: {score}/10.")
+    if insights:
+        parts.append("Key insights: " + " ".join(insights[:3]))
+    if recs:
+        parts.append("Recommendations: " + " ".join(recs[:3]))
+    return " ".join(parts)
+
+
+async def _call_openai_for_narrative(
+    computed_result: dict[str, Any],
+    test_title: str,
+    category: str,
+) -> str:
+    """Turn the computed result (not raw answers) into fine, readable prose. Returns narrative string."""
+    if not settings.openai_api_key:
+        return _fallback_narrative(computed_result)
+
+    try:
+        from openai import AsyncOpenAI
+
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        data_str = json.dumps(
+            {
+                "personality_type": computed_result.get("personality_type"),
+                "score": computed_result.get("score"),
+                "insights": computed_result.get("insights", []),
+                "recommendations": computed_result.get("recommendations", []),
+            },
+            indent=2,
+        )
+        prompt = (
+            f"Test: {test_title} (category: {category}).\n\n"
+            "Below is the computed result for this user (personality type, score, insights, recommendations). "
+            "Write a short, warm, and well-crafted narrative paragraph (2–4 sentences) that presents this result "
+            "in fine writing suitable for displaying to the user. Do not use bullet points or JSON. "
+            "Write only the narrative text, nothing else.\n\n"
+            f"Computed result:\n{data_str}"
+        )
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=min(settings.ai_max_tokens_per_request, 512),
+            temperature=0.5,
+        )
+        text = (response.choices[0].message.content or "").strip()
+        return text if text else _fallback_narrative(computed_result)
+    except Exception as e:
+        logger.warning("OpenAI narrative call failed: %s", e)
+        return _fallback_narrative(computed_result)
+
+
 async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
     """Load TestResult by id, (optionally) call AI, cache, save, set status=completed."""
     async with AsyncSessionLocal() as session:
@@ -154,6 +209,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             row.personality_type = "Rate limit"
             row.insights = ["Daily AI limit reached. Try again tomorrow."]
             row.recommendations = []
+            row.narrative = "Your responses have been saved. Daily AI limit reached; check back tomorrow for your full narrative."
             await session.commit()
             return
 
@@ -165,6 +221,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             row.personality_type = cached.get("personality_type")
             row.insights = cached.get("insights", [])
             row.recommendations = cached.get("recommendations", [])
+            row.narrative = cached.get("narrative")
             row.status = "completed"
             await session.commit()
             return
@@ -188,11 +245,24 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         # else keep row.personality_type as computed (MBTI)
         row.insights = out["insights"]
         row.recommendations = out["recommendations"]
-        row.status = "completed"
 
-        # Cache: store computed type if we have one so cache reflects it
+        # 5) Build computed result and get LLM narrative (fine writing) from it
         if computed_type:
             out = {**out, "personality_type": computed_type}
+        computed_for_narrative = {
+            "personality_type": out.get("personality_type"),
+            "score": out.get("score"),
+            "insights": out.get("insights", []),
+            "recommendations": out.get("recommendations", []),
+        }
+        row.narrative = await _call_openai_for_narrative(
+            computed_for_narrative,
+            row.test_title,
+            row.category,
+        )
+        out["narrative"] = row.narrative
+
+        row.status = "completed"
         await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
         await session.commit()
         logger.info("Refined result_id=%s", result_id)

@@ -31,6 +31,36 @@ from app.services.result_calculation.numerology import compute_numerology
 router = APIRouter()
 
 
+def _auto_generated_already_taken(user: UserModel, test_id: int) -> bool:
+    """True if this auto-generated test is effectively 'taken' via onboarding data (birth, name)."""
+    if test_id == 1:  # Astrology Chart
+        return (
+            user.birth_year is not None
+            and user.birth_month is not None
+            and user.birth_day is not None
+            and user.birth_place_lat is not None
+            and user.birth_place_lng is not None
+            and user.birth_place_timezone is not None
+        )
+    if test_id == 2:  # Numerology
+        return (
+            user.birth_year is not None
+            and user.birth_month is not None
+            and user.birth_day is not None
+            and bool((user.name or "").strip())
+        )
+    if test_id == 4:  # Human Design (birth-based)
+        return (
+            user.birth_year is not None
+            and user.birth_month is not None
+            and user.birth_day is not None
+            and user.birth_place_lat is not None
+            and user.birth_place_lng is not None
+            and user.birth_place_timezone is not None
+        )
+    return False
+
+
 @router.get("/tests", response_model=TestsListResponse)
 async def list_tests(
     user: UserModel | None = Depends(get_optional_current_user),
@@ -55,20 +85,28 @@ async def list_tests(
         )
         completed_test_ids = {row[0] for row in result.all()}
 
-    tests = [
-        TestListItem(
-            id=t["id"],
-            slug=t.get("slug") or f"test-{t['id']}",
-            title=t["title"],
-            category=t["category"],
-            category_id=t["category_id"],
-            questions=t["questions"],
-            premium=t.get("premium", False),
-            auto_generated=t.get("auto_generated", False),
-            already_taken=t["id"] in completed_test_ids,
+    tests = []
+    for t in catalog:
+        tid = t["id"]
+        is_completed = tid in completed_test_ids
+        is_auto = t.get("auto_generated", False)
+        if is_auto and user is not None and _auto_generated_already_taken(user, tid):
+            already_taken = True
+        else:
+            already_taken = is_completed
+        tests.append(
+            TestListItem(
+                id=tid,
+                slug=t.get("slug") or f"test-{tid}",
+                title=t["title"],
+                category=t["category"],
+                category_id=t["category_id"],
+                questions=t["questions"],
+                premium=t.get("premium", False),
+                auto_generated=is_auto,
+                already_taken=already_taken,
+            )
         )
-        for t in catalog
-    ]
     return TestsListResponse(user_is_premium=user_is_premium, tests=tests)
 
 

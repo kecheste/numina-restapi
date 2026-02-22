@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, Integer, String, func
+from sqlalchemy import DateTime, Float, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -25,7 +25,7 @@ class TestResult(Base):
         server_default=func.now(),
         nullable=False,
     )
-    answers: Mapped[dict | list] = mapped_column(JSONB, nullable=False)  # list of {question_id, prompt, answer_type?, answer} or legacy dict
+    answers: Mapped[dict | list] = mapped_column(JSONB, nullable=False)
 
     status: Mapped[str] = mapped_column(
         String(20), default="pending_ai", nullable=False
@@ -34,3 +34,4 @@ class TestResult(Base):
     personality_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     insights: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     recommendations: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    narrative: Mapped[str | None] = mapped_column(Text, nullable=True)
