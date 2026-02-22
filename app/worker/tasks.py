@@ -20,6 +20,7 @@ from app.core.redis import (
 )
 from app.db.models.test_result import TestResult
 from app.db.session import AsyncSessionLocal
+from app.services.result_calculation.mbti import compute_mbti
 
 logger = logging.getLogger(__name__)
 
@@ -168,18 +169,30 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             await session.commit()
             return
 
-        # 3) Call AI (token-limited)
+        # 3) Computed result for tests with deterministic type (e.g. MBTI)
+        computed_type: str | None = None
+        if test_id == 7:  # MBTI Type
+            computed_type = compute_mbti(row.answers)
+            if computed_type:
+                row.personality_type = computed_type
+
+        # 4) Call AI (token-limited) for score, insights, recommendations
         out = await _call_openai_for_insights(
             row.test_title,
             row.category,
             row.answers,
         )
         row.score = out["score"]
-        row.personality_type = out["personality_type"]
+        if computed_type is None:
+            row.personality_type = out["personality_type"]
+        # else keep row.personality_type as computed (MBTI)
         row.insights = out["insights"]
         row.recommendations = out["recommendations"]
         row.status = "completed"
 
+        # Cache: store computed type if we have one so cache reflects it
+        if computed_type:
+            out = {**out, "personality_type": computed_type}
         await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
         await session.commit()
         logger.info("Refined result_id=%s", result_id)

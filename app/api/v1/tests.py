@@ -1,6 +1,7 @@
 """Tests and test results API. Submit creates a result and enqueues AI refinement job."""
 
 from fastapi import APIRouter, Depends, Query
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +15,8 @@ from app.db.models.user import User as UserModel
 from app.db.models.test_result import TestResult
 from app.schemas.test_result import (
     AstrologyChartResponse,
+    EnergySynthesisResponse,
+    NumerologyResponse,
     QuestionOut,
     SubmitTestRequest,
     SubmitTestResponse,
@@ -21,7 +24,9 @@ from app.schemas.test_result import (
     TestsListResponse,
     TestResultResponse,
 )
-from app.services.astrology import compute_astrology
+from app.services.result_calculation.astrology import compute_astrology
+from app.services.result_calculation.energy_synthesis import compute_energy_synthesis
+from app.services.result_calculation.numerology import compute_numerology
 
 router = APIRouter()
 
@@ -105,6 +110,57 @@ async def get_astrology_chart(
     )
 
 
+@router.get("/tests/numerology", response_model=NumerologyResponse)
+async def get_numerology(
+    user: UserModel = Depends(get_current_active_user),
+):
+    """
+    Return the current user's numerology (life path, soul urge).
+    Computed from stored birth date and name.
+    """
+    if (
+        user.birth_year is None
+        or user.birth_month is None
+        or user.birth_day is None
+    ):
+        raise not_found("Birth date incomplete; need year, month, and day.")
+    if not (user.name or "").strip():
+        raise not_found("Name is required for Soul Urge calculation.")
+
+    result = compute_numerology(
+        birth_year=user.birth_year,
+        birth_month=user.birth_month,
+        birth_day=user.birth_day,
+        name=user.name or "",
+    )
+    if result is None:
+        raise not_found("Could not compute numerology for this data.")
+
+    return NumerologyResponse(
+        life_path=result["life_path"],
+        soul_urge=result["soul_urge"],
+    )
+
+
+@router.get("/tests/energy-synthesis", response_model=EnergySynthesisResponse)
+async def get_energy_synthesis(
+    primary_axis: str = Query(..., description="Primary axis, e.g. 'mind' for mindVal=100"),
+    heart_status: str = Query(..., description="Heart chakra status, e.g. 'Balanced' for heartVal=100"),
+):
+    """
+    Return Energy Synthesis (fusion type and average) from primary axis and heart status.
+    Call with values from Cognitive Style and Chakra Assessment (or other sources).
+    """
+    result = compute_energy_synthesis(
+        primary_axis=primary_axis,
+        heart_status=heart_status,
+    )
+    return EnergySynthesisResponse(
+        fusion=result["fusion"],
+        avg=result["avg"],
+    )
+
+
 @router.post("/tests/submit", response_model=SubmitTestResponse)
 async def submit_test(
     body: SubmitTestRequest,
@@ -127,7 +183,7 @@ async def submit_test(
 
     enqueued = await enqueue_refine_test_result(row.id)
     if not enqueued:
-        pass  # still saved; worker or manual process can pick up later
+        pass
 
     return SubmitTestResponse(result_id=row.id, status="pending_ai")
 

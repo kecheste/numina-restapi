@@ -13,10 +13,10 @@ class TestItem(TypedDict):
     auto_generated: bool
 
 TESTS: list[TestItem] = [
-    {"id": 1, "slug": "astrology-chart", "title": "Astrology Chart", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 12, "premium": False, "auto_generated": False},
-    {"id": 2, "slug": "numerology", "title": "Numerology", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 10, "premium": False, "auto_generated": False},
+    {"id": 1, "slug": "astrology-chart", "title": "Astrology Chart", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": False, "auto_generated": True},
+    {"id": 2, "slug": "numerology", "title": "Numerology", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": False, "auto_generated": True},
     {"id": 3, "slug": "starseed-origins", "title": "Starseed origins", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 7, "premium": False, "auto_generated": False},
-    {"id": 4, "slug": "human-design", "title": "Human Design", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 15, "premium": False, "auto_generated": False},
+    {"id": 4, "slug": "human-design", "title": "Human Design", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": False, "auto_generated": True},
     {"id": 5, "slug": "transits", "title": "Transits", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 15, "premium": False, "auto_generated": False},
     {"id": 6, "slug": "zodiac-element-modality", "title": "Zodiac Element & Modality", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 15, "premium": False, "auto_generated": False},
     {"id": 7, "slug": "mbti-type", "title": "MBTI Type", "category": "Psychological Profile", "category_id": "psychological", "questions": 4, "premium": False, "auto_generated": False},
@@ -30,7 +30,7 @@ TESTS: list[TestItem] = [
     {"id": 15, "slug": "emotional-regulation-type", "title": "Emotional Regulation Type", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 5, "premium": False, "auto_generated": False},
     {"id": 16, "slug": "stress-balance-index", "title": "Stress Balance Index", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 3, "premium": False, "auto_generated": False},
     {"id": 17, "slug": "somatic-connection", "title": "Somatic Connection", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 5, "premium": False, "auto_generated": False},
-    {"id": 18, "slug": "energy-synthesis", "title": "Energy Synthesis", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 5, "premium": False, "auto_generated": True},
+    {"id": 18, "slug": "energy-synthesis", "title": "Energy Synthesis", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 0, "premium": False, "auto_generated": True},
     {"id": 19, "slug": "life-path-number", "title": "Life Path Number", "category": "Soul Path & Karma", "category_id": "soul", "questions": 10, "premium": False, "auto_generated": False},
     {"id": 20, "slug": "soul-urge-hearts-desire", "title": "Soul Urge / Heart's Desire", "category": "Soul Path & Karma", "category_id": "soul", "questions": 15, "premium": False, "auto_generated": False},
     {"id": 21, "slug": "past-life-vibes", "title": "Past Life Vibes", "category": "Soul Path & Karma", "category_id": "soul", "questions": 6, "premium": False, "auto_generated": False},

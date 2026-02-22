@@ -7,33 +7,39 @@ import redis.asyncio as redis
 
 from app.core.config import settings
 
-# Global client; set in lifespan if needed
 _redis: redis.Redis | None = None
 
-CACHE_TTL_SECONDS = 300  # 5 min default
-AI_RESULT_CACHE_TTL = 86400 * 7  # 7 days for AI results
-USER_PROFILE_CACHE_TTL = 300  # 5 min
-TEST_LIST_CACHE_TTL = 600  # 10 min
-
+CACHE_TTL_SECONDS = 300
+AI_RESULT_CACHE_TTL = 86400 * 7
+USER_PROFILE_CACHE_TTL = 300
+TEST_LIST_CACHE_TTL = 600
 
 def get_redis() -> redis.Redis | None:
-    """Return Redis client if initialized; None otherwise."""
     return _redis
+
+def normalize_redis_url(url: str) -> str:
+    url = url.strip()
+    if "redislabs.com" not in url:
+        return url
+    if url.startswith("rediss://") and "ssl_cert_reqs" not in url:
+        sep = "&" if "?" in url else "?"
+        url = f"{url}{sep}ssl_cert_reqs=none"
+    return url
 
 
 async def init_redis() -> redis.Redis:
-    """Create and store async Redis client from settings."""
     global _redis
+    url = normalize_redis_url(settings.redis_url)
     _redis = redis.from_url(
-        settings.redis_url,
+        url,
         encoding="utf-8",
         decode_responses=True,
     )
+    await _redis.ping()
     return _redis
 
 
 async def close_redis() -> None:
-    """Close Redis connection (lifespan shutdown)."""
     global _redis
     if _redis is not None:
         await _redis.aclose()
@@ -41,7 +47,6 @@ async def close_redis() -> None:
 
 
 async def cache_get(key: str) -> Any | None:
-    """Get JSON value from cache. Returns None if missing, invalid, or Redis down."""
     if _redis is None:
         return None
     try:
@@ -58,7 +63,6 @@ async def cache_set(
     value: Any,
     ttl_seconds: int = CACHE_TTL_SECONDS,
 ) -> None:
-    """Set JSON value in cache with TTL. No-op if Redis not initialized."""
     if _redis is None:
         return
     try:
@@ -68,7 +72,6 @@ async def cache_set(
 
 
 async def cache_delete(key: str) -> None:
-    """Delete a cache key (e.g. on profile update)."""
     if _redis is None:
         return
     try:
@@ -86,5 +89,4 @@ def cache_key_test_list() -> str:
 
 
 def cache_key_ai_result(test_id: int, user_id: int, answer_hash: str) -> str:
-    """Cache key for AI refinement result to avoid duplicate OpenAI calls."""
     return f"ai:result:{test_id}:{user_id}:{answer_hash}"

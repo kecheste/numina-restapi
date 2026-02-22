@@ -50,6 +50,20 @@ class AstrologyChartResponse(BaseModel):
     element_distribution: ElementDistribution
 
 
+class NumerologyResponse(BaseModel):
+    """Response for GET /tests/numerology (computed from user birth date and name)."""
+
+    life_path: int
+    soul_urge: int
+
+
+class EnergySynthesisResponse(BaseModel):
+    """Response for GET /tests/energy-synthesis (computed from primary axis + heart status)."""
+
+    fusion: str  # "Clarity" or "Integration"
+    avg: float
+
+
 class TestListItem(BaseModel):
     """Single test in GET /tests list (frontend-aligned). id is 1–24; slug is unique for URLs/fetching."""
 

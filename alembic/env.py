@@ -20,7 +20,7 @@ from sqlalchemy.pool import NullPool
 
 from app.core.config import get_database_url_and_connect_args, settings
 from app.db.base import Base
-from app.db.models import User, TestResult  # noqa: F401 - register models with Base.metadata
+from app.db.models import User, TestResult
 
 config = context.config
 _db_url, _connect_args = get_database_url_and_connect_args()
@@ -29,7 +29,6 @@ target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode (generate SQL only)."""
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -49,7 +48,6 @@ def do_run_migrations(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     _url, _connect_args = get_database_url_and_connect_args()
-    # Log which DB we're targeting (host only, no credentials)
     if "neon.tech" in _url:
         print("Alembic: running migrations against Neon database (neon.tech)")
     connectable = create_async_engine(_url, poolclass=NullPool, connect_args=_connect_args)
@@ -59,7 +57,6 @@ async def run_async_migrations() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode (connect to DB)."""
     asyncio.run(run_async_migrations())
 
 

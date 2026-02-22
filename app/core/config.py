@@ -6,8 +6,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
 
 def get_database_url_and_connect_args() -> tuple[str, dict]:
-    """Return (url, connect_args) for create_async_engine. Strips sslmode for asyncpg; use ssl=True for Neon."""
-    url = settings.database_url
+    """Return (url, connect_args) for create_async_engine. Uses asyncpg; strips sslmode for Neon."""
+    url = settings.database_url.strip()
+    # Async engine requires postgresql+asyncpg (asyncpg is the project's driver)
+    if url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
+        url = "postgresql+asyncpg://" + url.split("://", 1)[1]
     need_ssl = "neon.tech" in url or "sslmode" in url
     if not need_ssl:
         return url, {}
@@ -31,29 +34,25 @@ class Settings(BaseSettings):
     app_name: str = "Numina API"
     api_v1_prefix: str = "/api/v1"
 
-    # Neon Postgres: use postgresql+asyncpg://... for async SQLAlchemy
     database_url: str
 
-    # Redis: required for BullMQ and caching
     redis_url: str = "redis://localhost:6379/0"
 
-    # JWT (backend-issued tokens)
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "numina-api"
     jwt_audience: str = "numina-api"
     jwt_access_token_expire_minutes: int = 60
 
-    # Stripe (optional until payments are enabled)
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None
 
-    # OpenAI (optional; used by AI refinement worker)
     openai_api_key: str | None = None
 
-    # AI safeguards: max tokens per request, rate limit per user per day
     ai_max_tokens_per_request: int = 1024
     ai_max_requests_per_user_per_day: int = 20
+
+    cors_origins: str = ""
 
 
 settings = Settings()

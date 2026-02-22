@@ -22,7 +22,6 @@ _SIGN_TO_ELEMENT = {
     "Pisces": "water",
 }
 
-# Kerykeion may return abbreviated signs; map to full name for element lookup and display
 _SIGN_ALIASES = {
     "ari": "Aries", "aries": "Aries",
     "tau": "Taurus", "taurus": "Taurus",
@@ -125,7 +124,6 @@ def compute_astrology(
     except Exception:
         return None
 
-    # Kerykeion: .sun.sign, .moon.sign; ascendant may be .first_house or .ascendant
     raw_sun = getattr(subject.sun, "sign", None) or ""
     raw_moon = getattr(subject.moon, "sign", None) or ""
     raw_rising = ""
