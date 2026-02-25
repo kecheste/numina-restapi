@@ -80,7 +80,7 @@ async def list_tests(
         result = await db.execute(
             select(TestResult.test_id).where(
                 TestResult.user_id == user.id,
-                TestResult.status == "completed",
+                TestResult.status.in_(["pending_ai", "completed"]),
             )
         )
         completed_test_ids = {row[0] for row in result.all()}
