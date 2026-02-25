@@ -75,11 +75,49 @@ def decode_access_token(token: str) -> dict[str, Any]:
     )
 
 
+_PASSWORD_RESET_EXPIRE_MINUTES = 60
+
+
+def create_password_reset_token(user_id: int) -> str:
+    """Create a signed token for password reset; expires in 1 hour."""
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=_PASSWORD_RESET_EXPIRE_MINUTES)
+    payload: dict[str, Any] = {
+        "sub": str(user_id),
+        "purpose": "password_reset",
+        "iat": now,
+        "exp": expire,
+        "iss": settings.jwt_issuer,
+        "aud": settings.jwt_audience,
+    }
+    return jwt.encode(
+        payload,
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+
+
+def decode_password_reset_token(token: str) -> dict[str, Any]:
+    """Decode and validate a password-reset JWT; raises InvalidTokenError on failure."""
+    payload = jwt.decode(
+        token,
+        settings.jwt_secret_key,
+        algorithms=[settings.jwt_algorithm],
+        audience=settings.jwt_audience,
+        issuer=settings.jwt_issuer,
+    )
+    if payload.get("purpose") != "password_reset":
+        raise InvalidTokenError("Invalid token purpose")
+    return payload
+
+
 __all__ = [
     "hash_password",
     "verify_password",
     "create_access_token",
     "decode_access_token",
+    "create_password_reset_token",
+    "decode_password_reset_token",
     "InvalidTokenError",
     "pwd_context",
 ]

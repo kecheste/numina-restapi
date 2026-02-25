@@ -54,5 +54,15 @@ class Settings(BaseSettings):
 
     cors_origins: str = ""
 
+    # Password reset: frontend base URL for the reset link in emails (e.g. https://app.example.com)
+    frontend_url: str = ""
+
+    # SMTP for sending password reset emails
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""  # Optional; defaults to smtp_username if not set
+
 
 settings = Settings()
