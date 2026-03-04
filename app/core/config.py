@@ -1,6 +1,9 @@
+import json
 from pathlib import Path
+from typing import List
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -58,7 +61,21 @@ class Settings(BaseSettings):
 
     ai_result_output_max_tokens: int = 600
 
-    cors_origins: str = ""
+    cors_origins_env: str = Field(default="", validation_alias="CORS_ORIGINS")
+
+    @property
+    def cors_origins(self) -> List[str]:
+        raw = (getattr(self, "cors_origins_env", None) or "").strip()
+        if not raw:
+            return []
+        if raw.startswith("["):
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    return [str(x).strip() for x in parsed if str(x).strip()]
+            except json.JSONDecodeError:
+                pass
+        return [x.strip() for x in raw.split(",") if x.strip()]
 
     mapbox_access_token: str | None = None
 
