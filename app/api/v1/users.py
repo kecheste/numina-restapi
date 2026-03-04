@@ -39,6 +39,8 @@ async def update_me(
     """Update current user profile (name, birth fields). Invalidates profile cache."""
     if body.name is not None:
         user.name = body.name
+    if body.full_name is not None:
+        user.full_name = body.full_name
     if body.birth_year is not None:
         user.birth_year = body.birth_year
     if body.birth_month is not None:

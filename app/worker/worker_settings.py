@@ -18,10 +18,10 @@ def get_redis_settings() -> RedisSettings:
 
 
 class WorkerSettings:
-    """Arq worker config."""
+    """Arq worker config. max_jobs=1 to avoid bursting OpenAI (429) with parallel LLM calls."""
 
     functions = [refine_test_result]
     redis_settings = get_redis_settings()
     on_startup = startup
-    max_jobs = 5
+    max_jobs = 1
     job_timeout = 120

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.constants.questions import QUESTIONS_BY_TEST_ID
 from app.constants.tests import TESTS, get_test_id
 from app.core.dependencies import get_current_active_user, get_db, get_optional_current_user
-from app.core.exceptions import not_found
+from app.core.exceptions import conflict, not_found
 from app.core.queue import enqueue_refine_test_result
 from app.core.redis import cache_get, cache_set, cache_key_test_list, TEST_LIST_CACHE_TTL
 from app.db.models.user import User as UserModel
@@ -16,8 +16,11 @@ from app.db.models.test_result import TestResult
 from app.schemas.test_result import (
     AstrologyChartResponse,
     EnergySynthesisResponse,
+    LifePathNumberResponse,
     NumerologyResponse,
     QuestionOut,
+    SoulCompassResponse,
+    SoulUrgeResponse,
     SubmitTestRequest,
     SubmitTestResponse,
     TestListItem,
@@ -26,7 +29,9 @@ from app.schemas.test_result import (
 )
 from app.services.result_calculation.astrology import compute_astrology
 from app.services.result_calculation.energy_synthesis import compute_energy_synthesis
+from app.services.result_calculation.life_path_number import compute_life_path_number
 from app.services.result_calculation.numerology import compute_numerology
+from app.services.result_calculation.soul_urge import compute_soul_urge
 
 router = APIRouter()
 
@@ -180,6 +185,57 @@ async def get_numerology(
     )
 
 
+@router.get("/tests/life-path-number", response_model=LifePathNumberResponse)
+async def get_life_path_number(
+    user: UserModel = Depends(get_current_active_user),
+):
+    """
+    Life Path Number from date of birth: sum digits, reduce to 1–9 or keep 11/22/33.
+    Returns lifePath, traits[], strengths[], challenges[].
+    """
+    if (
+        user.birth_year is None
+        or user.birth_month is None
+        or user.birth_day is None
+    ):
+        raise not_found("Birth date incomplete; need year, month, and day.")
+    result = compute_life_path_number(
+        birth_year=user.birth_year,
+        birth_month=user.birth_month,
+        birth_day=user.birth_day,
+    )
+    if result is None:
+        raise not_found("Could not compute Life Path Number for this date.")
+    return LifePathNumberResponse(
+        lifePath=result["lifePath"],
+        traits=result["traits"],
+        strengths=result["strengths"],
+        challenges=result["challenges"],
+    )
+
+
+@router.get("/tests/soul-urge", response_model=SoulUrgeResponse)
+async def get_soul_urge(
+    user: UserModel = Depends(get_current_active_user),
+):
+    """
+    Soul Urge / Heart's Desire from vowels in full name (Pythagorean).
+    Uses full_name if set, else name. Returns soulUrge, traits[], strengths[], challenges[].
+    """
+    full_name = (user.full_name or user.name or "").strip()
+    if not full_name:
+        raise not_found("Full name or name is required for Soul Urge calculation.")
+    result = compute_soul_urge(full_name=full_name)
+    if result is None:
+        raise not_found("Could not compute Soul Urge for this name.")
+    return SoulUrgeResponse(
+        soulUrge=result["soulUrge"],
+        traits=result["traits"],
+        strengths=result["strengths"],
+        challenges=result["challenges"],
+    )
+
+
 @router.get("/tests/energy-synthesis", response_model=EnergySynthesisResponse)
 async def get_energy_synthesis(
     primary_axis: str = Query(..., description="Primary axis, e.g. 'mind' for mindVal=100"),
@@ -205,7 +261,7 @@ async def submit_test(
     user: UserModel = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a test result and enqueue AI refinement. Poll GET /tests/results/{result_id} for completion."""
+    """Create a test result and enqueue exactly one AI refinement job. Poll GET /tests/results/{result_id} for completion."""
     answers_data = [item.model_dump() for item in body.answers]
     row = TestResult(
         user_id=user.id,
@@ -224,6 +280,46 @@ async def submit_test(
         pass
 
     return SubmitTestResponse(result_id=row.id, status="pending_ai")
+
+
+LIFE_PATH_TEST_ID = 19
+
+@router.post("/tests/ensure-onboarding-life-path")
+async def ensure_onboarding_life_path(
+    user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """After onboarding, ensure Life Path (19) result exists. Creates a result and enqueues worker if user has DOB and no existing result."""
+    if (
+        user.birth_year is None
+        or user.birth_month is None
+        or user.birth_day is None
+    ):
+        return {"queued": False, "reason": "missing_dob"}
+    existing = await db.execute(
+        select(TestResult.id).where(
+            TestResult.user_id == user.id,
+            TestResult.test_id == LIFE_PATH_TEST_ID,
+        ).limit(1)
+    )
+    if existing.scalar_one_or_none() is not None:
+        return {"queued": False, "already_exists": True}
+    test_item = next((t for t in TESTS if t["id"] == LIFE_PATH_TEST_ID), None)
+    if not test_item:
+        return {"queued": False, "reason": "test_not_found"}
+    row = TestResult(
+        user_id=user.id,
+        test_id=LIFE_PATH_TEST_ID,
+        test_title=test_item["title"],
+        category=test_item["category"],
+        answers=[],
+        status="pending_ai",
+    )
+    db.add(row)
+    await db.commit()
+    await db.refresh(row)
+    enqueued = await enqueue_refine_test_result(row.id)
+    return {"queued": enqueued, "result_id": row.id}
 
 
 @router.get("/tests/results", response_model=list[TestResultResponse])
@@ -265,9 +361,19 @@ async def get_result(
 async def list_questions(
     id_or_slug: str,
     user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Return questions for a test. Accepts numeric id or slug (e.g. chakra-assessment-scan). Returns [] for tests with no questions defined."""
+    """Return questions for a test. Accepts numeric id or slug. Returns 409 if user has already taken this test."""
     test_id = get_test_id(id_or_slug)
     if test_id is None:
         raise not_found("Test not found")
+    existing = await db.execute(
+        select(TestResult.id).where(
+            TestResult.user_id == user.id,
+            TestResult.test_id == test_id,
+            TestResult.status.in_(["pending_ai", "completed"]),
+        ).limit(1)
+    )
+    if existing.scalar_one_or_none() is not None:
+        raise conflict("You have already taken this test.")
     return QUESTIONS_BY_TEST_ID.get(test_id, [])

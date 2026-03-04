@@ -16,6 +16,7 @@ from app.api.v1.routers import router as api_router
 from app.core.config import settings
 from app.core.redis import init_redis, close_redis
 from app.core.queue import get_arq_pool, close_arq_pool
+from app.db.seed import run_seed
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,11 @@ async def lifespan(app: FastAPI):
         await init_redis()
     except Exception as e:
         logger.warning("Redis init failed (caching disabled): %s", e)
-    await get_arq_pool()  # no-op if Redis down
+    await get_arq_pool()
+    try:
+        await run_seed()
+    except Exception as e:
+        logger.warning("Seed failed (non-fatal): %s", e)
     yield
     await close_arq_pool()
     await close_redis()

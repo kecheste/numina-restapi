@@ -16,6 +16,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(50), default="user", nullable=False)
 
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)  # optional; used for Soul Urge (vowels)
     birth_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     birth_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     birth_day: Mapped[int | None] = mapped_column(Integer, nullable=True)
@@ -30,6 +31,7 @@ class User(Base):
     )
     subscription_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     stripe_customer_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    life_path_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),

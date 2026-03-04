@@ -8,7 +8,7 @@ _BACKEND_ROOT = Path(__file__).resolve().parent.parent.parent
 def get_database_url_and_connect_args() -> tuple[str, dict]:
     """Return (url, connect_args) for create_async_engine. Uses asyncpg; strips sslmode for Neon."""
     url = settings.database_url.strip()
-    # Async engine requires postgresql+asyncpg (asyncpg is the project's driver)
+
     if url.startswith("postgresql://") and not url.startswith("postgresql+asyncpg://"):
         url = "postgresql+asyncpg://" + url.split("://", 1)[1]
     need_ssl = "neon.tech" in url or "sslmode" in url
@@ -47,22 +47,30 @@ class Settings(BaseSettings):
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None
 
+    stripe_price_id_monthly: str | None = None
+
     openai_api_key: str | None = None
 
     ai_max_tokens_per_request: int = 1024
     ai_max_requests_per_user_per_day: int = 20
 
+    ai_input_max_chars: int = 3500
+
+    ai_result_output_max_tokens: int = 600
+
     cors_origins: str = ""
 
-    # Password reset: frontend base URL for the reset link in emails (e.g. https://app.example.com)
+    mapbox_access_token: str | None = None
+
     frontend_url: str = ""
 
-    # SMTP for sending password reset emails
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_username: str = ""
     smtp_password: str = ""
-    smtp_from_email: str = ""  # Optional; defaults to smtp_username if not set
+    smtp_from_email: str = ""
 
+    seed_admin_email: str = ""
+    seed_admin_password: str = ""
 
 settings = Settings()

@@ -11,6 +11,7 @@ class UserResponse(BaseModel):
     id: int
     email: str
     name: str | None
+    full_name: str | None = None  # optional; used for Soul Urge / Heart's Desire
     birth_year: int | None
     birth_month: int | None
     birth_day: int | None
@@ -23,6 +24,7 @@ class UserResponse(BaseModel):
     subscription_status: str
     is_active: bool
     role: str
+    life_path_number: int | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -31,6 +33,7 @@ class UserUpdate(BaseModel):
     """Allowed fields for PATCH /users/me."""
 
     name: str | None = None
+    full_name: str | None = Field(None, max_length=255)
     birth_year: int | None = Field(None, ge=1900, le=2100)
     birth_month: int | None = Field(None, ge=1, le=12)
     birth_day: int | None = Field(None, ge=1, le=31)

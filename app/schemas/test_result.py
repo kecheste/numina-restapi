@@ -61,6 +61,33 @@ class EnergySynthesisResponse(BaseModel):
     avg: float
 
 
+class LifePathNumberResponse(BaseModel):
+    """Life Path Number: computed from date of birth. Output: lifePath, traits, strengths, challenges."""
+
+    lifePath: int
+    traits: list[str]
+    strengths: list[str]
+    challenges: list[str]
+
+
+class SoulUrgeResponse(BaseModel):
+    """Soul Urge / Heart's Desire: computed from vowels in full name (Pythagorean). Same structure."""
+
+    soulUrge: int
+    traits: list[str]
+    strengths: list[str]
+    challenges: list[str]
+
+
+class SoulCompassResponse(BaseModel):
+    """Soul Compass: synthesis from values, motivations, fears, long-term desires."""
+
+    coreDrive: str
+    directionTheme: str
+    growthFocus: str
+    shadowPattern: str
+
+
 class TestListItem(BaseModel):
     """Single test in GET /tests list (frontend-aligned). id is 1–24; slug is unique for URLs/fetching."""
 
@@ -109,6 +136,8 @@ class TestResultResponse(BaseModel):
     insights: list[str] | None
     recommendations: list[str] | None
     narrative: str | None = None  # LLM-generated prose from computed result
+    extracted_json: dict[str, Any] | list[Any] | None = None  # compact JSON; narrative uses only this for text tests
+    llm_result_json: dict[str, Any] | None = None  # structured LLM output: title, summary, insights, recommendations, takeaway
 
 
 class SubmitTestRequest(BaseModel):

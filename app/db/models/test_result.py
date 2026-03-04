@@ -35,3 +35,7 @@ class TestResult(Base):
     insights: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     recommendations: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     narrative: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Compact JSON from extractor/compute stub; narrative LLM uses only this (not raw answers)
+    extracted_json: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
+    # Structured LLM response for result screen: { title, summary, insights, recommendations, takeaway }
+    llm_result_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
