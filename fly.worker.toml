@@ -1,0 +1,17 @@
+# Numina Arq worker app. Deploy: fly deploy -a numina-worker -c fly.worker.toml
+
+app = "numina-worker"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+
+[processes]
+worker = "python -m app.worker.run_worker"
+
+# No [http_service]; worker does not serve HTTP
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

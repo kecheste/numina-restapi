@@ -71,7 +71,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-print(settings.cors_origins)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
