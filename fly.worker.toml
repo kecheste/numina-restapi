@@ -1,4 +1,4 @@
-# Numina Arq worker app. Deploy: fly deploy -a numina-worker -c fly.worker.toml
+# Numina Arq worker app
 
 app = "numina-worker"
 
@@ -10,7 +10,9 @@ app = "numina-worker"
 [processes]
 worker = "python -m app.worker.run_worker"
 
-# No [http_service]; worker does not serve HTTP
+# Worker does not serve HTTP
+# [[http_service]] section is intentionally omitted
+
 [[vm]]
   memory = "512mb"
   cpu_kind = "shared"
