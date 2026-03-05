@@ -50,7 +50,7 @@ async def run_async_migrations() -> None:
     _url, _connect_args = get_database_url_and_connect_args()
     if "neon.tech" in _url:
         print("Alembic: running migrations against Neon database (neon.tech)")
-    connectable = create_async_engine(_url, poolclass=NullPool, connect_args=_connect_args)
+    connectable = create_async_engine(_url, poolclass=NullPool, connect_args=_connect_args, pool_pre_ping=True, pool_recycle=1800)
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()

@@ -9,9 +9,13 @@ engine = create_async_engine(
     future=True,
     echo=False,
     connect_args=_connect_args,
+    pool_pre_ping=True,
+    pool_recycle=1800,
 )
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
     expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
 )
