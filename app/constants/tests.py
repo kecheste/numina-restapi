@@ -1,4 +1,9 @@
-"""Static test catalog (aligned with frontend allTests). Locked/premium handled by frontend."""
+"""Static test catalog (aligned with frontend allTests). Locked/premium handled by frontend.
+
+auto_generated: True means the user does not take a separate test; the result is derived
+from data they already provided (e.g. birth date/place). It does not mean the backend
+generates the result automatically.
+"""
 
 from typing import TypedDict
 

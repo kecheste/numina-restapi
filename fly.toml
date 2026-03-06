@@ -1,6 +1,6 @@
 # fly.toml - API
 
-app = 'numina-worker'
+app = 'numina-api'
 
 [build]
   dockerfile = "Dockerfile"

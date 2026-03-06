@@ -54,6 +54,27 @@ class NumerologyResponse(BaseModel):
     soul_urge: int
 
 
+class AstrologyBlueprintResponse(BaseModel):
+    """AI-generated copy for onboarding astrology blueprint screen."""
+
+    sun_description: str
+    moon_description: str
+    rising_description: str
+    cosmic_traits_summary: str
+
+
+class NumerologyBlueprintItem(BaseModel):
+    number: str
+    title: str
+    description: str
+
+
+class NumerologyBlueprintResponse(BaseModel):
+    """AI-generated copy for onboarding numerology blueprint screen."""
+
+    items: list[NumerologyBlueprintItem]
+
+
 class EnergySynthesisResponse(BaseModel):
     """Response for GET /tests/energy-synthesis (computed from primary axis + heart status)."""
 

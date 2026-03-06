@@ -69,3 +69,34 @@ SYNTHESIS_FULL_JSON_KEYS = frozenset({
     "youAre", "sureThings", "identitySummary", "growthAreas", "nextFocus",
     "themes", "strengths", "shadowPatterns",
 })
+
+
+BLUEPRINT_SYSTEM = """You are a warm, insightful astrologer and numerologist. You write only valid JSON. No markdown, no code fences.
+Keep each field concise: 1-3 sentences for descriptions."""
+
+ASTROLOGY_BLUEPRINT_USER = """The user's astrology chart (from birth data):
+- Sun sign: {sun_sign}
+- Moon sign: {moon_sign}
+- Rising sign: {rising_sign}
+- Element distribution: fire={fire}, earth={earth}, air={air}, water={water}
+
+Return exactly one JSON object with these keys only:
+- "sunDescription": string, 1-2 sentences on core personality from their sun sign (personalized, warm)
+- "moonDescription": string, 1-2 sentences on emotional self from their moon sign
+- "risingDescription": string, 1-2 sentences on how others see them from rising sign
+- "cosmicTraitsSummary": string, 2-4 short lines (element, modality, ruling planet, active house) as one paragraph or bullet-style text
+
+Output only the JSON object, nothing else."""
+
+ASTROLOGY_BLUEPRINT_JSON_KEYS = frozenset({"sunDescription", "moonDescription", "risingDescription", "cosmicTraitsSummary"})
+
+NUMEROLOGY_BLUEPRINT_USER = """The user's numerology (from birth date and name):
+- Life path number: {life_path}
+- Soul urge number: {soul_urge}
+
+Return exactly one JSON object with this key only:
+- "items": array of objects, each with "number" (string, e.g. "7"), "title" (string, e.g. "Life Path"), "description" (string, 1-2 sentences personalized for this user). Include at least: Life Path ({life_path}), Soul Urge ({soul_urge}). You may add 1-2 more relevant numbers (e.g. Expression, Birthday) with brief descriptions. Maximum 5 items.
+
+Output only the JSON object, nothing else."""
+
+NUMEROLOGY_BLUEPRINT_JSON_KEYS = frozenset({"items"})

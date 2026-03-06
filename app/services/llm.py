@@ -8,6 +8,11 @@ from typing import Any
 
 from app.core.config import settings
 from app.core.prompts import (
+    ASTROLOGY_BLUEPRINT_JSON_KEYS,
+    ASTROLOGY_BLUEPRINT_USER,
+    BLUEPRINT_SYSTEM,
+    NUMEROLOGY_BLUEPRINT_JSON_KEYS,
+    NUMEROLOGY_BLUEPRINT_USER,
     SYNTHESIS_FULL_JSON_KEYS,
     SYNTHESIS_FULL_USER_TEMPLATE,
     SYNTHESIS_PREVIEW_JSON_KEYS,
@@ -199,3 +204,132 @@ def _fallback_synthesis_json(full: bool) -> dict[str, Any]:
         base["strengths"] = []
         base["shadowPatterns"] = []
     return base
+
+
+def _validate_astrology_blueprint(obj: dict[str, Any]) -> dict[str, Any]:
+    fallback = _fallback_astrology_blueprint()
+    if not isinstance(obj, dict):
+        return fallback
+    out: dict[str, Any] = {}
+    for k in ASTROLOGY_BLUEPRINT_JSON_KEYS:
+        v = obj.get(k)
+        s = str(v).strip() if v is not None and isinstance(v, str) else ""
+        out[k] = s if s else fallback[k]
+    return out
+
+
+def _fallback_astrology_blueprint() -> dict[str, Any]:
+    return {
+        "sunDescription": "Your sun sign shapes your core personality and life direction.",
+        "moonDescription": "Your moon sign reveals how you process emotions and seek comfort.",
+        "risingDescription": "Your rising sign reflects how others see you and your outward style.",
+        "cosmicTraitsSummary": "Your cosmic blueprint is unique. Explore more to deepen your understanding.",
+    }
+
+
+async def call_llm_for_astrology_blueprint(
+    sun_sign: str,
+    moon_sign: str,
+    rising_sign: str,
+    element_distribution: dict[str, int],
+) -> dict[str, Any]:
+    """Generate short AI copy for onboarding astrology blueprint screen."""
+    if not settings.openai_api_key:
+        return _fallback_astrology_blueprint()
+    fire = element_distribution.get("fire", 0)
+    earth = element_distribution.get("earth", 0)
+    air = element_distribution.get("air", 0)
+    water = element_distribution.get("water", 0)
+    user_content = ASTROLOGY_BLUEPRINT_USER.format(
+        sun_sign=sun_sign,
+        moon_sign=moon_sign,
+        rising_sign=rising_sign,
+        fire=fire,
+        earth=earth,
+        air=air,
+        water=water,
+    )
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": BLUEPRINT_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=400,
+            temperature=0.4,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        if data:
+            return _validate_astrology_blueprint(data)
+    except Exception as e:
+        logger.warning("LLM astrology blueprint call failed: %s", e)
+    return _fallback_astrology_blueprint()
+
+
+def _validate_numerology_blueprint(obj: dict[str, Any], life_path: int, soul_urge: int) -> dict[str, Any]:
+    if not isinstance(obj, dict):
+        return _fallback_numerology_blueprint(life_path, soul_urge)
+    items = obj.get("items")
+    if not isinstance(items, list) or len(items) == 0:
+        return _fallback_numerology_blueprint(life_path, soul_urge)
+    out_items: list[dict[str, str]] = []
+    for i in items[:5]:
+        if not isinstance(i, dict):
+            continue
+        n = i.get("number")
+        t = i.get("title")
+        d = i.get("description")
+        if n is not None and t is not None and d is not None:
+            out_items.append({
+                "number": str(n),
+                "title": str(t),
+                "description": str(d),
+            })
+    if not out_items:
+        return _fallback_numerology_blueprint(life_path, soul_urge)
+    return {"items": out_items}
+
+
+def _fallback_numerology_blueprint(life_path: int, soul_urge: int) -> dict[str, Any]:
+    return {
+        "items": [
+            {"number": str(life_path), "title": "Life Path", "description": "Your life path number reflects your core purpose and the lessons you're here to learn."},
+            {"number": str(soul_urge), "title": "Soul Urge", "description": "Your soul urge reveals what your heart truly desires and what motivates you from within."},
+        ],
+    }
+
+
+async def call_llm_for_numerology_blueprint(
+    life_path: int,
+    soul_urge: int,
+) -> dict[str, Any]:
+    """Generate short AI copy for onboarding numerology blueprint screen."""
+    if not settings.openai_api_key:
+        return _fallback_numerology_blueprint(life_path, soul_urge)
+    user_content = NUMEROLOGY_BLUEPRINT_USER.format(
+        life_path=life_path,
+        soul_urge=soul_urge,
+    )
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": BLUEPRINT_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=400,
+            temperature=0.4,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        if data:
+            return _validate_numerology_blueprint(data, life_path, soul_urge)
+    except Exception as e:
+        logger.warning("LLM numerology blueprint call failed: %s", e)
+    return _fallback_numerology_blueprint(life_path, soul_urge)

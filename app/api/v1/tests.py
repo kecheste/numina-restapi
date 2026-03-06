@@ -14,9 +14,12 @@ from app.core.redis import cache_get, cache_set, cache_key_test_list, TEST_LIST_
 from app.db.models.user import User as UserModel
 from app.db.models.test_result import TestResult
 from app.schemas.test_result import (
+    AstrologyBlueprintResponse,
     AstrologyChartResponse,
     EnergySynthesisResponse,
     LifePathNumberResponse,
+    NumerologyBlueprintItem,
+    NumerologyBlueprintResponse,
     NumerologyResponse,
     QuestionOut,
     SoulCompassResponse,
@@ -27,6 +30,7 @@ from app.schemas.test_result import (
     TestsListResponse,
     TestResultResponse,
 )
+from app.services.llm import call_llm_for_astrology_blueprint, call_llm_for_numerology_blueprint
 from app.services.result_calculation.astrology import compute_astrology
 from app.services.result_calculation.energy_synthesis import compute_energy_synthesis
 from app.services.result_calculation.life_path_number import compute_life_path_number
@@ -35,17 +39,13 @@ from app.services.result_calculation.soul_urge import compute_soul_urge
 
 router = APIRouter()
 
-
 def _auto_generated_already_taken(user: UserModel, test_id: int) -> bool:
-    """True if this auto-generated test is effectively 'taken' via onboarding data (birth, name)."""
-    if test_id == 1:  # Astrology Chart
+    """True if this test (no separate test—result from existing data) is covered by user's onboarding data (birth, name)."""
+    if test_id == 1:
         return (
             user.birth_year is not None
             and user.birth_month is not None
             and user.birth_day is not None
-            and user.birth_place_lat is not None
-            and user.birth_place_lng is not None
-            and user.birth_place_timezone is not None
         )
     if test_id == 2:  # Numerology
         return (
@@ -54,17 +54,7 @@ def _auto_generated_already_taken(user: UserModel, test_id: int) -> bool:
             and user.birth_day is not None
             and bool((user.name or "").strip())
         )
-    if test_id == 4:  # Human Design (birth-based)
-        return (
-            user.birth_year is not None
-            and user.birth_month is not None
-            and user.birth_day is not None
-            and user.birth_place_lat is not None
-            and user.birth_place_lng is not None
-            and user.birth_place_timezone is not None
-        )
     return False
-
 
 @router.get("/tests", response_model=TestsListResponse)
 async def list_tests(
@@ -95,7 +85,13 @@ async def list_tests(
         tid = t["id"]
         is_completed = tid in completed_test_ids
         is_auto = t.get("auto_generated", False)
-        if is_auto and user is not None and _auto_generated_already_taken(user, tid):
+        is_premium = t.get("premium", False)
+        if (
+            is_auto
+            and user is not None
+            and not is_premium
+            and _auto_generated_already_taken(user, tid)
+        ):
             already_taken = True
         else:
             already_taken = is_completed
@@ -182,6 +178,91 @@ async def get_numerology(
     return NumerologyResponse(
         life_path=result["life_path"],
         soul_urge=result["soul_urge"],
+    )
+
+
+@router.get("/tests/onboarding/astrology-blueprint", response_model=AstrologyBlueprintResponse)
+async def get_onboarding_astrology_blueprint(
+    user: UserModel = Depends(get_current_active_user),
+):
+    """
+    AI-generated copy for the onboarding astrology blueprint screen.
+    Requires full birth data (date + place). Used only in onboarding flow.
+    """
+    if (
+        user.birth_year is None
+        or user.birth_month is None
+        or user.birth_day is None
+        or user.birth_place_lat is None
+        or user.birth_place_lng is None
+        or user.birth_place_timezone is None
+    ):
+        raise not_found("Birth data incomplete; need date and place (with coordinates and timezone).")
+
+    result = compute_astrology(
+        birth_year=user.birth_year,
+        birth_month=user.birth_month,
+        birth_day=user.birth_day,
+        birth_time=user.birth_time,
+        birth_place_lat=user.birth_place_lat,
+        birth_place_lng=user.birth_place_lng,
+        birth_place_timezone=user.birth_place_timezone,
+    )
+    if result is None:
+        raise not_found("Could not compute astrology chart for this birth data.")
+
+    el = result.get("element_distribution") or {}
+    data = await call_llm_for_astrology_blueprint(
+        sun_sign=result["sun_sign"],
+        moon_sign=result["moon_sign"],
+        rising_sign=result["rising_sign"],
+        element_distribution={
+            "fire": el.get("fire", 0),
+            "earth": el.get("earth", 0),
+            "air": el.get("air", 0),
+            "water": el.get("water", 0),
+        },
+    )
+    return AstrologyBlueprintResponse(
+        sun_description=data.get("sunDescription", ""),
+        moon_description=data.get("moonDescription", ""),
+        rising_description=data.get("risingDescription", ""),
+        cosmic_traits_summary=data.get("cosmicTraitsSummary", ""),
+    )
+
+
+@router.get("/tests/onboarding/numerology-blueprint", response_model=NumerologyBlueprintResponse)
+async def get_onboarding_numerology_blueprint(
+    user: UserModel = Depends(get_current_active_user),
+):
+    """
+    AI-generated copy for the onboarding numerology blueprint screen.
+    Requires birth date and name. Used only in onboarding flow.
+    """
+    if (
+        user.birth_year is None
+        or user.birth_month is None
+        or user.birth_day is None
+    ):
+        raise not_found("Birth date incomplete.")
+    if not (user.name or "").strip():
+        raise not_found("Name is required for Soul Urge.")
+
+    result = compute_numerology(
+        birth_year=user.birth_year,
+        birth_month=user.birth_month,
+        birth_day=user.birth_day,
+        name=user.name or "",
+    )
+    if result is None:
+        raise not_found("Could not compute numerology for this data.")
+
+    data = await call_llm_for_numerology_blueprint(
+        life_path=result["life_path"],
+        soul_urge=result["soul_urge"],
+    )
+    return NumerologyBlueprintResponse(
+        items=[NumerologyBlueprintItem(**i) for i in data.get("items", [])],
     )
 
 
