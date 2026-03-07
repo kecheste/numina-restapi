@@ -26,11 +26,18 @@ Additionally include these two keys (required for this test):
 - "strongestChakra": string, one sentence describing which chakra is currently strongest for this user based on their answers (e.g. "Your energy flows most freely through your Crown Chakra, indicating heightened intuition.")
 - "needsRebalancing": string, one sentence describing which chakra most needs rebalancing (e.g. "You may want to bring attention to your Root Chakra, which governs your sense of stability and grounding.")
 """
+
+CHAKRA_ALIGNMENT_APPENDIX = """
+Also include the full chakra alignment result so we can display it on the result screen:
+- "statusSummary": string, 2-4 sentences summarizing the user's chakra balance (which chakras are strong, blocked, overactive; overall energetic picture).
+- "chakras": array of exactly 7 objects in this order: Root, Sacral, Solar Plexus, Heart, Throat, Third Eye, Crown. Each object must have: "id" (one of: root, sacral, solarPlexus, heart, throat, thirdEye, crown), "name" (e.g. "Root Chakra"), "status" (one of: Balanced, Blocked, Open, Overactive, Slightly Blocked, Slightly Open), "description" (1-2 sentences for this chakra), "tryItems" (string or null; practical tips when status is not Balanced), "avoidItems" (string or null; what to avoid when not Balanced).
+- For "synchronicities" use objects with "label" (e.g. "Life Path 7") and "description" (short connection) instead of "test" and "connection".
+"""
 TEST_RESULT_JSON_KEYS = frozenset({
     "title", "summary", "coreTraits", "strengths", "challenges",
     "spiritualInsight", "tryThis", "avoidThis", "synchronicities",
 })
-CHAKRA_PREVIEW_JSON_KEYS = frozenset({"strongestChakra", "needsRebalancing"})
+CHAKRA_PREVIEW_JSON_KEYS = frozenset({"strongestChakra", "needsRebalancing", "statusSummary", "chakras"})
 
 
 SYNTHESIS_SYSTEM = """You are a spiritual and psychological synthesis coach. You weave multiple test results into one coherent portrait.
