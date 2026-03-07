@@ -1,5 +1,3 @@
-# --- Test result: single structured JSON for the result screen ---
-# Each result page: Short Intro, Core Traits, Strengths, Challenges, Spiritual Insight, Try This, Avoid This, optional Synchronicities.
 TEST_RESULT_SYSTEM = """You are a warm, insightful coach who turns assessment data into clear, encouraging results.
 You write only valid JSON. No markdown, no code fences, no extra text.
 Keep the entire response under 2000 tokens: short sentences, 2-5 items per array."""
@@ -23,14 +21,18 @@ Return exactly one JSON object with these keys only:
 
 Output only the JSON object, nothing else."""
 
-# Strict schema for parsing (keys we expect)
+CHAKRA_PREVIEW_USER_APPENDIX = """
+Additionally include these two keys (required for this test):
+- "strongestChakra": string, one sentence describing which chakra is currently strongest for this user based on their answers (e.g. "Your energy flows most freely through your Crown Chakra, indicating heightened intuition.")
+- "needsRebalancing": string, one sentence describing which chakra most needs rebalancing (e.g. "You may want to bring attention to your Root Chakra, which governs your sense of stability and grounding.")
+"""
 TEST_RESULT_JSON_KEYS = frozenset({
     "title", "summary", "coreTraits", "strengths", "challenges",
     "spiritualInsight", "tryThis", "avoidThis", "synchronicities",
 })
+CHAKRA_PREVIEW_JSON_KEYS = frozenset({"strongestChakra", "needsRebalancing"})
 
 
-# --- Synthesis: preview (3 tests) and full (6+ tests) ---
 SYNTHESIS_SYSTEM = """You are a spiritual and psychological synthesis coach. You weave multiple test results into one coherent portrait.
 You write only valid JSON. No markdown, no code fences, no extra text.
 Keep each field concise: short paragraphs, 3-6 list items where applicable."""
@@ -84,7 +86,11 @@ Return exactly one JSON object with these keys only:
 - "sunDescription": string, 1-2 sentences on core personality from their sun sign (personalized, warm)
 - "moonDescription": string, 1-2 sentences on emotional self from their moon sign
 - "risingDescription": string, 1-2 sentences on how others see them from rising sign
-- "cosmicTraitsSummary": string, 2-4 short lines (element, modality, ruling planet, active house) as one paragraph or bullet-style text
+- "cosmicTraitsSummary": string, exactly 4 lines in this format (use the exact emoji at the start of each line, then one value per line derived from their chart):
+  Line 1: 🜂 Element: [one of: Water / Earth / Fire / Air — pick the dominant element from their chart]
+  Line 2: ☌ Modality: [one of: Fixed / Mutable / Cardinal — from their sun/moon/rising]
+  Line 3: ♇ Ruling Planet: [e.g. Pluto, Mars, Venus — main ruling planet(s) for their chart]
+  Line 4: 🌠 Most active house: [e.g. 7th – Partnerships — the most emphasized house]
 
 Output only the JSON object, nothing else."""
 
@@ -95,7 +101,7 @@ NUMEROLOGY_BLUEPRINT_USER = """The user's numerology (from birth date and name):
 - Soul urge number: {soul_urge}
 
 Return exactly one JSON object with this key only:
-- "items": array of objects, each with "number" (string, e.g. "7"), "title" (string, e.g. "Life Path"), "description" (string, 1-2 sentences personalized for this user). Include at least: Life Path ({life_path}), Soul Urge ({soul_urge}). You may add 1-2 more relevant numbers (e.g. Expression, Birthday) with brief descriptions. Maximum 5 items.
+- "items": array of objects, each with "number" (string, e.g. "7"), "title" (string, e.g. "Life Path"), "description" (string: exactly ONE sentence, maximum 70 characters, personalized for this user). Include at least: Life Path ({life_path}), Soul Urge ({soul_urge}). You may add 1-2 more relevant numbers (e.g. Expression, Birthday) with one short sentence each (max 70 chars). Maximum 5 items.
 
 Output only the JSON object, nothing else."""
 

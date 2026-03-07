@@ -25,6 +25,9 @@ class UserResponse(BaseModel):
     is_active: bool
     role: str
     life_path_number: int | None = None
+    mbti_type: str | None = None
+    mbti_descriptor: str | None = None
+    strongest_chakra: str | None = None
     created_at: datetime
     updated_at: datetime
 

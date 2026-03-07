@@ -11,6 +11,8 @@ from app.core.prompts import (
     ASTROLOGY_BLUEPRINT_JSON_KEYS,
     ASTROLOGY_BLUEPRINT_USER,
     BLUEPRINT_SYSTEM,
+    CHAKRA_PREVIEW_JSON_KEYS,
+    CHAKRA_PREVIEW_USER_APPENDIX,
     NUMEROLOGY_BLUEPRINT_JSON_KEYS,
     NUMEROLOGY_BLUEPRINT_USER,
     SYNTHESIS_FULL_JSON_KEYS,
@@ -82,14 +84,15 @@ async def call_llm_for_test_result(
     test_title: str,
     category: str,
     user_context: str = "",
+    include_chakra_preview: bool = False,
 ) -> dict[str, Any]:
     """
     Single LLM call: input is capped; output is strict JSON with title, summary, coreTraits,
     strengths, challenges, spiritualInsight, tryThis, avoidThis, synchronicities.
-    Total user prompt capped to ~2000 tokens. Returns validated dict or fallback.
+    When include_chakra_preview=True, also returns strongestChakra and needsRebalancing.
     """
     if not settings.openai_api_key:
-        return _fallback_test_result_json()
+        return _fallback_test_result_json(include_chakra_preview=include_chakra_preview)
 
     input_str = json.dumps(computed_input, indent=0) if isinstance(computed_input, dict) else json.dumps(computed_input)
     user_context = (user_context or "").strip()
@@ -105,9 +108,12 @@ async def call_llm_for_test_result(
         user_context=user_context,
         input_json=input_str,
     )
+    if include_chakra_preview:
+        user_content = user_content + CHAKRA_PREVIEW_USER_APPENDIX
     if len(user_content) > TEST_RESULT_PROMPT_MAX_CHARS:
         user_content = user_content[: TEST_RESULT_PROMPT_MAX_CHARS - 20] + "\n\n[...truncated]"
 
+    allowed_keys = (TEST_RESULT_JSON_KEYS | CHAKRA_PREVIEW_JSON_KEYS) if include_chakra_preview else TEST_RESULT_JSON_KEYS
     try:
         from openai import AsyncOpenAI
         client = AsyncOpenAI(api_key=settings.openai_api_key)
@@ -123,14 +129,14 @@ async def call_llm_for_test_result(
         raw = (response.choices[0].message.content or "").strip()
         data = _extract_json_from_response(raw)
         if data:
-            return _validate_and_filter(data, TEST_RESULT_JSON_KEYS)
+            return _validate_and_filter(data, allowed_keys)
     except Exception as e:
         logger.warning("LLM test result call failed: %s", e)
-    return _fallback_test_result_json()
+    return _fallback_test_result_json(include_chakra_preview=include_chakra_preview)
 
 
-def _fallback_test_result_json() -> dict[str, Any]:
-    return {
+def _fallback_test_result_json(include_chakra_preview: bool = False) -> dict[str, Any]:
+    out: dict[str, Any] = {
         "title": "Your Result",
         "summary": "Your responses have been recorded. Insights are being prepared.",
         "coreTraits": ["Reflective", "Growing"],
@@ -141,6 +147,10 @@ def _fallback_test_result_json() -> dict[str, Any]:
         "avoidThis": ["Rushing to conclusions.", "Comparing yourself to others."],
         "synchronicities": [],
     }
+    if include_chakra_preview:
+        out["strongestChakra"] = "Your energy flows most freely through your Crown Chakra, indicating heightened intuition or spiritual awareness."
+        out["needsRebalancing"] = "You may want to bring attention to your Root Chakra, which governs your sense of stability and grounding."
+    return out
 
 
 async def call_llm_for_synthesis(
@@ -223,7 +233,7 @@ def _fallback_astrology_blueprint() -> dict[str, Any]:
         "sunDescription": "Your sun sign shapes your core personality and life direction.",
         "moonDescription": "Your moon sign reveals how you process emotions and seek comfort.",
         "risingDescription": "Your rising sign reflects how others see you and your outward style.",
-        "cosmicTraitsSummary": "Your cosmic blueprint is unique. Explore more to deepen your understanding.",
+        "cosmicTraitsSummary": "🜂 Element: —\n☌ Modality: —\n♇ Ruling Planet: —\n🌠 Most active house: —",
     }
 
 
@@ -270,6 +280,26 @@ async def call_llm_for_astrology_blueprint(
     return _fallback_astrology_blueprint()
 
 
+def _truncate_numerology_description(text: str, max_len: int = 70) -> str:
+    if not text or not isinstance(text, str):
+        return ""
+    s = text.strip()
+    for end in (".", "!", "?"):
+        i = s.find(end)
+        if i >= 0:
+            s = s[: i + 1].strip()
+            break
+    if len(s) <= max_len:
+        return s
+    s = s[: max_len + 1]
+    last_space = s.rfind(" ")
+    if last_space > max_len // 2:
+        s = s[:last_space].rstrip()
+    else:
+        s = s[:max_len].rstrip()
+    return s + "." if not s.endswith((".", "!", "?")) else s
+
+
 def _validate_numerology_blueprint(obj: dict[str, Any], life_path: int, soul_urge: int) -> dict[str, Any]:
     if not isinstance(obj, dict):
         return _fallback_numerology_blueprint(life_path, soul_urge)
@@ -287,7 +317,7 @@ def _validate_numerology_blueprint(obj: dict[str, Any], life_path: int, soul_urg
             out_items.append({
                 "number": str(n),
                 "title": str(t),
-                "description": str(d),
+                "description": _truncate_numerology_description(str(d)),
             })
     if not out_items:
         return _fallback_numerology_blueprint(life_path, soul_urge)
@@ -297,8 +327,8 @@ def _validate_numerology_blueprint(obj: dict[str, Any], life_path: int, soul_urg
 def _fallback_numerology_blueprint(life_path: int, soul_urge: int) -> dict[str, Any]:
     return {
         "items": [
-            {"number": str(life_path), "title": "Life Path", "description": "Your life path number reflects your core purpose and the lessons you're here to learn."},
-            {"number": str(soul_urge), "title": "Soul Urge", "description": "Your soul urge reveals what your heart truly desires and what motivates you from within."},
+            {"number": str(life_path), "title": "Life Path", "description": "Your life path reflects your core purpose and lessons."},
+            {"number": str(soul_urge), "title": "Soul Urge", "description": "Your soul urge reveals what your heart truly desires."},
         ],
     }
 

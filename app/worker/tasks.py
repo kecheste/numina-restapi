@@ -47,6 +47,33 @@ TEXT_TEST_COMPUTE_STUBS: dict[int, Callable[..., dict[str, Any]]] = {
 
 AI_RATE_LIMIT_PREFIX = "user:ai_requests:"
 
+# Canonical chakra labels for storing on user profile (from strongestChakra LLM sentence)
+CHAKRA_LABELS = (
+    "Root Chakra",
+    "Sacral Chakra",
+    "Solar Plexus Chakra",
+    "Heart Chakra",
+    "Throat Chakra",
+    "Third Eye Chakra",
+    "Crown Chakra",
+)
+
+
+def _extract_strongest_chakra_label(text: str | None) -> str | None:
+    """Extract canonical chakra label from LLM strongestChakra sentence."""
+    if not text or not isinstance(text, str):
+        return None
+    t = text.strip().lower()
+    for label in CHAKRA_LABELS:
+        if label.lower() in t:
+            return label
+    for label in CHAKRA_LABELS:
+        word = label.replace(" Chakra", "")
+        if word.lower() in t and " chakra" in t:
+            return label
+    return None
+
+
 # Zodiac sign from (month, day) for user context
 _ZODIAC_BOUNDARIES = [
     (1, 19, "Capricorn"), (2, 18, "Aquarius"), (3, 20, "Pisces"), (4, 19, "Aries"),
@@ -649,6 +676,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             row.test_title,
             row.category,
             user_context=user_ctx,
+            include_chakra_preview=(test_id == 13),
         )
         row.llm_result_json = llm_result
         row.personality_type = llm_result.get("title") or row.personality_type
@@ -659,6 +687,25 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         out["narrative"] = row.narrative
         out["llm_result_json"] = row.llm_result_json
         row.status = "completed"
+        # Save onboarding fields to user profile for My Soul page
+        if test_id == 7:
+            mbti_type = (computed_type or "").strip().upper() if computed_type and len(computed_type) >= 4 else (row.personality_type or "").strip()[:4].upper() or None
+            mbti_descriptor = (llm_result.get("title") or "").strip() or None
+            if mbti_type or mbti_descriptor:
+                await session.execute(
+                    update(UserModel).where(UserModel.id == user_id).values(
+                        mbti_type=mbti_type[:20] if mbti_type else None,
+                        mbti_descriptor=mbti_descriptor[:100] if mbti_descriptor else None,
+                    )
+                )
+                await cache_delete(cache_key_user_profile(user_id))
+        elif test_id == 13:
+            chakra_label = _extract_strongest_chakra_label(llm_result.get("strongestChakra"))
+            if chakra_label:
+                await session.execute(
+                    update(UserModel).where(UserModel.id == user_id).values(strongest_chakra=chakra_label)
+                )
+                await cache_delete(cache_key_user_profile(user_id))
         await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
         await session.commit()
         async with AsyncSessionLocal() as syn_session:
