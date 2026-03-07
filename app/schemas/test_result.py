@@ -63,6 +63,25 @@ class AstrologyBlueprintResponse(BaseModel):
     cosmic_traits_summary: str
 
 
+class AstrologyChartNarrativeOverlap(BaseModel):
+    label: str
+    description: str
+
+
+class AstrologyChartNarrativeResponse(BaseModel):
+    """AI-generated full narrative for Astrology Chart result view."""
+
+    title: str
+    core_traits: list[str]
+    narrative: str
+    strengths: list[str]
+    challenges: list[str]
+    avoid_this: list[str]
+    overlaps: list[AstrologyChartNarrativeOverlap]
+    try_this: list[str]
+    spiritual_insight: str
+
+
 class NumerologyBlueprintItem(BaseModel):
     number: str
     title: str

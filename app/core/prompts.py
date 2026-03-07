@@ -103,6 +103,33 @@ Output only the JSON object, nothing else."""
 
 ASTROLOGY_BLUEPRINT_JSON_KEYS = frozenset({"sunDescription", "moonDescription", "risingDescription", "cosmicTraitsSummary"})
 
+ASTROLOGY_CHART_NARRATIVE_SYSTEM = """You are a warm, insightful astrologer. You write only valid JSON. No markdown, no code fences.
+Create a rich, personalized interpretation of the user's chart. Use their actual sun, moon, rising signs and element distribution. Be specific (e.g. mention Scorpio, Pisces, Virgo, Capricorn by name when relevant). Keep arrays to 2-5 items; narrative can be 2-4 short paragraphs."""
+
+ASTROLOGY_CHART_NARRATIVE_USER = """The user's astrology chart (from birth data):
+- Sun sign: {sun_sign}
+- Moon sign: {moon_sign}
+- Rising sign: {rising_sign}
+- Element distribution: fire={fire}, earth={earth}, air={air}, water={water}
+
+Return exactly one JSON object with these keys only:
+- "title": string, a compelling headline for their chart (e.g. "Astrology Chart – Complex, Reflective, and Spiritually Wired")
+- "coreTraits": array of 2-5 short strings (e.g. "Intuitive depth", "analytical discernment", "spiritual sensitivity")
+- "narrative": string, 2-4 short paragraphs weaving together their signs and elements. Describe how their chart blends (e.g. water and earth), name specific signs (Scorpio, Pisces, Virgo, etc.) where relevant, mention dual processing or tensions, and give one paragraph of practical balance advice (grounding + reflective practices).
+- "strengths": array of 2-5 short strings (e.g. "Keen intuition", "deep analysis", "transformative vision")
+- "challenges": array of 2-5 short strings (e.g. "Overthinking", "neglect of physical needs", "emotional burnout")
+- "avoidThis": array of 2-4 short strings (what to avoid, e.g. "Skipping grounding in favor of endless metaphysical inquiry")
+- "overlaps": array of 0-4 objects with "label" (e.g. "INFJ (MBTI)") and "description" (short connection, e.g. "empathic insight married to idealistic vision")
+- "tryThis": array of 2-4 short strings (specific practices, e.g. "Moonlit Journaling: once per lunar cycle, write by moonlight")
+- "spiritualInsight": string, one closing sentence or short paragraph (e.g. "You're here to decode humanity's hidden currents and translate them into compassionate service.")
+
+Output only the JSON object, nothing else."""
+
+ASTROLOGY_CHART_NARRATIVE_JSON_KEYS = frozenset({
+    "title", "coreTraits", "narrative", "strengths", "challenges",
+    "avoidThis", "overlaps", "tryThis", "spiritualInsight",
+})
+
 NUMEROLOGY_BLUEPRINT_USER = """The user's numerology (from birth date and name):
 - Life path number: {life_path}
 - Soul urge number: {soul_urge}

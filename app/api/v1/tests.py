@@ -15,6 +15,7 @@ from app.db.models.user import User as UserModel
 from app.db.models.test_result import TestResult
 from app.schemas.test_result import (
     AstrologyBlueprintResponse,
+    AstrologyChartNarrativeResponse,
     AstrologyChartResponse,
     EnergySynthesisResponse,
     LifePathNumberResponse,
@@ -30,7 +31,11 @@ from app.schemas.test_result import (
     TestsListResponse,
     TestResultResponse,
 )
-from app.services.llm import call_llm_for_astrology_blueprint, call_llm_for_numerology_blueprint
+from app.services.llm import (
+    call_llm_for_astrology_blueprint,
+    call_llm_for_astrology_chart_narrative,
+    call_llm_for_numerology_blueprint,
+)
 from app.services.result_calculation.astrology import compute_astrology
 from app.services.result_calculation.energy_synthesis import compute_energy_synthesis
 from app.services.result_calculation.life_path_number import compute_life_path_number
@@ -146,6 +151,65 @@ async def get_astrology_chart(
         moon_sign=result["moon_sign"],
         rising_sign=result["rising_sign"],
         element_distribution=result["element_distribution"],
+    )
+
+
+@router.get("/tests/astrology-chart-narrative", response_model=AstrologyChartNarrativeResponse)
+async def get_astrology_chart_narrative(
+    user: UserModel = Depends(get_current_active_user),
+):
+    """
+    Return AI-generated full narrative for the Astrology Chart result view.
+    Requires same birth data as astrology-chart. Used when displaying the chart result (Explore).
+    """
+    if (
+        user.birth_year is None
+        or user.birth_month is None
+        or user.birth_day is None
+        or user.birth_place_lat is None
+        or user.birth_place_lng is None
+        or user.birth_place_timezone is None
+    ):
+        raise not_found("Birth data incomplete; need date and place (with coordinates and timezone).")
+
+    result = compute_astrology(
+        birth_year=user.birth_year,
+        birth_month=user.birth_month,
+        birth_day=user.birth_day,
+        birth_time=user.birth_time,
+        birth_place_lat=user.birth_place_lat,
+        birth_place_lng=user.birth_place_lng,
+        birth_place_timezone=user.birth_place_timezone,
+    )
+    if result is None:
+        raise not_found("Could not compute astrology chart for this birth data.")
+
+    el = result.get("element_distribution") or {}
+    data = await call_llm_for_astrology_chart_narrative(
+        sun_sign=result["sun_sign"],
+        moon_sign=result["moon_sign"],
+        rising_sign=result["rising_sign"],
+        element_distribution={
+            "fire": el.get("fire", 0),
+            "earth": el.get("earth", 0),
+            "air": el.get("air", 0),
+            "water": el.get("water", 0),
+        },
+    )
+    overlaps = [
+        {"label": o.get("label", ""), "description": o.get("description", "")}
+        for o in data.get("overlaps", [])
+    ]
+    return AstrologyChartNarrativeResponse(
+        title=data.get("title", "Your Astrology Chart"),
+        core_traits=data.get("coreTraits", []),
+        narrative=data.get("narrative", ""),
+        strengths=data.get("strengths", []),
+        challenges=data.get("challenges", []),
+        avoid_this=data.get("avoidThis", []),
+        overlaps=overlaps,
+        try_this=data.get("tryThis", []),
+        spiritual_insight=data.get("spiritualInsight", ""),
     )
 
 

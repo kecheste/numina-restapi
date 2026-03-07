@@ -10,6 +10,9 @@ from app.core.config import settings
 from app.core.prompts import (
     ASTROLOGY_BLUEPRINT_JSON_KEYS,
     ASTROLOGY_BLUEPRINT_USER,
+    ASTROLOGY_CHART_NARRATIVE_JSON_KEYS,
+    ASTROLOGY_CHART_NARRATIVE_SYSTEM,
+    ASTROLOGY_CHART_NARRATIVE_USER,
     BLUEPRINT_SYSTEM,
     CHAKRA_ALIGNMENT_APPENDIX,
     CHAKRA_PREVIEW_JSON_KEYS,
@@ -340,6 +343,89 @@ async def call_llm_for_astrology_blueprint(
     except Exception as e:
         logger.warning("LLM astrology blueprint call failed: %s", e)
     return _fallback_astrology_blueprint()
+
+
+def _validate_astrology_chart_narrative(obj: dict[str, Any]) -> dict[str, Any]:
+    """Validate and normalize astrology chart narrative response."""
+    fallback = _fallback_astrology_chart_narrative()
+    if not isinstance(obj, dict):
+        return fallback
+    out: dict[str, Any] = {}
+    for k in ASTROLOGY_CHART_NARRATIVE_JSON_KEYS:
+        v = obj.get(k)
+        if k == "overlaps":
+            if isinstance(v, list) and v:
+                out[k] = [
+                    {"label": str(s.get("label", "")), "description": str(s.get("description", ""))}
+                    for s in v if isinstance(s, dict)
+                ][:6]
+            else:
+                out[k] = []
+        elif k in ("coreTraits", "strengths", "challenges", "avoidThis", "tryThis"):
+            out[k] = [str(x) for x in v][:8] if isinstance(v, list) else []
+        elif k in ("title", "narrative", "spiritualInsight"):
+            s = str(v).strip() if v is not None else ""
+            out[k] = s if s else fallback[k]
+        else:
+            out[k] = v
+    return out
+
+
+def _fallback_astrology_chart_narrative() -> dict[str, Any]:
+    return {
+        "title": "Your Astrology Chart",
+        "coreTraits": ["Reflective", "Intuitive", "Grounded"],
+        "narrative": "Your chart blends your sun, moon, and rising signs with your element distribution. Explore your birth chart in depth to uncover more layers.",
+        "strengths": ["Self-awareness", "Emotional depth"],
+        "challenges": ["Integration", "Balance"],
+        "avoidThis": ["Ignoring your body's needs", "Overthinking"],
+        "overlaps": [],
+        "tryThis": ["Journal by the moon", "Spend time in nature"],
+        "spiritualInsight": "Your birth chart is a map of your soul's journey—use it as a guide, not a limit.",
+    }
+
+
+async def call_llm_for_astrology_chart_narrative(
+    sun_sign: str,
+    moon_sign: str,
+    rising_sign: str,
+    element_distribution: dict[str, int],
+) -> dict[str, Any]:
+    """Generate full detailed narrative for the Astrology Chart result view."""
+    if not settings.openai_api_key:
+        return _fallback_astrology_chart_narrative()
+    fire = element_distribution.get("fire", 0)
+    earth = element_distribution.get("earth", 0)
+    air = element_distribution.get("air", 0)
+    water = element_distribution.get("water", 0)
+    user_content = ASTROLOGY_CHART_NARRATIVE_USER.format(
+        sun_sign=sun_sign,
+        moon_sign=moon_sign,
+        rising_sign=rising_sign,
+        fire=fire,
+        earth=earth,
+        air=air,
+        water=water,
+    )
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": ASTROLOGY_CHART_NARRATIVE_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=1200,
+            temperature=0.4,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        if data:
+            return _validate_astrology_chart_narrative(data)
+    except Exception as e:
+        logger.warning("LLM astrology chart narrative call failed: %s", e)
+    return _fallback_astrology_chart_narrative()
 
 
 def _truncate_numerology_description(text: str, max_len: int = 70) -> str:
