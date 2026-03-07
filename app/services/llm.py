@@ -4,6 +4,7 @@ LLM calls with input cap and strict JSON output. Used for test result and synthe
 
 import json
 import logging
+import re
 from typing import Any
 
 from app.core.config import settings
@@ -345,6 +346,19 @@ async def call_llm_for_astrology_blueprint(
     return _fallback_astrology_blueprint()
 
 
+def _narrative_to_one_paragraph_four_sentences(text: str) -> str:
+    """Keep only the first paragraph and at most the first 4 sentences."""
+    if not text or not isinstance(text, str):
+        return ""
+    s = text.strip()
+    first_para = s.split("\n\n")[0].strip() if "\n\n" in s else s
+    if not first_para:
+        return ""
+    sentences = re.split(r"(?<=[.!?])\s+", first_para)
+    sentences = [x.strip() for x in sentences if x.strip()][:4]
+    return " ".join(sentences) if sentences else first_para
+
+
 def _validate_astrology_chart_narrative(obj: dict[str, Any]) -> dict[str, Any]:
     """Validate and normalize astrology chart narrative response."""
     fallback = _fallback_astrology_chart_narrative()
@@ -366,6 +380,8 @@ def _validate_astrology_chart_narrative(obj: dict[str, Any]) -> dict[str, Any]:
         elif k in ("title", "narrative", "spiritualInsight"):
             s = str(v).strip() if v is not None else ""
             out[k] = s if s else fallback[k]
+            if k == "narrative" and out[k]:
+                out[k] = _narrative_to_one_paragraph_four_sentences(out[k])
         else:
             out[k] = v
     return out
@@ -375,7 +391,7 @@ def _fallback_astrology_chart_narrative() -> dict[str, Any]:
     return {
         "title": "Your Astrology Chart",
         "coreTraits": ["Reflective", "Intuitive", "Grounded"],
-        "narrative": "Your chart blends your sun, moon, and rising signs with your element distribution. Explore your birth chart in depth to uncover more layers.",
+        "narrative": "Your chart blends your sun, moon, and rising signs with your element distribution. You carry both emotional depth and practical grounding. Use this awareness to make choices that honor your nature. Explore your birth chart in depth to uncover more layers and align with your purpose.",
         "strengths": ["Self-awareness", "Emotional depth"],
         "challenges": ["Integration", "Balance"],
         "avoidThis": ["Ignoring your body's needs", "Overthinking"],
@@ -390,14 +406,30 @@ async def call_llm_for_astrology_chart_narrative(
     moon_sign: str,
     rising_sign: str,
     element_distribution: dict[str, int],
+    *,
+    life_path_number: int | None = None,
+    strongest_chakra: str | None = None,
+    mbti_type: str | None = None,
 ) -> dict[str, Any]:
-    """Generate full detailed narrative for the Astrology Chart result view."""
+    """Generate full detailed narrative for the Astrology Chart result view. Optional user context enriches the narrative."""
     if not settings.openai_api_key:
         return _fallback_astrology_chart_narrative()
     fire = element_distribution.get("fire", 0)
     earth = element_distribution.get("earth", 0)
     air = element_distribution.get("air", 0)
     water = element_distribution.get("water", 0)
+    parts = []
+    if life_path_number is not None:
+        parts.append(f"- Life path number: {life_path_number}")
+    if strongest_chakra and str(strongest_chakra).strip():
+        parts.append(f"- Strongest chakra: {strongest_chakra.strip()}")
+    if mbti_type and str(mbti_type).strip():
+        parts.append(f"- MBTI type: {mbti_type.strip()}")
+    user_context = "\n".join(parts) if parts else ""
+    if user_context:
+        user_context = "User context (use to personalize the narrative when relevant):\n" + user_context
+    else:
+        user_context = ""
     user_content = ASTROLOGY_CHART_NARRATIVE_USER.format(
         sun_sign=sun_sign,
         moon_sign=moon_sign,
@@ -406,6 +438,7 @@ async def call_llm_for_astrology_chart_narrative(
         earth=earth,
         air=air,
         water=water,
+        user_context=user_context,
     )
     try:
         from openai import AsyncOpenAI

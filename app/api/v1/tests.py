@@ -195,6 +195,9 @@ async def get_astrology_chart_narrative(
             "air": el.get("air", 0),
             "water": el.get("water", 0),
         },
+        life_path_number=user.life_path_number,
+        strongest_chakra=user.strongest_chakra,
+        mbti_type=user.mbti_type,
     )
     overlaps = [
         {"label": o.get("label", ""), "description": o.get("description", "")}
