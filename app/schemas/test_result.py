@@ -52,6 +52,8 @@ class NumerologyResponse(BaseModel):
 
     life_path: int
     soul_urge: int
+    birthday_number: int
+    expression_number: int
 
 
 class AstrologyBlueprintResponse(BaseModel):

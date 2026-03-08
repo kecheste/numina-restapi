@@ -481,35 +481,65 @@ def _truncate_numerology_description(text: str, max_len: int = 70) -> str:
     return s + "." if not s.endswith((".", "!", "?")) else s
 
 
-def _validate_numerology_blueprint(obj: dict[str, Any], life_path: int, soul_urge: int) -> dict[str, Any]:
+def _validate_numerology_blueprint(
+    obj: dict[str, Any],
+    life_path: int,
+    soul_urge: int,
+    birthday_number: int,
+    expression_number: int,
+) -> dict[str, Any]:
+    """Ensure exactly 4 items: Life Path, Soul Urge, Birthday Number, Expression (with correct numbers)."""
+    fallback = _fallback_numerology_blueprint(
+        life_path, soul_urge, birthday_number, expression_number
+    )
     if not isinstance(obj, dict):
-        return _fallback_numerology_blueprint(life_path, soul_urge)
+        return fallback
     items = obj.get("items")
-    if not isinstance(items, list) or len(items) == 0:
-        return _fallback_numerology_blueprint(life_path, soul_urge)
+    if not isinstance(items, list) or len(items) < 4:
+        return fallback
+    expected = [
+        ("Life Path", life_path),
+        ("Soul Urge", soul_urge),
+        ("Birthday Number", birthday_number),
+        ("Expression", expression_number),
+    ]
     out_items: list[dict[str, str]] = []
-    for i in items[:5]:
-        if not isinstance(i, dict):
-            continue
-        n = i.get("number")
-        t = i.get("title")
-        d = i.get("description")
-        if n is not None and t is not None and d is not None:
-            out_items.append({
-                "number": str(n),
-                "title": str(t),
-                "description": _truncate_numerology_description(str(d)),
-            })
-    if not out_items:
-        return _fallback_numerology_blueprint(life_path, soul_urge)
+    for idx, (title, num) in enumerate(expected):
+        row = None
+        for i in items:
+            if not isinstance(i, dict):
+                continue
+            t = (i.get("title") or "").strip()
+            n = i.get("number")
+            if (t.lower() == title.lower() or str(n) == str(num)) and n is not None and i.get("description"):
+                row = {
+                    "number": str(n),
+                    "title": title,
+                    "description": _truncate_numerology_description(str(i.get("description"))),
+                }
+                break
+        if not row:
+            row = {
+                "number": str(num),
+                "title": title,
+                "description": fallback["items"][idx]["description"],
+            }
+        out_items.append(row)
     return {"items": out_items}
 
 
-def _fallback_numerology_blueprint(life_path: int, soul_urge: int) -> dict[str, Any]:
+def _fallback_numerology_blueprint(
+    life_path: int,
+    soul_urge: int,
+    birthday_number: int,
+    expression_number: int,
+) -> dict[str, Any]:
     return {
         "items": [
             {"number": str(life_path), "title": "Life Path", "description": "Your life path reflects your core purpose and lessons."},
             {"number": str(soul_urge), "title": "Soul Urge", "description": "Your soul urge reveals what your heart truly desires."},
+            {"number": str(birthday_number), "title": "Birthday Number", "description": "Your birthday number adds a personal layer to your cosmic profile."},
+            {"number": str(expression_number), "title": "Expression", "description": "Your expression number reflects how you show up in the world."},
         ],
     }
 
@@ -517,13 +547,31 @@ def _fallback_numerology_blueprint(life_path: int, soul_urge: int) -> dict[str, 
 async def call_llm_for_numerology_blueprint(
     life_path: int,
     soul_urge: int,
+    birthday_number: int,
+    expression_number: int,
+    *,
+    strongest_chakra: str | None = None,
+    mbti_type: str | None = None,
 ) -> dict[str, Any]:
-    """Generate short AI copy for onboarding numerology blueprint screen."""
+    """Generate short AI copy for onboarding numerology blueprint screen. Uses all four numbers and optional user context."""
     if not settings.openai_api_key:
-        return _fallback_numerology_blueprint(life_path, soul_urge)
+        return _fallback_numerology_blueprint(
+            life_path, soul_urge, birthday_number, expression_number
+        )
+    parts = []
+    if strongest_chakra and str(strongest_chakra).strip():
+        parts.append(f"- Strongest chakra: {strongest_chakra.strip()}")
+    if mbti_type and str(mbti_type).strip():
+        parts.append(f"- MBTI type: {mbti_type.strip()}")
+    user_context = "\n".join(parts) if parts else ""
+    if user_context:
+        user_context = "Additional user context (use to personalize descriptions when relevant):\n" + user_context
     user_content = NUMEROLOGY_BLUEPRINT_USER.format(
         life_path=life_path,
         soul_urge=soul_urge,
+        birthday_number=birthday_number,
+        expression_number=expression_number,
+        user_context=user_context,
     )
     try:
         from openai import AsyncOpenAI
@@ -534,13 +582,17 @@ async def call_llm_for_numerology_blueprint(
                 {"role": "system", "content": BLUEPRINT_SYSTEM},
                 {"role": "user", "content": user_content},
             ],
-            max_tokens=400,
+            max_tokens=500,
             temperature=0.4,
         )
         raw = (response.choices[0].message.content or "").strip()
         data = _extract_json_from_response(raw)
         if data:
-            return _validate_numerology_blueprint(data, life_path, soul_urge)
+            return _validate_numerology_blueprint(
+                data, life_path, soul_urge, birthday_number, expression_number
+            )
     except Exception as e:
         logger.warning("LLM numerology blueprint call failed: %s", e)
-    return _fallback_numerology_blueprint(life_path, soul_urge)
+    return _fallback_numerology_blueprint(
+        life_path, soul_urge, birthday_number, expression_number
+    )

@@ -135,9 +135,12 @@ ASTROLOGY_CHART_NARRATIVE_JSON_KEYS = frozenset({
 NUMEROLOGY_BLUEPRINT_USER = """The user's numerology (from birth date and name):
 - Life path number: {life_path}
 - Soul urge number: {soul_urge}
+- Birthday number: {birthday_number}
+- Expression number: {expression_number}
+{user_context}
 
 Return exactly one JSON object with this key only:
-- "items": array of objects, each with "number" (string, e.g. "7"), "title" (string, e.g. "Life Path"), "description" (string: exactly ONE sentence, maximum 70 characters, personalized for this user). Include at least: Life Path ({life_path}), Soul Urge ({soul_urge}). You may add 1-2 more relevant numbers (e.g. Expression, Birthday) with one short sentence each (max 70 chars). Maximum 5 items.
+- "items": array of exactly 4 objects in this order: Life Path, Soul Urge, Birthday Number, Expression. Each object: "number" (string, the number), "title" (string: "Life Path" | "Soul Urge" | "Birthday Number" | "Expression"), "description" (string: exactly ONE sentence, maximum 70 characters, personalized for this user). Use the numbers above; do not invent. You may reference their strongest chakra or MBTI type if provided to enrich the descriptions.
 
 Output only the JSON object, nothing else."""
 

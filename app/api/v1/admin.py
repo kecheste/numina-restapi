@@ -5,12 +5,13 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, func, or_, cast, String
+from sqlalchemy import select, func, or_, cast, String, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.tests import TESTS
 from app.core.dependencies import get_db, require_roles
 from app.db.models.test_result import TestResult
+from app.db.models.user_synthesis import UserSynthesis
 from app.db.models.user import User as UserModel
 from app.db.models.email_log import EmailLog
 from app.schemas.admin import (
@@ -221,6 +222,26 @@ async def update_user(
         tests_taken=taken_r.scalar() or 0,
         tests_failed=failed_r.scalar() or 0,
     )
+
+
+@router.delete("/users/{user_id}", status_code=204)
+async def delete_user(
+    user_id: int,
+    admin_user: UserModel = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Delete a user and their related data (test results, synthesis, email logs). Cannot delete yourself."""
+    if user_id == admin_user.id:
+        raise HTTPException(status_code=400, detail="You cannot delete your own account")
+    r = await db.execute(select(UserModel).where(UserModel.id == user_id))
+    user = r.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    await db.execute(delete(TestResult).where(TestResult.user_id == user_id))
+    await db.execute(delete(UserSynthesis).where(UserSynthesis.user_id == user_id))
+    await db.execute(delete(EmailLog).where(EmailLog.user_id == user_id))
+    await db.delete(user)
+    await db.commit()
 
 
 @router.get("/subscriptions", response_model=AdminSubscriptionStats)

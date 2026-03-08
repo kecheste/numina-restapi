@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, Query
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.questions import QUESTIONS_BY_TEST_ID
@@ -219,10 +219,11 @@ async def get_astrology_chart_narrative(
 @router.get("/tests/numerology", response_model=NumerologyResponse)
 async def get_numerology(
     user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
-    Return the current user's numerology (life path, soul urge).
-    Computed from stored birth date and name.
+    Return the current user's numerology (life path, soul urge, birthday number, expression).
+    Computed from stored birth date and name. Persists values to user profile.
     """
     if (
         user.birth_year is None
@@ -230,21 +231,36 @@ async def get_numerology(
         or user.birth_day is None
     ):
         raise not_found("Birth date incomplete; need year, month, and day.")
-    if not (user.name or "").strip():
-        raise not_found("Name is required for Soul Urge calculation.")
+    name_for_numerology = (user.full_name or user.name or "").strip()
+    if not name_for_numerology:
+        raise not_found("Name or full name is required for Soul Urge and Expression.")
 
     result = compute_numerology(
         birth_year=user.birth_year,
         birth_month=user.birth_month,
         birth_day=user.birth_day,
-        name=user.name or "",
+        name=name_for_numerology,
     )
     if result is None:
         raise not_found("Could not compute numerology for this data.")
 
+    await db.execute(
+        update(UserModel)
+        .where(UserModel.id == user.id)
+        .values(
+            life_path_number=result["life_path"],
+            soul_urge_number=result["soul_urge"],
+            birthday_number=result["birthday_number"],
+            expression_number=result["expression_number"],
+        )
+    )
+    await db.commit()
+
     return NumerologyResponse(
         life_path=result["life_path"],
         soul_urge=result["soul_urge"],
+        birthday_number=result["birthday_number"],
+        expression_number=result["expression_number"],
     )
 
 
@@ -301,10 +317,11 @@ async def get_onboarding_astrology_blueprint(
 @router.get("/tests/onboarding/numerology-blueprint", response_model=NumerologyBlueprintResponse)
 async def get_onboarding_numerology_blueprint(
     user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     AI-generated copy for the onboarding numerology blueprint screen.
-    Requires birth date and name. Used only in onboarding flow.
+    Requires birth date and name. Persists life path, soul urge, birthday, expression to user. Used only in onboarding flow.
     """
     if (
         user.birth_year is None
@@ -312,14 +329,15 @@ async def get_onboarding_numerology_blueprint(
         or user.birth_day is None
     ):
         raise not_found("Birth date incomplete.")
-    if not (user.name or "").strip():
-        raise not_found("Name is required for Soul Urge.")
+    name_for_numerology = (user.full_name or user.name or "").strip()
+    if not name_for_numerology:
+        raise not_found("Name or full name is required for Soul Urge and Expression.")
 
     result = compute_numerology(
         birth_year=user.birth_year,
         birth_month=user.birth_month,
         birth_day=user.birth_day,
-        name=user.name or "",
+        name=name_for_numerology,
     )
     if result is None:
         raise not_found("Could not compute numerology for this data.")
@@ -327,7 +345,24 @@ async def get_onboarding_numerology_blueprint(
     data = await call_llm_for_numerology_blueprint(
         life_path=result["life_path"],
         soul_urge=result["soul_urge"],
+        birthday_number=result["birthday_number"],
+        expression_number=result["expression_number"],
+        strongest_chakra=user.strongest_chakra,
+        mbti_type=user.mbti_type,
     )
+
+    await db.execute(
+        update(UserModel)
+        .where(UserModel.id == user.id)
+        .values(
+            life_path_number=result["life_path"],
+            soul_urge_number=result["soul_urge"],
+            birthday_number=result["birthday_number"],
+            expression_number=result["expression_number"],
+        )
+    )
+    await db.commit()
+
     return NumerologyBlueprintResponse(
         items=[NumerologyBlueprintItem(**i) for i in data.get("items", [])],
     )
