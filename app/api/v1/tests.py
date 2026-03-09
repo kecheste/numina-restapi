@@ -157,6 +157,7 @@ async def get_astrology_chart(
 @router.get("/tests/astrology-chart-narrative", response_model=AstrologyChartNarrativeResponse)
 async def get_astrology_chart_narrative(
     user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Return AI-generated full narrative for the Astrology Chart result view.
@@ -184,18 +185,53 @@ async def get_astrology_chart_narrative(
     if result is None:
         raise not_found("Could not compute astrology chart for this birth data.")
 
-    el = result.get("element_distribution") or {}
-    data = await call_llm_for_astrology_chart_narrative(
-        sun_sign=result["sun_sign"],
-        moon_sign=result["moon_sign"],
-        rising_sign=result["rising_sign"],
-        element_distribution={
-            "fire": el.get("fire", 0),
-            "earth": el.get("earth", 0),
-            "air": el.get("air", 0),
-            "water": el.get("water", 0),
-        },
+    existing_q = await db.execute(
+        select(TestResult).where(
+            TestResult.user_id == user.id,
+            TestResult.test_id == 1,
+            TestResult.test_title == "Astrology Chart Narrative",
+        ).order_by(TestResult.completed_at.desc()).limit(1)
     )
+    existing = existing_q.scalar_one_or_none()
+    if existing is not None and isinstance(existing.llm_result_json, dict):
+        data = existing.llm_result_json
+    else:
+        el = result.get("element_distribution") or {}
+        data = await call_llm_for_astrology_chart_narrative(
+            sun_sign=result["sun_sign"],
+            moon_sign=result["moon_sign"],
+            rising_sign=result["rising_sign"],
+            element_distribution={
+                "fire": el.get("fire", 0),
+                "earth": el.get("earth", 0),
+                "air": el.get("air", 0),
+                "water": el.get("water", 0),
+            },
+        )
+        if existing is None:
+            existing = TestResult(
+                user_id=user.id,
+                test_id=1,
+                test_title="Astrology Chart Narrative",
+                category="Cosmic Identity",
+                answers=result,
+                status="completed",
+                score=None,
+                personality_type=None,
+                insights=None,
+                recommendations=None,
+                narrative=data.get("narrative", ""),
+                extracted_json=result,
+                llm_result_json=data,
+            )
+            db.add(existing)
+        else:
+            existing.llm_result_json = data
+            existing.narrative = data.get("narrative", "")
+            existing.extracted_json = result
+            existing.status = "completed"
+        await db.commit()
+
     overlaps = [
         {"label": o.get("label", ""), "description": o.get("description", "")}
         for o in data.get("overlaps", [])

@@ -29,7 +29,6 @@ async def get_synthesis(
     )
     completed_count = count_result.scalar() or 0
 
-    # Full synthesis: only if user is premium AND has completed at least 6 tests
     if completed_count >= SYNTHESIS_FULL_MIN_TESTS and user.is_premium:
         row = await db.execute(
             select(UserSynthesis).where(
@@ -45,7 +44,6 @@ async def get_synthesis(
                 result=syn.result_json,
             )
 
-    # Preview synthesis: after 3 tests (e.g. onboarding); stored and shown on later visits
     if completed_count >= SYNTHESIS_PREVIEW_MIN_TESTS:
         row = await db.execute(
             select(UserSynthesis).where(

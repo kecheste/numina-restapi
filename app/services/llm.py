@@ -5,6 +5,7 @@ LLM calls with input cap and strict JSON output. Used for test result and synthe
 import json
 import logging
 import re
+from collections import Counter
 from typing import Any
 
 from app.core.config import settings
@@ -282,6 +283,112 @@ def _fallback_synthesis_json(full: bool) -> dict[str, Any]:
     return base
 
 
+SIGN_MODALITY = {
+    "Aries": "Cardinal",
+    "Cancer": "Cardinal",
+    "Libra": "Cardinal",
+    "Capricorn": "Cardinal",
+    "Taurus": "Fixed",
+    "Leo": "Fixed",
+    "Scorpio": "Fixed",
+    "Aquarius": "Fixed",
+    "Gemini": "Mutable",
+    "Virgo": "Mutable",
+    "Sagittarius": "Mutable",
+    "Pisces": "Mutable",
+}
+
+
+def calculate_modality(planet_signs: dict[str, str]) -> dict[str, Any]:
+    """
+    planet_signs example:
+    {
+        "sun": "Aries",
+        "moon": "Taurus",
+        "mercury": "Pisces",
+        "venus": "Aries",
+        "mars": "Leo"
+    }
+    """
+
+    modality_count: Counter[str] = Counter()
+
+    for _planet, sign in planet_signs.items():
+        modality = SIGN_MODALITY.get(sign)
+        if modality:
+            modality_count[modality] += 1
+
+    if not modality_count:
+        return {"counts": {}, "dominant_modality": ""}
+
+    dominant_modality = max(modality_count, key=modality_count.get)
+
+    return {
+        "counts": dict(modality_count),
+        "dominant_modality": dominant_modality,
+    }
+
+
+def _dominant_element_from_distribution(element_distribution: dict[str, int]) -> str:
+    """Return dominant element as 'Fire' | 'Earth' | 'Air' | 'Water' (capitalized)."""
+    if not isinstance(element_distribution, dict):
+        return ""
+    fire = int(element_distribution.get("fire", 0) or 0)
+    earth = int(element_distribution.get("earth", 0) or 0)
+    air = int(element_distribution.get("air", 0) or 0)
+    water = int(element_distribution.get("water", 0) or 0)
+    pairs = [("Fire", fire), ("Earth", earth), ("Air", air), ("Water", water)]
+    dominant = max(pairs, key=lambda x: x[1])[0] if any(v > 0 for _, v in pairs) else ""
+    return dominant
+
+
+_SIGN_RULERS = {
+    "Aries": ["Mars"],
+    "Taurus": ["Venus"],
+    "Gemini": ["Mercury"],
+    "Cancer": ["Moon"],
+    "Leo": ["Sun"],
+    "Virgo": ["Mercury"],
+    "Libra": ["Venus"],
+    "Scorpio": ["Mars", "Pluto"],
+    "Sagittarius": ["Jupiter"],
+    "Capricorn": ["Saturn"],
+    "Aquarius": ["Saturn", "Uranus"],
+    "Pisces": ["Jupiter", "Neptune"],
+}
+
+
+def _ruling_planets_for_chart(sun_sign: str, rising_sign: str) -> str:
+    """Return comma-separated ruling planet(s) based on sun and rising signs."""
+    rulers: list[str] = []
+    for sign in (sun_sign, rising_sign):
+        for planet in _SIGN_RULERS.get(sign, []):
+            if planet not in rulers:
+                rulers.append(planet)
+    return ", ".join(rulers)
+
+
+_SIGN_TO_HOUSE = {
+    "Aries": "1st",
+    "Taurus": "2nd",
+    "Gemini": "3rd",
+    "Cancer": "4th",
+    "Leo": "5th",
+    "Virgo": "6th",
+    "Libra": "7th",
+    "Scorpio": "8th",
+    "Sagittarius": "9th",
+    "Capricorn": "10th",
+    "Aquarius": "11th",
+    "Pisces": "12th",
+}
+
+
+def _most_emphasized_house(sun_sign: str) -> str:
+    """Approximate most emphasized house using natural house of the sun sign."""
+    return _SIGN_TO_HOUSE.get(sun_sign, "")
+
+
 def _validate_astrology_blueprint(obj: dict[str, Any]) -> dict[str, Any]:
     fallback = _fallback_astrology_blueprint()
     if not isinstance(obj, dict):
@@ -316,6 +423,19 @@ async def call_llm_for_astrology_blueprint(
     earth = element_distribution.get("earth", 0)
     air = element_distribution.get("air", 0)
     water = element_distribution.get("water", 0)
+
+    dominant_element = _dominant_element_from_distribution(element_distribution)
+    modality_info = calculate_modality(
+        {
+            "sun": sun_sign,
+            "moon": moon_sign,
+            "rising": rising_sign,
+        }
+    )
+    dominant_modality = modality_info.get("dominant_modality", "")
+    ruling_planets = _ruling_planets_for_chart(sun_sign, rising_sign)
+    most_emphasized_house = _most_emphasized_house(sun_sign)
+
     user_content = ASTROLOGY_BLUEPRINT_USER.format(
         sun_sign=sun_sign,
         moon_sign=moon_sign,
@@ -324,6 +444,10 @@ async def call_llm_for_astrology_blueprint(
         earth=earth,
         air=air,
         water=water,
+        dominant_element=dominant_element,
+        modality=dominant_modality,
+        ruling_planets=ruling_planets,
+        most_emphasized_house=most_emphasized_house,
     )
     try:
         from openai import AsyncOpenAI
@@ -414,6 +538,19 @@ async def call_llm_for_astrology_chart_narrative(
     earth = element_distribution.get("earth", 0)
     air = element_distribution.get("air", 0)
     water = element_distribution.get("water", 0)
+
+    dominant_element = _dominant_element_from_distribution(element_distribution)
+    modality_info = calculate_modality(
+        {
+            "sun": sun_sign,
+            "moon": moon_sign,
+            "rising": rising_sign,
+        }
+    )
+    dominant_modality = modality_info.get("dominant_modality", "")
+    ruling_planets = _ruling_planets_for_chart(sun_sign, rising_sign)
+    most_emphasized_house = _most_emphasized_house(sun_sign)
+
     user_content = ASTROLOGY_CHART_NARRATIVE_USER.format(
         sun_sign=sun_sign,
         moon_sign=moon_sign,
@@ -422,6 +559,10 @@ async def call_llm_for_astrology_chart_narrative(
         earth=earth,
         air=air,
         water=water,
+        dominant_element=dominant_element,
+        modality=dominant_modality,
+        ruling_planets=ruling_planets,
+        most_emphasized_house=most_emphasized_house,
     )
     try:
         from openai import AsyncOpenAI
