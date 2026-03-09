@@ -1,16 +1,25 @@
 """
-Soul Urge / Heart's Desire: computed from vowels in full name (Pythagorean mapping).
-A=1, E=5, I=9, O=6, U=3 (Pythagorean vowel values) or position A=1..Z=26.
-Sum vowel values, reduce to 1–9 or keep 11, 22, 33.
+Soul Urge / Heart's Desire: computed from vowels in first name only (Pythagorean 1-9).
+First name = first token of full name (e.g. "John" from "John Doe").
+Sum vowel values (Pythagorean), reduce to 1–9 or keep 11, 22, 33.
 Returns JSON: { soulUrge, traits[], strengths[], challenges[] }.
 """
 
 from typing import Any
 
-# Pythagorean vowel values (common system: A=1, E=5, I=9, O=6, U=3; Y sometimes as vowel)
-# Using letter position A=1, B=2, ... Z=26 for vowels only (aligned with existing numerology)
 VOWELS = "AEIOU"
 MASTER_NUMBERS = (11, 22, 33)
+
+
+def _pythagorean_value(c: str) -> int:
+    """Pythagorean: A=1..I=9, J=1..Z=8."""
+    if not c or len(c) != 1:
+        return 0
+    u = c.upper()
+    if not ("A" <= u <= "Z"):
+        return 0
+    n = ord(u) - 64
+    return (n - 1) % 9 + 1
 
 
 def _reduce_to_soul_urge(n: int) -> int:
@@ -22,22 +31,25 @@ def _reduce_to_soul_urge(n: int) -> int:
     return n if n >= 1 else 0
 
 
+def _first_name(full_name: str) -> str:
+    """First token of name (e.g. 'John' from 'John Doe')."""
+    return (full_name or "").strip().split()[0] if (full_name or "").strip() else ""
+
+
 def compute_soul_urge(*, full_name: str) -> dict[str, Any] | None:
     """
-    Compute Soul Urge from vowels in full name (Pythagorean: A=1..Z=26, vowels only).
+    Compute Soul Urge from vowels in first name only (Pythagorean 1-9).
+    full_name can be "John Doe" or "John Doe, Father Name"; only "John" is used.
     Returns dict with soulUrge (int), traits[], strengths[], challenges[].
     Returns None if name is empty after stripping.
     """
-    clean = (full_name or "").strip().upper()
-    if not clean:
+    first = _first_name(full_name).upper()
+    if not first:
         return None
-    vowel_values = []
-    for c in clean:
-        if c in VOWELS and "A" <= c <= "Z":
-            vowel_values.append(ord(c) - 64)  # A=1, Z=26
-    if not vowel_values:
+    vowel_sum = sum(_pythagorean_value(c) for c in first if c in VOWELS and "A" <= c <= "Z")
+    if vowel_sum == 0:
         return None
-    soul_urge = _reduce_to_soul_urge(sum(vowel_values))
+    soul_urge = _reduce_to_soul_urge(vowel_sum)
 
     data = _SOUL_URGE_DATA.get(soul_urge)
     if not data:

@@ -105,23 +105,22 @@ ASTROLOGY_BLUEPRINT_JSON_KEYS = frozenset({"sunDescription", "moonDescription", 
 
 ASTROLOGY_CHART_NARRATIVE_SYSTEM = """You are a warm, insightful astrologer. You write only valid JSON. No markdown, no code fences.
 Create a rich, personalized interpretation of the user's chart. Use their actual sun, moon, rising signs and element distribution. Be specific (e.g. mention Scorpio, Pisces, Virgo, Capricorn by name when relevant). Keep arrays to 2-5 items.
-The "narrative" field must be exactly ONE paragraph and exactly FOUR sentences—no more, no less. Weave together their signs and elements; you may reference their life path, strongest chakra, or MBTI type if provided."""
+The "narrative" field must be exactly ONE paragraph and exactly FOUR sentences—no more, no less. Weave together their signs and elements only. Do NOT reference MBTI, chakra, life path, or other systems—keep this result independent; mixing happens only in the final synthesis."""
 
 ASTROLOGY_CHART_NARRATIVE_USER = """The user's astrology chart (from birth data):
 - Sun sign: {sun_sign}
 - Moon sign: {moon_sign}
 - Rising sign: {rising_sign}
 - Element distribution: fire={fire}, earth={earth}, air={air}, water={water}
-{user_context}
 
 Return exactly one JSON object with these keys only:
 - "title": string, a compelling headline for their chart (e.g. "Astrology Chart – Complex, Reflective, and Spiritually Wired")
 - "coreTraits": array of 2-5 short strings (e.g. "Intuitive depth", "analytical discernment", "spiritual sensitivity")
-- "narrative": string, exactly ONE paragraph of exactly FOUR sentences. Weave together their signs and elements; name specific signs (Scorpio, Pisces, Virgo, etc.) where relevant. If user context (life path, chakra, MBTI) is provided above, you may briefly reference it to personalize. No second paragraph.
+- "narrative": string, exactly ONE paragraph of exactly FOUR sentences. Weave together their signs and elements; name specific signs (Scorpio, Pisces, Virgo, etc.) where relevant. Do NOT reference other tests or systems. No second paragraph.
 - "strengths": array of 2-5 short strings (e.g. "Keen intuition", "deep analysis", "transformative vision")
 - "challenges": array of 2-5 short strings (e.g. "Overthinking", "neglect of physical needs", "emotional burnout")
 - "avoidThis": array of 2-4 short strings (what to avoid, e.g. "Skipping grounding in favor of endless metaphysical inquiry")
-- "overlaps": array of 0-4 objects with "label" (e.g. "INFJ (MBTI)") and "description" (short connection, e.g. "empathic insight married to idealistic vision")
+- "overlaps": array of 0-4 objects with "label" and "description" linking only to other astrological concepts or same-chart themes (e.g. "Water dominance" with a short description). Do NOT reference MBTI or other non-astrology systems.
 - "tryThis": array of 2-4 short strings (specific practices, e.g. "Moonlit Journaling: once per lunar cycle, write by moonlight")
 - "spiritualInsight": string, one closing sentence or short paragraph (e.g. "You're here to decode humanity's hidden currents and translate them into compassionate service.")
 
@@ -137,10 +136,9 @@ NUMEROLOGY_BLUEPRINT_USER = """The user's numerology (from birth date and name):
 - Soul urge number: {soul_urge}
 - Birthday number: {birthday_number}
 - Expression number: {expression_number}
-{user_context}
 
 Return exactly one JSON object with this key only:
-- "items": array of exactly 4 objects in this order: Life Path, Soul Urge, Birthday Number, Expression. Each object: "number" (string, the number), "title" (string: "Life Path" | "Soul Urge" | "Birthday Number" | "Expression"), "description" (string: exactly ONE sentence, maximum 70 characters, personalized for this user). Use the numbers above; do not invent. You may reference their strongest chakra or MBTI type if provided to enrich the descriptions.
+- "items": array of exactly 4 objects in this order: Life Path, Soul Urge, Birthday Number, Expression. Each object: "number" (string, the number), "title" (string: "Life Path" | "Soul Urge" | "Birthday Number" | "Expression"), "description" (string: exactly ONE sentence, maximum 70 characters, personalized for this user based only on numerology). Use the numbers above; do not invent. Write in a self-contained way (e.g. "Your soul craves freedom and adventure."). Do NOT reference other tests, MBTI, chakra, or any system outside numerology—keep this result independent.
 
 Output only the JSON object, nothing else."""
 

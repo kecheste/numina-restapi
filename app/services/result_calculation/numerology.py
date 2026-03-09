@@ -1,11 +1,13 @@
 """
 Numerology: Life Path, Birthday, Soul Urge, Expression.
 Rules:
-- Life Path = sum all digits of full birth date, reduce to one digit (keep 11/22/33).
-- Birthday Number = day of birth only, reduce (keep 11/22).
-- Soul Urge = sum of vowels in full name (Pythagorean 1-9), then reduce (keep 11/22/33).
+- Life Path = sum all digits of full birth date, reduce to one digit (keep 11/22/33). Uses same logic as life_path_number module.
+- Birthday Number = day of birth only, reduce (keep 11/22). Computed from birth_day; not stored on user.
+- Soul Urge = sum of vowels in first name only (Pythagorean 1-9), then reduce (keep 11/22/33).
 - Expression = sum of all letters in full name (Pythagorean 1-9), then reduce (keep 11/22/33).
 """
+
+from app.services.result_calculation.life_path_number import compute_life_path_number
 
 MASTER_NUMBERS = (11, 22, 33)
 
@@ -30,6 +32,11 @@ def _pythagorean_value(c: str) -> int:
     return (n - 1) % 9 + 1
 
 
+def _first_name(full_or_display_name: str) -> str:
+    """First token of name (e.g. 'John' from 'John Doe' or 'John Doe, Father Name')."""
+    return (full_or_display_name or "").strip().split()[0] if (full_or_display_name or "").strip() else ""
+
+
 def compute_numerology(
     *,
     birth_year: int,
@@ -39,29 +46,38 @@ def compute_numerology(
 ) -> dict[str, int] | None:
     """
     Compute life_path, birthday_number, soul_urge, expression_number.
-    Uses full_name if provided in name (for Soul Urge/Expression). Otherwise name.
-    Returns None if name is missing or empty after stripping.
+    - Life path: from life_path_number module (single source of truth).
+    - Birthday: from birth_day only (not stored on user).
+    - Soul urge: vowels in first name only (name may be "John Doe" or include father name).
+    - Expression: all letters in full name (name = full_name or name from user).
+    Returns None if name is missing or empty after stripping, or date invalid.
     """
-    date_str = f"{birth_year:04d}{birth_month:02d}{birth_day:02d}"
-    digits = [int(d) for d in date_str if d.isdigit()]
-    if not digits:
+    life_path_result = compute_life_path_number(
+        birth_year=birth_year,
+        birth_month=birth_month,
+        birth_day=birth_day,
+    )
+    if not life_path_result:
         return None
-    life_path = _reduce(sum(digits), keep_master=True)
+    life_path = life_path_result["lifePath"]
 
     day_digits = [int(d) for d in str(birth_day) if d.isdigit()]
     birthday_number = _reduce(sum(day_digits), keep_master=True) if day_digits else 0
 
-    clean_name = (name or "").strip().upper()
-    if not clean_name:
+    full_name = (name or "").strip().upper()
+    if not full_name:
         return None
 
+    first_name = _first_name(name or "").upper()
+    if not first_name:
+        return None
     vowels = "AEIOU"
-    vowel_sum = sum(_pythagorean_value(c) for c in clean_name if c in vowels and "A" <= c <= "Z")
+    vowel_sum = sum(_pythagorean_value(c) for c in first_name if c in vowels and "A" <= c <= "Z")
     if vowel_sum == 0:
         return None
     soul_urge = _reduce(vowel_sum, keep_master=True)
 
-    letter_sum = sum(_pythagorean_value(c) for c in clean_name if "A" <= c <= "Z")
+    letter_sum = sum(_pythagorean_value(c) for c in full_name if "A" <= c <= "Z")
     if letter_sum == 0:
         return None
     expression_number = _reduce(letter_sum, keep_master=True)

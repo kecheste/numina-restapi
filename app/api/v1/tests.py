@@ -195,9 +195,6 @@ async def get_astrology_chart_narrative(
             "air": el.get("air", 0),
             "water": el.get("water", 0),
         },
-        life_path_number=user.life_path_number,
-        strongest_chakra=user.strongest_chakra,
-        mbti_type=user.mbti_type,
     )
     overlaps = [
         {"label": o.get("label", ""), "description": o.get("description", "")}
@@ -250,7 +247,6 @@ async def get_numerology(
         .values(
             life_path_number=result["life_path"],
             soul_urge_number=result["soul_urge"],
-            birthday_number=result["birthday_number"],
             expression_number=result["expression_number"],
         )
     )
@@ -347,8 +343,6 @@ async def get_onboarding_numerology_blueprint(
         soul_urge=result["soul_urge"],
         birthday_number=result["birthday_number"],
         expression_number=result["expression_number"],
-        strongest_chakra=user.strongest_chakra,
-        mbti_type=user.mbti_type,
     )
 
     await db.execute(
@@ -357,7 +351,6 @@ async def get_onboarding_numerology_blueprint(
         .values(
             life_path_number=result["life_path"],
             soul_urge_number=result["soul_urge"],
-            birthday_number=result["birthday_number"],
             expression_number=result["expression_number"],
         )
     )
@@ -402,8 +395,8 @@ async def get_soul_urge(
     user: UserModel = Depends(get_current_active_user),
 ):
     """
-    Soul Urge / Heart's Desire from vowels in full name (Pythagorean).
-    Uses full_name if set, else name. Returns soulUrge, traits[], strengths[], challenges[].
+        Soul Urge / Heart's Desire from vowels in first name (Pythagorean).
+        Uses first name only (e.g. 'John' from full_name or name). Returns soulUrge, traits[], strengths[], challenges[].
     """
     full_name = (user.full_name or user.name or "").strip()
     if not full_name:

@@ -406,30 +406,14 @@ async def call_llm_for_astrology_chart_narrative(
     moon_sign: str,
     rising_sign: str,
     element_distribution: dict[str, int],
-    *,
-    life_path_number: int | None = None,
-    strongest_chakra: str | None = None,
-    mbti_type: str | None = None,
 ) -> dict[str, Any]:
-    """Generate full detailed narrative for the Astrology Chart result view. Optional user context enriches the narrative."""
+    """Generate full detailed narrative for the Astrology Chart result view. Kept independent of other systems (no MBTI/chakra/life path)."""
     if not settings.openai_api_key:
         return _fallback_astrology_chart_narrative()
     fire = element_distribution.get("fire", 0)
     earth = element_distribution.get("earth", 0)
     air = element_distribution.get("air", 0)
     water = element_distribution.get("water", 0)
-    parts = []
-    if life_path_number is not None:
-        parts.append(f"- Life path number: {life_path_number}")
-    if strongest_chakra and str(strongest_chakra).strip():
-        parts.append(f"- Strongest chakra: {strongest_chakra.strip()}")
-    if mbti_type and str(mbti_type).strip():
-        parts.append(f"- MBTI type: {mbti_type.strip()}")
-    user_context = "\n".join(parts) if parts else ""
-    if user_context:
-        user_context = "User context (use to personalize the narrative when relevant):\n" + user_context
-    else:
-        user_context = ""
     user_content = ASTROLOGY_CHART_NARRATIVE_USER.format(
         sun_sign=sun_sign,
         moon_sign=moon_sign,
@@ -438,7 +422,6 @@ async def call_llm_for_astrology_chart_narrative(
         earth=earth,
         air=air,
         water=water,
-        user_context=user_context,
     )
     try:
         from openai import AsyncOpenAI
@@ -549,29 +532,17 @@ async def call_llm_for_numerology_blueprint(
     soul_urge: int,
     birthday_number: int,
     expression_number: int,
-    *,
-    strongest_chakra: str | None = None,
-    mbti_type: str | None = None,
 ) -> dict[str, Any]:
-    """Generate short AI copy for onboarding numerology blueprint screen. Uses all four numbers and optional user context."""
+    """Generate short AI copy for onboarding numerology blueprint screen. Uses only the four numbers; no MBTI/chakra so systems stay independent."""
     if not settings.openai_api_key:
         return _fallback_numerology_blueprint(
             life_path, soul_urge, birthday_number, expression_number
         )
-    parts = []
-    if strongest_chakra and str(strongest_chakra).strip():
-        parts.append(f"- Strongest chakra: {strongest_chakra.strip()}")
-    if mbti_type and str(mbti_type).strip():
-        parts.append(f"- MBTI type: {mbti_type.strip()}")
-    user_context = "\n".join(parts) if parts else ""
-    if user_context:
-        user_context = "Additional user context (use to personalize descriptions when relevant):\n" + user_context
     user_content = NUMEROLOGY_BLUEPRINT_USER.format(
         life_path=life_path,
         soul_urge=soul_urge,
         birthday_number=birthday_number,
         expression_number=expression_number,
-        user_context=user_context,
     )
     try:
         from openai import AsyncOpenAI
