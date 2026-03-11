@@ -72,7 +72,7 @@ def compute_numerology(
     if not first_name:
         return None
     vowels = "AEIOU"
-    vowel_sum = sum(_pythagorean_value(c) for c in first_name if c in vowels and "A" <= c <= "Z")
+    vowel_sum = sum(_pythagorean_value(c) for c in full_name if c in vowels and "A" <= c <= "Z")
     if vowel_sum == 0:
         return None
     soul_urge = _reduce(vowel_sum, keep_master=True)

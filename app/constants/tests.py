@@ -19,7 +19,7 @@ class TestItem(TypedDict):
 
 TESTS: list[TestItem] = [
     {"id": 1, "slug": "astrology-chart", "title": "Astrology Chart", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": False, "auto_generated": True},
-    {"id": 7, "slug": "mbti-type", "title": "MBTI Type", "category": "Psychological Profile", "category_id": "psychological", "questions": 4, "premium": False, "auto_generated": False},
+    {"id": 7, "slug": "mbti-type", "title": "MBTI Type", "category": "Psychological Profile", "category_id": "psychological", "questions": 12, "premium": False, "auto_generated": False},
     {"id": 13, "slug": "chakra-assessment-scan", "title": "Chakra Assessment Scan", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 10, "premium": False, "auto_generated": False},
     {"id": 19, "slug": "life-path-number", "title": "Life Path Number", "category": "Soul Path & Karma", "category_id": "soul", "questions": 0, "premium": False, "auto_generated": True},
     {"id": 2, "slug": "numerology", "title": "Numerology", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": True, "auto_generated": False},

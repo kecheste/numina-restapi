@@ -45,6 +45,9 @@ class AstrologyChartResponse(BaseModel):
     moon_sign: str
     rising_sign: str
     element_distribution: ElementDistribution
+    sun_description: str | None = None
+    moon_description: str | None = None
+    rising_description: str | None = None
 
 
 class NumerologyResponse(BaseModel):
@@ -56,32 +59,45 @@ class NumerologyResponse(BaseModel):
     expression_number: int
 
 
-class AstrologyBlueprintResponse(BaseModel):
-    """AI-generated copy for onboarding astrology blueprint screen."""
-
-    sun_description: str
-    moon_description: str
-    rising_description: str
-    cosmic_traits_summary: str
-
-
 class AstrologyChartNarrativeOverlap(BaseModel):
     label: str
     description: str
 
 
+class AstrologyBlueprintResponse(BaseModel):
+    """AI-generated copy for onboarding astrology blueprint screen."""
+
+    status: str = "completed"
+    result_id: int | None = None
+    sun_description: str | None = None
+    moon_description: str | None = None
+    rising_description: str | None = None
+    cosmic_traits_summary: str | None = None
+    strengths: list[str] | None = None
+    challenges: list[str] | None = None
+    avoid_this: list[str] | None = None
+    overlaps: list[AstrologyChartNarrativeOverlap] | None = None
+    try_this: list[str] | None = None
+    spiritual_insight: str | None = None
+
+
 class AstrologyChartNarrativeResponse(BaseModel):
     """AI-generated full narrative for Astrology Chart result view."""
 
-    title: str
-    core_traits: list[str]
-    narrative: str
-    strengths: list[str]
-    challenges: list[str]
-    avoid_this: list[str]
-    overlaps: list[AstrologyChartNarrativeOverlap]
-    try_this: list[str]
-    spiritual_insight: str
+    status: str = "completed"
+    result_id: int | None = None
+    title: str | None = None
+    core_traits: list[str] | None = None
+    narrative: str | None = None
+    strengths: list[str] | None = None
+    challenges: list[str] | None = None
+    avoid_this: list[str] | None = None
+    overlaps: list[AstrologyChartNarrativeOverlap] | None = None
+    try_this: list[str] | None = None
+    spiritual_insight: str | None = None
+    sun_description: str | None = None
+    moon_description: str | None = None
+    rising_description: str | None = None
 
 
 class NumerologyBlueprintItem(BaseModel):
@@ -93,7 +109,9 @@ class NumerologyBlueprintItem(BaseModel):
 class NumerologyBlueprintResponse(BaseModel):
     """AI-generated copy for onboarding numerology blueprint screen."""
 
-    items: list[NumerologyBlueprintItem]
+    status: str = "completed"
+    result_id: int | None = None
+    items: list[NumerologyBlueprintItem] | None = None
 
 
 class EnergySynthesisResponse(BaseModel):

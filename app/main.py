@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup: run DB migrations (so users table exists), Redis + Arq pool. Shutdown: close both."""

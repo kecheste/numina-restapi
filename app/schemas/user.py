@@ -30,6 +30,18 @@ class UserResponse(BaseModel):
     mbti_type: str | None = None
     mbti_descriptor: str | None = None
     strongest_chakra: str | None = None
+    # Astrology Blueprint
+    sun_sign: str | None = None
+    sun_description: str | None = None
+    moon_sign: str | None = None
+    moon_description: str | None = None
+    rising_sign: str | None = None
+    rising_description: str | None = None
+    cosmic_traits_summary: str | None = None
+    astrology_blueprint: dict | None = None
+    # Numerology Blueprint
+    numerology_blueprint: list | None = None
+
     created_at: datetime
     updated_at: datetime
 

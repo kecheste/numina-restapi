@@ -9,12 +9,17 @@ from app.constants.questions import QUESTIONS_BY_TEST_ID
 from app.constants.tests import TESTS, get_test_id
 from app.core.dependencies import get_current_active_user, get_db, get_optional_current_user
 from app.core.exceptions import conflict, not_found
-from app.core.queue import enqueue_refine_test_result
+from app.core.queue import (
+    enqueue_refine_test_result,
+    enqueue_astrology_blueprint,
+    enqueue_numerology_blueprint,
+)
 from app.core.redis import cache_get, cache_set, cache_key_test_list, TEST_LIST_CACHE_TTL
 from app.db.models.user import User as UserModel
 from app.db.models.test_result import TestResult
 from app.schemas.test_result import (
     AstrologyBlueprintResponse,
+    AstrologyChartNarrativeOverlap,
     AstrologyChartNarrativeResponse,
     AstrologyChartResponse,
     EnergySynthesisResponse,
@@ -30,11 +35,6 @@ from app.schemas.test_result import (
     TestListItem,
     TestsListResponse,
     TestResultResponse,
-)
-from app.services.llm import (
-    call_llm_for_astrology_blueprint,
-    call_llm_for_astrology_chart_narrative,
-    call_llm_for_numerology_blueprint,
 )
 from app.services.result_calculation.astrology import compute_astrology
 from app.services.result_calculation.energy_synthesis import compute_energy_synthesis
@@ -151,6 +151,10 @@ async def get_astrology_chart(
         moon_sign=result["moon_sign"],
         rising_sign=result["rising_sign"],
         element_distribution=result["element_distribution"],
+        sun_description=user.sun_description,
+        moon_description=user.moon_description,
+        rising_description=user.rising_description,
+        cosmic_traits_summary=user.cosmic_traits_summary,
     )
 
 
@@ -184,7 +188,6 @@ async def get_astrology_chart_narrative(
     )
     if result is None:
         raise not_found("Could not compute astrology chart for this birth data.")
-
     existing_q = await db.execute(
         select(TestResult).where(
             TestResult.user_id == user.id,
@@ -193,50 +196,35 @@ async def get_astrology_chart_narrative(
         ).order_by(TestResult.completed_at.desc()).limit(1)
     )
     existing = existing_q.scalar_one_or_none()
-    if existing is not None and isinstance(existing.llm_result_json, dict):
-        data = existing.llm_result_json
-    else:
-        el = result.get("element_distribution") or {}
-        data = await call_llm_for_astrology_chart_narrative(
-            sun_sign=result["sun_sign"],
-            moon_sign=result["moon_sign"],
-            rising_sign=result["rising_sign"],
-            element_distribution={
-                "fire": el.get("fire", 0),
-                "earth": el.get("earth", 0),
-                "air": el.get("air", 0),
-                "water": el.get("water", 0),
-            },
+    if existing is None:
+        existing = TestResult(
+            user_id=user.id,
+            test_id=1,
+            test_title="Astrology Chart Narrative",
+            category="Cosmic Identity",
+            answers=result,
+            status="pending_ai",
+            extracted_json=result,
         )
-        if existing is None:
-            existing = TestResult(
-                user_id=user.id,
-                test_id=1,
-                test_title="Astrology Chart Narrative",
-                category="Cosmic Identity",
-                answers=result,
-                status="completed",
-                score=None,
-                personality_type=None,
-                insights=None,
-                recommendations=None,
-                narrative=data.get("narrative", ""),
-                extracted_json=result,
-                llm_result_json=data,
-            )
-            db.add(existing)
-        else:
-            existing.llm_result_json = data
-            existing.narrative = data.get("narrative", "")
-            existing.extracted_json = result
-            existing.status = "completed"
+        db.add(existing)
         await db.commit()
+        await db.refresh(existing)
+        await enqueue_refine_test_result(existing.id)
 
+    if existing.status == "pending_ai":
+        return AstrologyChartNarrativeResponse(
+            status="pending_ai",
+            result_id=existing.id,
+        )
+
+    data = existing.llm_result_json or {}
     overlaps = [
-        {"label": o.get("label", ""), "description": o.get("description", "")}
+        AstrologyChartNarrativeOverlap(label=o.get("label", ""), description=o.get("description", ""))
         for o in data.get("overlaps", [])
     ]
     return AstrologyChartNarrativeResponse(
+        status="completed",
+        result_id=existing.id,
         title=data.get("title", "Your Astrology Chart"),
         core_traits=data.get("coreTraits", []),
         narrative=data.get("narrative", ""),
@@ -246,7 +234,12 @@ async def get_astrology_chart_narrative(
         overlaps=overlaps,
         try_this=data.get("tryThis", []),
         spiritual_insight=data.get("spiritualInsight", ""),
+        sun_description=user.sun_description,
+        moon_description=user.moon_description,
+        rising_description=user.rising_description,
+        cosmic_traits_summary=user.cosmic_traits_summary,
     )
+
 
 
 @router.get("/tests/numerology", response_model=NumerologyResponse)
@@ -299,10 +292,11 @@ async def get_numerology(
 @router.get("/tests/onboarding/astrology-blueprint", response_model=AstrologyBlueprintResponse)
 async def get_onboarding_astrology_blueprint(
     user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
-    AI-generated copy for the onboarding astrology blueprint screen.
-    Requires full birth data (date + place). Used only in onboarding flow.
+    Returns astrology blueprint teaser data from user profile.
+    Trigger worker if not present.
     """
     if (
         user.birth_year is None
@@ -312,37 +306,32 @@ async def get_onboarding_astrology_blueprint(
         or user.birth_place_lng is None
         or user.birth_place_timezone is None
     ):
-        raise not_found("Birth data incomplete; need date and place (with coordinates and timezone).")
+        raise not_found("Birth data incomplete.")
 
-    result = compute_astrology(
-        birth_year=user.birth_year,
-        birth_month=user.birth_month,
-        birth_day=user.birth_day,
-        birth_time=user.birth_time,
-        birth_place_lat=user.birth_place_lat,
-        birth_place_lng=user.birth_place_lng,
-        birth_place_timezone=user.birth_place_timezone,
-    )
-    if result is None:
-        raise not_found("Could not compute astrology chart for this birth data.")
+    if not user.sun_description:
+        await enqueue_astrology_blueprint(user.id)
+        return AstrologyBlueprintResponse(
+            status="pending_ai",
+        )
 
-    el = result.get("element_distribution") or {}
-    data = await call_llm_for_astrology_blueprint(
-        sun_sign=result["sun_sign"],
-        moon_sign=result["moon_sign"],
-        rising_sign=result["rising_sign"],
-        element_distribution={
-            "fire": el.get("fire", 0),
-            "earth": el.get("earth", 0),
-            "air": el.get("air", 0),
-            "water": el.get("water", 0),
-        },
-    )
+    data = user.astrology_blueprint or {}
+    overlaps = [
+        AstrologyChartNarrativeOverlap(label=o.get("label", ""), description=o.get("description", ""))
+        for o in data.get("overlaps", [])
+    ] if isinstance(data.get("overlaps"), list) else []
+
     return AstrologyBlueprintResponse(
-        sun_description=data.get("sunDescription", ""),
-        moon_description=data.get("moonDescription", ""),
-        rising_description=data.get("risingDescription", ""),
-        cosmic_traits_summary=data.get("cosmicTraitsSummary", ""),
+        status="completed",
+        sun_description=user.sun_description,
+        moon_description=user.moon_description,
+        rising_description=user.rising_description,
+        cosmic_traits_summary=user.cosmic_traits_summary,
+        strengths=data.get("strengths", []),
+        challenges=data.get("challenges", []),
+        avoid_this=data.get("avoidThis", []),
+        overlaps=overlaps,
+        try_this=data.get("tryThis", []),
+        spiritual_insight=data.get("spiritualInsight", ""),
     )
 
 
@@ -352,8 +341,8 @@ async def get_onboarding_numerology_blueprint(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    AI-generated copy for the onboarding numerology blueprint screen.
-    Requires birth date and name. Persists life path, soul urge, birthday, expression to user. Used only in onboarding flow.
+    Returns numerology blueprint teaser data (items) from user profile.
+    Trigger worker if not present.
     """
     if (
         user.birth_year is None
@@ -361,40 +350,75 @@ async def get_onboarding_numerology_blueprint(
         or user.birth_day is None
     ):
         raise not_found("Birth date incomplete.")
+
     name_for_numerology = (user.full_name or user.name or "").strip()
     if not name_for_numerology:
-        raise not_found("Name or full name is required for Soul Urge and Expression.")
+        raise not_found("Name is required.")
 
-    result = compute_numerology(
-        birth_year=user.birth_year,
-        birth_month=user.birth_month,
-        birth_day=user.birth_day,
-        name=name_for_numerology,
-    )
-    if result is None:
-        raise not_found("Could not compute numerology for this data.")
-
-    data = await call_llm_for_numerology_blueprint(
-        life_path=result["life_path"],
-        soul_urge=result["soul_urge"],
-        birthday_number=result["birthday_number"],
-        expression_number=result["expression_number"],
-    )
-
-    await db.execute(
-        update(UserModel)
-        .where(UserModel.id == user.id)
-        .values(
-            life_path_number=result["life_path"],
-            soul_urge_number=result["soul_urge"],
-            expression_number=result["expression_number"],
+    if not user.numerology_blueprint:
+        await enqueue_numerology_blueprint(user.id)
+        return NumerologyBlueprintResponse(
+            status="pending_ai",
         )
-    )
-    await db.commit()
 
     return NumerologyBlueprintResponse(
-        items=[NumerologyBlueprintItem(**i) for i in data.get("items", [])],
+        status="completed",
+        items=[NumerologyBlueprintItem(**i) for i in user.numerology_blueprint],
     )
+
+
+@router.post("/tests/onboarding/finish")
+async def post_onboarding_finish(
+    user: UserModel = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Complete the onboarding process:
+    1) Verify required tests (7, 13)
+    2) Auto-generate Life Path Number (19) result
+    3) Finalize user profile and trigger synthesis
+    """
+    # 1. Verification (Optional but good pattern)
+    # 2. Auto-generate Life Path (19)
+    if (
+        user.birth_year is not None
+        and user.birth_month is not None
+        and user.birth_day is not None
+    ):
+        lp_data = compute_life_path_number(
+            birth_year=user.birth_year,
+            birth_month=user.birth_month,
+            birth_day=user.birth_day,
+        )
+        if lp_data:
+            # Check if exists
+            exists_q = await db.execute(
+                select(TestResult).where(
+                    TestResult.user_id == user.id,
+                    TestResult.test_id == 19
+                ).limit(1)
+            )
+            if exists_q.scalar_one_or_none() is None:
+                lp_res = TestResult(
+                    user_id=user.id,
+                    test_id=19,
+                    test_title="Life Path Number",
+                    category="Soul Path & Karma",
+                    answers=lp_data,
+                    status="pending_ai",
+                    extracted_json=lp_data,
+                )
+                db.add(lp_res)
+                await db.commit()
+                await db.refresh(lp_res)
+                await enqueue_refine_test_result(lp_res.id)
+
+    # 3. Trigger Synthesis (Ensure it's ready for first home view)
+    async with AsyncSessionLocal() as session:
+        from app.worker.helpers import generate_synthesis_for_user
+        await generate_synthesis_for_user(session, user.id)
+
+    return {"message": "Onboarding completed"}
 
 
 @router.get("/tests/life-path-number", response_model=LifePathNumberResponse)
@@ -494,44 +518,6 @@ async def submit_test(
     return SubmitTestResponse(result_id=row.id, status="pending_ai")
 
 
-LIFE_PATH_TEST_ID = 19
-
-@router.post("/tests/ensure-onboarding-life-path")
-async def ensure_onboarding_life_path(
-    user: UserModel = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """After onboarding, ensure Life Path (19) result exists. Creates a result and enqueues worker if user has DOB and no existing result."""
-    if (
-        user.birth_year is None
-        or user.birth_month is None
-        or user.birth_day is None
-    ):
-        return {"queued": False, "reason": "missing_dob"}
-    existing = await db.execute(
-        select(TestResult.id).where(
-            TestResult.user_id == user.id,
-            TestResult.test_id == LIFE_PATH_TEST_ID,
-        ).limit(1)
-    )
-    if existing.scalar_one_or_none() is not None:
-        return {"queued": False, "already_exists": True}
-    test_item = next((t for t in TESTS if t["id"] == LIFE_PATH_TEST_ID), None)
-    if not test_item:
-        return {"queued": False, "reason": "test_not_found"}
-    row = TestResult(
-        user_id=user.id,
-        test_id=LIFE_PATH_TEST_ID,
-        test_title=test_item["title"],
-        category=test_item["category"],
-        answers=[],
-        status="pending_ai",
-    )
-    db.add(row)
-    await db.commit()
-    await db.refresh(row)
-    enqueued = await enqueue_refine_test_result(row.id)
-    return {"queued": enqueued, "result_id": row.id}
 
 
 @router.get("/tests/results", response_model=list[TestResultResponse])

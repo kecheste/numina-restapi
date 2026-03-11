@@ -1,4 +1,5 @@
 from sqlalchemy import Float, String, DateTime, Boolean, Integer, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -37,6 +38,19 @@ class User(Base):
     mbti_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     mbti_descriptor: Mapped[str | None] = mapped_column(String(100), nullable=True)
     strongest_chakra: Mapped[str | None] = mapped_column(String(50), nullable=True)
+
+    # Astrology Blueprint (Short Teaser)
+    sun_sign: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    sun_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    moon_sign: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    moon_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    rising_sign: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    rising_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cosmic_traits_summary: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    astrology_blueprint: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+    # Numerology Blueprint (Items)
+    numerology_blueprint: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),

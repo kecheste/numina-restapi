@@ -94,32 +94,128 @@ CHAKRA_ALIGNMENT_SCAN_QUESTIONS: list[QuestionOut] = [
 ]
 
 MBTI_TYPE_QUESTIONS: list[QuestionOut] = [
+    # --- I / E ---
     QuestionOut(
         id=1,
-        prompt="Do you gain energy from being alone or with others?",
+        prompt="Where do you usually regain energy?",
         answer_type="single_choice",
-        options=["Alone (I)", "With Others (E)"],
+        options=[
+            "Spending quiet time alone (I)",
+            "Being around people or social activity (E)",
+        ],
         required=True,
     ),
     QuestionOut(
         id=2,
-        prompt="Do you focus more on ideas or on facts?",
+        prompt="In social situations you tend to:",
         answer_type="single_choice",
-        options=["Ideas (N)", "Facts (S)"],
+        options=[
+            "Listen more and speak selectively (I)",
+            "Speak easily and engage actively (E)",
+        ],
         required=True,
     ),
     QuestionOut(
         id=3,
-        prompt="When deciding, do you lean on feelings or logic?",
+        prompt="After a busy day you prefer to:",
         answer_type="single_choice",
-        options=["Feelings (F)", "Logic (T)"],
+        options=[
+            "Recharge in solitude (I)",
+            "Do something with others (E)",
+        ],
+        required=True,
+    ),
+    # --- N / S ---
+    QuestionOut(
+        id=4,
+        prompt="When learning something new you prefer:",
+        answer_type="single_choice",
+        options=[
+            "Concepts and possibilities (N)",
+            "Practical details and facts (S)",
+        ],
         required=True,
     ),
     QuestionOut(
-        id=4,
-        prompt="Do you prefer planning or spontaneity?",
+        id=5,
+        prompt="When thinking about the future you focus more on:",
         answer_type="single_choice",
-        options=["Planned (J)", "Flexible (P)"],
+        options=[
+            "What could be possible (N)",
+            "What is realistically likely (S)",
+        ],
+        required=True,
+    ),
+    QuestionOut(
+        id=6,
+        prompt="You tend to trust more:",
+        answer_type="single_choice",
+        options=[
+            "Patterns and intuition (N)",
+            "Experience and observable facts (S)",
+        ],
+        required=True,
+    ),
+    # --- F / T ---
+    QuestionOut(
+        id=7,
+        prompt="When making decisions you usually rely more on:",
+        answer_type="single_choice",
+        options=[
+            "Personal values and empathy (F)",
+            "Logic and objective analysis (T)",
+        ],
+        required=True,
+    ),
+    QuestionOut(
+        id=8,
+        prompt="In conflict situations you prioritize:",
+        answer_type="single_choice",
+        options=[
+            "Maintaining harmony (F)",
+            "Finding the most rational solution (T)",
+        ],
+        required=True,
+    ),
+    QuestionOut(
+        id=9,
+        prompt="You tend to evaluate situations based on:",
+        answer_type="single_choice",
+        options=[
+            "How people are affected (F)",
+            "What makes the most sense logically (T)",
+        ],
+        required=True,
+    ),
+    # --- J / P ---
+    QuestionOut(
+        id=10,
+        prompt="You generally prefer your life to feel:",
+        answer_type="single_choice",
+        options=[
+            "Organized and planned (J)",
+            "Flexible and spontaneous (P)",
+        ],
+        required=True,
+    ),
+    QuestionOut(
+        id=11,
+        prompt="When approaching tasks you usually:",
+        answer_type="single_choice",
+        options=[
+            "Plan ahead and follow structure (J)",
+            "Adapt as things unfold (P)",
+        ],
+        required=True,
+    ),
+    QuestionOut(
+        id=12,
+        prompt="You feel most comfortable when:",
+        answer_type="single_choice",
+        options=[
+            "Decisions are settled (J)",
+            "Options remain open (P)",
+        ],
         required=True,
     ),
 ]

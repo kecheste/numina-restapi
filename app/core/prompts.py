@@ -41,6 +41,9 @@ Avoid:
 - medical claims
 - absolute statements about personality.
 
+Write in calm, natural language addressing the user as "you", avoiding overly mystical or exaggerated statements.
+The goal is to make the reading feel more like a thoughtful interpretation rather than repeating similar traits in multiple places.
+
 STRUCTURE RULES
 
 Lists must contain between 2 and 5 items unless otherwise specified.
@@ -93,8 +96,9 @@ Computed/structured result for this user (use only this; do not invent data):
 
 Return exactly one JSON object with these keys only:
 - "title": string, one short catchy title (e.g. "The Reflective Seeker")
-- "summary": string, short intro/overview paragraph (2-4 sentences) for the result screen
-- "coreTraits": array of 2-5 short strings (bullets or tags)
+- "summary": string, 2-3 paragraphs separated by \\n\\n (Paragraph 1: core personality/theme. Paragraph 2: deeper dynamic/inner workings. Paragraph 3: life direction/how these energies show up in life patterns)
+- "shortDescription": string, a single paragraph (2-4 sentences) summarizing the result, completely distinct from the summary paragraphs above
+- "coreTraits": array of 2-5 short descriptive phrases, not single words (e.g. "You recharge alone, but care deeply about others")
 - "strengths": array of 2-5 short strings (bullets)
 - "challenges": array of 2-5 short strings (bullets)
 - "spiritualInsight": string, one paragraph spiritual interpretation
@@ -117,7 +121,7 @@ Also include the full chakra alignment result so we can display it on the result
 - For "synchronicities" use objects with "label" (e.g. "Life Path 7") and "description" (short connection) instead of "test" and "connection".
 """
 TEST_RESULT_JSON_KEYS = frozenset({
-    "title", "summary", "coreTraits", "strengths", "challenges",
+    "title", "summary", "shortDescription", "coreTraits", "strengths", "challenges",
     "spiritualInsight", "tryThis", "avoidThis", "synchronicities",
 })
 CHAKRA_PREVIEW_JSON_KEYS = frozenset({"strongestChakra", "needsRebalancing", "statusSummary", "chakras"})
@@ -185,14 +189,23 @@ Return exactly one JSON object with these keys only:
   Line 2: ☌ Modality: [one of: Fixed / Mutable / Cardinal — from their sun/moon/rising]
   Line 3: ♇ Ruling Planet: [e.g. Pluto, Mars, Venus — main ruling planet(s) for their chart]
   Line 4: 🌠 Most active house: [e.g. 7th – Partnerships — the most emphasized house]
+- "strengths": array of 2-5 short phrases
+- "challenges": array of 2-5 short phrases
+- "avoidThis": array of 2-4 short phrases
+- "tryThis": array of 2-4 short phrases
+- "overlaps": array of 2-4 objects with "label" and "description" linking only to other astrological concepts (e.g. "Pisces Sun + Cancer Moon: Emotional depth and psychic receptivity")
+- "spiritualInsight": string, 1-2 sentences on their soul's journey
 
 Output only the JSON object, nothing else."""
 
-ASTROLOGY_BLUEPRINT_JSON_KEYS = frozenset({"sunDescription", "moonDescription", "risingDescription", "cosmicTraitsSummary"})
+ASTROLOGY_BLUEPRINT_JSON_KEYS = frozenset({
+    "sunDescription", "moonDescription", "risingDescription", "cosmicTraitsSummary",
+    "strengths", "challenges", "avoidThis", "tryThis", "overlaps", "spiritualInsight"
+})
 
 ASTROLOGY_CHART_NARRATIVE_SYSTEM = """You are a warm, insightful astrologer. You write only valid JSON. No markdown, no code fences.
 Create a rich, personalized interpretation of the user's chart. Use their actual sun, moon, rising signs and element distribution. Be specific (e.g. mention Scorpio, Pisces, Virgo, Capricorn by name when relevant). Keep arrays to 2-5 items.
-The "narrative" field must be exactly ONE paragraph and exactly FOUR sentences—no more, no less. Weave together their signs and elements only. Do NOT reference MBTI, chakra, life path, or other systems—keep this result independent; mixing happens only in the final synthesis."""
+The "narrative" field must be 2-3 paragraphs separated by \\n\\n. Each paragraph should have 3-5 sentences. Weave together their signs and elements only. Do NOT reference MBTI, chakra, life path, or other systems—keep this result independent; mixing happens only in the final synthesis."""
 
 ASTROLOGY_CHART_NARRATIVE_USER = """The user's astrology chart (from birth data):
 - Sun sign: {sun_sign}
@@ -206,19 +219,22 @@ ASTROLOGY_CHART_NARRATIVE_USER = """The user's astrology chart (from birth data)
 
 Return exactly one JSON object with these keys only:
 - "title": string, create a short title describing the overall energy of the chart (e.g. "Astrology Chart – Complex, Reflective, and Spiritually Wired")
-- "coreTraits": array of 2-5 short phrases describing the user's key personality traits (e.g. "Intuitive depth", "analytical discernment", "spiritual sensitivity")
-- "narrative": string, write 2 - 3 paragraphs explaining the deeper meaning of the user's sun, moon and rising combination. Focus on inner motivations, emotional tendencies, how the person interacts with the world, how how others may percieve them.
-- "strengths": array of 2-5 short phrases describing natural strengths suggested by the chart (e.g. "Keen intuition", "deep analysis", "transformative vision")
-- "challenges": array of 2-5 short phrases describing potential growth areas or tensions in the chart (e.g. "Overthinking", "neglect of physical needs", "emotional burnout")
-- "avoidThis": array of 2-4 short phrases describing a tendency the user should be mindful of (what to avoid, e.g. "Skipping grounding in favor of endless metaphysical inquiry")
-- "overlaps": array of 0-4 objects with "label" and "description" linking only to other astrological concepts or same-chart themes (e.g. "Water dominance" with a short description). Do NOT reference MBTI or other non-astrology systems.
-- "tryThis": array of 2-4 short phrases containing practical suggestions that may help the user stay balanced (specific practices, e.g. "Moonlit Journaling: once per lunar cycle, write by moonlight")
+- "coreTraits": array of 2-5 short descriptive phrases describing the user's key personality traits (e.g. "Intuitive depth and emotional resonance", "analytical discernment with a touch of idealism")
+- "narrative": string, 2-3 paragraphs separated by \\n\\n explaining the deeper meaning of the user's sun, moon and rising combination. Paragraph 1: core personality interplay. Paragraph 2: deeper dynamic/modality/planets. Paragraph 3: life direction/patterns. The paragraphs should give deeper interpretation of how sun, moon, rising, modality, ruling planet and active house interact in the user's life. It should also feel reflective and insightful.
+- "shortDescription": string, a single paragraph (2-4 sentences) summarizing the chart, completely distinct from the narrative paragraphs above
+- "strengths": array of 2-3 short phrases describing natural strengths suggested by the chart (e.g. "Keen intuition", "deep analysis", "transformative vision"). It should feel practical and actionable
+- "challenges": array of 2-3 short phrases describing potential growth areas or tensions in the chart (e.g. "Overthinking", "neglect of physical needs", "emotional burnout"). It should feel practical and actionable
+- "avoidThis": array of 2-3 short phrases describing a tendency the user should be mindful of (what to avoid, e.g. "Skipping grounding in favor of endless metaphysical inquiry"). It should feel practical and actionable
+- "overlaps": array of 0-3 objects with "label" and "description" linking only to other astrological concepts or same-chart themes (e.g. "Water dominance" with a short description). Do NOT reference MBTI or other non-astrology systems. It should feel practical and actionable
+- "tryThis": array of 2-3 short phrases containing practical suggestions that may help the user stay balanced (specific practices, e.g. "Moonlit Journaling: once per lunar cycle, write by moonlight"). It should feel practical and actionable
 - "spiritualInsight": string, one meaningful closing sentence summarizing the deeper theme of the chart (e.g. "You're here to decode humanity's hidden currents and translate them into compassionate service.")
+
+Avoid repeating the same traits or words across different sections (for example "practical", "grounded", etc.). Each section should highlight a slightly different angle of the personality.
 
 Output only the JSON object, nothing else."""
 
 ASTROLOGY_CHART_NARRATIVE_JSON_KEYS = frozenset({
-    "title", "coreTraits", "narrative", "strengths", "challenges",
+    "title", "coreTraits", "narrative", "shortDescription", "strengths", "challenges",
     "avoidThis", "overlaps", "tryThis", "spiritualInsight",
 })
 

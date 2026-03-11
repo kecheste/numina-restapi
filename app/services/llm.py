@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 INPUT_MAX_CHARS = getattr(settings, "ai_input_max_chars", 3500)
 TEST_RESULT_PROMPT_MAX_CHARS = 8000
-OUTPUT_MAX_TOKENS = getattr(settings, "ai_result_output_max_tokens", 600)
+OUTPUT_MAX_TOKENS = getattr(settings, "ai_result_output_max_tokens", 1000)
 
 
 def _cap_input(text: str, max_chars: int | None = None) -> str:
@@ -58,6 +58,12 @@ def _extract_json_from_response(raw: str) -> dict[str, Any] | None:
         return None
 
 
+def get_case_insensitive_val(o: dict, k: str):
+    if k in o: return o[k]
+    snake = re.sub(r'(?<!^)(?=[A-Z])', '_', k).lower()
+    return o.get(snake)
+
+
 def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> dict[str, Any]:
     if not isinstance(obj, dict):
         return {}
@@ -67,15 +73,15 @@ def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> d
     )
     out = {}
     for k in allowed_keys:
-        if k not in obj:
+        v = get_case_insensitive_val(obj, k)
+        if v is None:
             continue
-        v = obj[k]
         if k in list_keys:
             out[k] = [str(x) for x in v][:8] if isinstance(v, list) else []
         elif k == "synchronicities":
             if isinstance(v, list):
                 out[k] = [
-                    {"test": str(s.get("test", "")), "connection": str(s.get("connection", ""))}
+                    {"test": str(s.get("test", s.get("label", ""))), "connection": str(s.get("connection", s.get("description", "")))}
                     for s in v if isinstance(s, dict)
                 ][:6]
             else:
@@ -394,10 +400,22 @@ def _validate_astrology_blueprint(obj: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(obj, dict):
         return fallback
     out: dict[str, Any] = {}
+
     for k in ASTROLOGY_BLUEPRINT_JSON_KEYS:
-        v = obj.get(k)
-        s = str(v).strip() if v is not None and isinstance(v, str) else ""
-        out[k] = s if s else fallback[k]
+        v = get_case_insensitive_val(obj, k)
+        if k == "overlaps":
+            if isinstance(v, list) and v:
+                out[k] = [
+                    {"label": str(s.get("label", s.get("title", ""))), "description": str(s.get("description", ""))}
+                    for s in v if isinstance(s, dict)
+                ][:6]
+            else:
+                out[k] = []
+        elif k in ("strengths", "challenges", "avoidThis", "tryThis"):
+            out[k] = [str(x) for x in v][:8] if isinstance(v, list) else []
+        else:
+            s = str(v).strip() if v is not None and isinstance(v, str) else ""
+            out[k] = s if s else fallback.get(k, "")
     return out
 
 
@@ -407,6 +425,12 @@ def _fallback_astrology_blueprint() -> dict[str, Any]:
         "moonDescription": "Your moon sign reveals how you process emotions and seek comfort.",
         "risingDescription": "Your rising sign reflects how others see you and your outward style.",
         "cosmicTraitsSummary": "🜂 Element: —\n☌ Modality: —\n♇ Ruling Planet: —\n🌠 Most active house: —",
+        "strengths": [],
+        "challenges": [],
+        "avoidThis": [],
+        "tryThis": [],
+        "overlaps": [],
+        "spiritualInsight": "",
     }
 
 
@@ -458,7 +482,7 @@ async def call_llm_for_astrology_blueprint(
                 {"role": "system", "content": BLUEPRINT_SYSTEM},
                 {"role": "user", "content": user_content},
             ],
-            max_tokens=400,
+            max_tokens=1000,
             temperature=0.4,
         )
         raw = (response.choices[0].message.content or "").strip()
@@ -469,20 +493,6 @@ async def call_llm_for_astrology_blueprint(
         logger.warning("LLM astrology blueprint call failed: %s", e)
     return _fallback_astrology_blueprint()
 
-
-def _narrative_to_one_paragraph_four_sentences(text: str) -> str:
-    """Keep only the first paragraph and at most the first 4 sentences."""
-    if not text or not isinstance(text, str):
-        return ""
-    s = text.strip()
-    first_para = s.split("\n\n")[0].strip() if "\n\n" in s else s
-    if not first_para:
-        return ""
-    sentences = re.split(r"(?<=[.!?])\s+", first_para)
-    sentences = [x.strip() for x in sentences if x.strip()][:4]
-    return " ".join(sentences) if sentences else first_para
-
-
 def _validate_astrology_chart_narrative(obj: dict[str, Any]) -> dict[str, Any]:
     """Validate and normalize astrology chart narrative response."""
     fallback = _fallback_astrology_chart_narrative()
@@ -490,24 +500,22 @@ def _validate_astrology_chart_narrative(obj: dict[str, Any]) -> dict[str, Any]:
         return fallback
     out: dict[str, Any] = {}
     for k in ASTROLOGY_CHART_NARRATIVE_JSON_KEYS:
-        v = obj.get(k)
+        v = get_case_insensitive_val(obj, k)
         if k == "overlaps":
             if isinstance(v, list) and v:
                 out[k] = [
-                    {"label": str(s.get("label", "")), "description": str(s.get("description", ""))}
+                    {"label": str(s.get("label", s.get("title", ""))), "description": str(s.get("description", ""))}
                     for s in v if isinstance(s, dict)
                 ][:6]
             else:
                 out[k] = []
         elif k in ("coreTraits", "strengths", "challenges", "avoidThis", "tryThis"):
             out[k] = [str(x) for x in v][:8] if isinstance(v, list) else []
-        elif k in ("title", "narrative", "spiritualInsight"):
-            s = str(v).strip() if v is not None else ""
-            out[k] = s if s else fallback[k]
-            if k == "narrative" and out[k]:
-                out[k] = _narrative_to_one_paragraph_four_sentences(out[k])
         else:
-            out[k] = v
+            s = str(v).strip() if v is not None and isinstance(v, str) else ""
+            out[k] = s if s else fallback.get(k, "")
+            if k == "narrative" and out[k]:
+                pass
     return out
 
 
@@ -674,7 +682,7 @@ async def call_llm_for_numerology_blueprint(
     birthday_number: int,
     expression_number: int,
 ) -> dict[str, Any]:
-    """Generate short AI copy for onboarding numerology blueprint screen. Uses only the four numbers; no MBTI/chakra so systems stay independent."""
+    """Generate short AI copy for onboarding numerology blueprint screen."""
     if not settings.openai_api_key:
         return _fallback_numerology_blueprint(
             life_path, soul_urge, birthday_number, expression_number
@@ -694,7 +702,7 @@ async def call_llm_for_numerology_blueprint(
                 {"role": "system", "content": BLUEPRINT_SYSTEM},
                 {"role": "user", "content": user_content},
             ],
-            max_tokens=500,
+            max_tokens=800,
             temperature=0.4,
         )
         raw = (response.choices[0].message.content or "").strip()
@@ -708,3 +716,168 @@ async def call_llm_for_numerology_blueprint(
     return _fallback_numerology_blueprint(
         life_path, soul_urge, birthday_number, expression_number
     )
+
+
+async def call_llm_for_numerology_narrative(
+    life_path: int,
+    soul_urge: int,
+    birthday_number: int,
+    expression_number: int,
+    user_context: str | None = None,
+) -> dict[str, Any]:
+    """Generate full AI narrative for the actual Numerology test result."""
+    if not settings.openai_api_key:
+        return {
+            "title": f"Numerology: Life Path {life_path}",
+            "summary": "Your numbers reveal a path of discovery and growth.",
+        }
+
+    system_prompt = (
+        "You are an expert Pythagorean Numerologist and soul guide. "
+        "Provide a profound, deeply personal narration for a user's numerology profile. "
+        "Explain the synergy between their Life Path, Soul Urge, Birthday Number, and Expression. "
+        "Focus on their spiritual journey, vocational alignment, and relationship dynamics."
+    )
+
+    user_content = (
+        f"Numerology Profile:\n"
+        f"- Life Path: {life_path}\n"
+        f"- Soul Urge: {soul_urge}\n"
+        f"- Birthday Number: {birthday_number}\n"
+        f"- Expression: {expression_number}\n"
+    )
+    if user_context:
+        user_content += f"\nUser Context:\n{user_context}"
+
+    user_content += (
+        "\n\nReturn a JSON object exactly matching this structure:\n"
+        "{\n"
+        '  "title": "A thematic title for their profile (e.g. The Master Builder)",\n'
+        '  "summary": "String: 2-3 paragraphs separated by \\n\\n. Paragraph 1: core numbers/theme. Paragraph 2: deeper dynamic/inner workings. Paragraph 3: life direction/patterns",\n'
+        '  "shortDescription": "String: a single paragraph summarizing the result, distinct from the summary paragraphs above",\n'
+        '  "coreTraits": ["String — exactly ONE short descriptive phrase (e.g. \'You prefer plans, but value integrity over control\')", "String — etc."],\n'
+        '  "strengths": ["Strength 1", "Strength 2"],\n'
+        '  "challenges": ["Challenge 1", "Challenge 2"],\n'
+        '  "spiritualInsight": "A specific esoteric insight about their numbers",\n'
+        '  "tryThis": ["Practical action 1", "Practical action 2"],\n'
+        '  "avoidThis": ["What to avoid 1", "What to avoid 2"]\n'
+        "}"
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=1000,
+            temperature=0.7,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        return data or {}
+    except Exception as e:
+        logger.warning("LLM numerology narrative call failed: %s", e)
+        return {}
+
+
+_MBTI_TYPE_NAMES: dict[str, str] = {
+    "INTJ": "The Architect", "INTP": "The Thinker", "ENTJ": "The Commander", "ENTP": "The Debater",
+    "INFJ": "The Advocate", "INFP": "The Mediator", "ENFJ": "The Protagonist", "ENFP": "The Campaigner",
+    "ISTJ": "The Logistician", "ISFJ": "The Defender", "ESTJ": "The Executive", "ESFJ": "The Consul",
+    "ISTP": "The Virtuoso", "ISFP": "The Adventurer", "ESTP": "The Entrepreneur", "ESFP": "The Entertainer",
+}
+
+_MBTI_NARRATIVE_SYSTEM = """\
+You are a compassionate, psychologically insightful personality coach writing for a mobile spiritual-wellness app.
+Your writing is warm, reflective, and grounded in real psychology — never generic horoscope copy.
+Always respond with ONLY valid JSON — no prose outside the JSON block.
+
+Return this exact JSON shape:
+{
+  "title": "string — MBTI type name (e.g. 'The Architect')",
+  "coreTraits": ["string — a short descriptive phrase, not a single word (e.g. 'You recharge alone, but care deeply about others')", "string — another short phrase", "string — etc."],
+  "narrative": "string — 2-3 paragraphs separated by \\n\\n. Paragraph 1: core personality/theme. Paragraph 2: deeper dynamic/inner workings. Paragraph 3: life direction/patterns",
+  "shortDescription": "string — a single paragraph summarizing the narrative, completely distinct from the paragraphs above",
+  "strengths": ["string — a short phrase describing a strength (e.g. 'Deep spiritual insight')", "string — etc."],
+  "challenges": ["string — a short phrase describing a challenge"],
+  "spiritualInsight": "string — 1 sentence linking the personality type to inner growth"
+}
+"""
+
+
+def _fallback_mbti_narrative(mbti_type: str) -> dict[str, Any]:
+    name = _MBTI_TYPE_NAMES.get(mbti_type.upper(), "Your Type")
+    return {
+        "title": name,
+        "coreTraits": [
+            "You recharge alone, but care deeply about others",
+            "You think ahead, looking for connections and meaning",
+            "You're a mix of logic and emotional intelligence",
+            "You prefer plans, but value integrity over control",
+        ],
+        "narrative": (
+            f"As an {mbti_type}, you bring a unique blend of inner depth and outward expression. "
+            "Your personality type is shaped by how you gather information and make decisions. "
+            "You thrive in environments that respect your natural way of engaging with the world."
+        ),
+        "strengths": [
+            "Deep intuitive thinking",
+            "Strong personal principles",
+            "High emotional intelligence",
+        ],
+        "challenges": [
+            "Prone to perfectionism",
+            "Occasional overthinking",
+        ],
+        "spiritualInsight": "Your growth path lies in balancing your inner world with the needs of the outer one.",
+    }
+
+
+async def call_llm_for_mbti_narrative(
+    mbti_type: str,
+    confidence: dict[str, int] | None = None,
+    user_context: str | None = None,
+) -> dict[str, Any]:
+    """
+    Generate MBTI personality narrative from a deterministically computed type.
+    AI only writes the description — type is never determined by AI.
+    """
+    if not settings.openai_api_key:
+        return _fallback_mbti_narrative(mbti_type)
+
+    type_name = _MBTI_TYPE_NAMES.get(mbti_type.upper(), "")
+    conf_lines = ""
+    if confidence:
+        conf_lines = "\n".join(f"  - {dim}: {pct}% dominant" for dim, pct in confidence.items())
+
+    user_content = (
+        f"MBTI Type: {mbti_type}{f' ({type_name})' if type_name else ''}\n"
+        f"Dimension confidence:\n{conf_lines}\n"
+        f"{f'User context: {user_context}' if user_context else ''}\n\n"
+        "Write a short, reflective personality insight for this type. "
+        "Highlight a balance of their strengths and a subtle inner tension. Keep it concise and readable on mobile."
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": _MBTI_NARRATIVE_SYSTEM},
+                {"role": "user", "content": _cap_input(user_content, 1500)},
+            ],
+            max_tokens=700,
+            temperature=0.4,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        if data and isinstance(data, dict) and data.get("narrative"):
+            return data
+    except Exception as e:
+        logger.warning("LLM MBTI narrative call failed: %s", e)
+    return _fallback_mbti_narrative(mbti_type)

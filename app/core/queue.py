@@ -49,3 +49,21 @@ async def enqueue_refine_test_result(result_id: int) -> bool:
     except Exception as e:
         logger.exception("Failed to enqueue refine_test_result: %s", e)
         return False
+
+
+async def enqueue_astrology_blueprint(user_id: int) -> bool:
+    """Astrology blueprint (sun/moon/rising teaser). Updates User table."""
+    pool = await get_arq_pool()
+    if pool:
+        await pool.enqueue_job("refine_astrology_blueprint", user_id)
+        return True
+    return False
+
+
+async def enqueue_numerology_blueprint(user_id: int) -> bool:
+    """Numerology blueprint (teaser items). Updates User table."""
+    pool = await get_arq_pool()
+    if pool:
+        await pool.enqueue_job("refine_numerology_blueprint", user_id)
+        return True
+    return False

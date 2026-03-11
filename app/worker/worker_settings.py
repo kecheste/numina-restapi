@@ -6,7 +6,12 @@ from arq.connections import RedisSettings
 
 from app.core.config import settings
 from app.core.redis import normalize_redis_url
-from app.worker.tasks import refine_test_result, startup
+from app.worker.tasks import (
+    refine_astrology_blueprint,
+    refine_numerology_blueprint,
+    refine_test_result,
+    startup,
+)
 
 
 def get_redis_settings() -> RedisSettings:
@@ -20,7 +25,11 @@ def get_redis_settings() -> RedisSettings:
 class WorkerSettings:
     """Arq worker config. max_jobs=1 to avoid bursting OpenAI (429) with parallel LLM calls."""
 
-    functions = [refine_test_result]
+    functions = [
+        refine_test_result,
+        refine_astrology_blueprint,
+        refine_numerology_blueprint,
+    ]
     redis_settings = get_redis_settings()
     on_startup = startup
     max_jobs = 1
