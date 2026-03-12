@@ -308,22 +308,90 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
 ]
 
 SHADOW_WORK_LENS_QUESTIONS: list[QuestionOut] = [
-    # Vulnerability avoidance
-    QuestionOut(id=1, prompt="I find it hard to let people see when I am struggling.", answer_type="slider", slider_min=1, slider_max=5, required=True),
-    QuestionOut(id=2, prompt="I often keep deeper feelings to myself, even with people I trust.", answer_type="slider", slider_min=1, slider_max=5, required=True),
-    QuestionOut(id=3, prompt="When I feel emotionally exposed, I pull back quickly.", answer_type="slider", slider_min=1, slider_max=5, required=True),
-    # Self-criticism
-    QuestionOut(id=4, prompt="I am harsher on myself than I would ever be on someone else.", answer_type="slider", slider_min=1, slider_max=5, required=True),
-    QuestionOut(id=5, prompt="When I make mistakes, my inner voice becomes very critical.", answer_type="slider", slider_min=1, slider_max=5, required=True),
-    QuestionOut(id=6, prompt="Even when I achieve something, I focus on what was not good enough.", answer_type="slider", slider_min=1, slider_max=5, required=True),
-    # Emotional suppression / control
-    QuestionOut(id=7, prompt="I prefer to stay composed rather than openly show difficult emotions.", answer_type="slider", slider_min=1, slider_max=5, required=True),
-    QuestionOut(id=8, prompt="I tend to control or contain feelings instead of expressing them.", answer_type="slider", slider_min=1, slider_max=5, required=True),
-    QuestionOut(id=9, prompt="I worry that showing emotion will make me look weak or unstable.", answer_type="slider", slider_min=1, slider_max=5, required=True),
-    # Withdrawal / avoidance
-    QuestionOut(id=10, prompt="When stress becomes intense, I disappear into myself instead of reaching out.", answer_type="slider", slider_min=1, slider_max=5, required=True),
-    QuestionOut(id=11, prompt="I avoid conversations or situations that may trigger discomfort.", answer_type="slider", slider_min=1, slider_max=5, required=True),
-    QuestionOut(id=12, prompt="When something hurts me deeply, I distract myself rather than face it directly.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    QuestionOut(
+        id=1,
+        prompt="I find it hard to let people see when I am struggling.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
+    QuestionOut(
+        id=2,
+        prompt="I often keep deeper feelings to myself, even with people I trust.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
+    QuestionOut(
+        id=3,
+        prompt="When I feel emotionally exposed, I pull back quickly.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
+    QuestionOut(
+        id=4,
+        prompt="I am harsher on myself than I would ever be on someone else.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
+    QuestionOut(
+        id=5,
+        prompt="When I make mistakes, my inner voice becomes very critical.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
+    QuestionOut(
+        id=6,
+        prompt="Even when I achieve something, I focus on what was not good enough.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
+    QuestionOut(
+        id=7,
+        prompt="I prefer to stay composed rather than openly show difficult emotions.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
+    QuestionOut(
+        id=8,
+        prompt="I tend to control or contain feelings instead of expressing them.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
+    QuestionOut(
+        id=9,
+        prompt="I worry that showing emotion will make me look weak or unstable.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
+    QuestionOut(
+        id=10,
+        prompt="When stress becomes intense, I disappear into myself instead of reaching out.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
+    QuestionOut(
+        id=11,
+        prompt="I avoid conversations or situations that may trigger discomfort.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
+    QuestionOut(
+        id=12,
+        prompt="When something hurts me deeply, I distract myself rather than face it directly.",
+        answer_type="single_choice",
+        options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"],
+        required=True,
+    ),
 ]
 
 CORE_VALUES_OPTIONS = [

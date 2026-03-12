@@ -49,14 +49,24 @@ class AstrologyChartResponse(BaseModel):
     moon_description: str | None = None
     rising_description: str | None = None
 
+class NumerologyBlueprintItem(BaseModel):
+    number: str
+    title: str
+    description: str
+
 
 class NumerologyResponse(BaseModel):
     """Response for GET /tests/numerology (computed from user birth date and name)."""
 
     life_path: int
     soul_urge: int
-    birthday_number: int
+    birth_day: int
     expression_number: int
+    life_path_description: str | None = None
+    soul_urge_description: str | None = None
+    birth_day_description: str | None = None
+    expression_description: str | None = None
+    items: list[NumerologyBlueprintItem] | None = None
 
 
 class AstrologyChartNarrativeOverlap(BaseModel):
@@ -98,13 +108,6 @@ class AstrologyChartNarrativeResponse(BaseModel):
     sun_description: str | None = None
     moon_description: str | None = None
     rising_description: str | None = None
-
-
-class NumerologyBlueprintItem(BaseModel):
-    number: str
-    title: str
-    description: str
-
 
 class NumerologyBlueprintResponse(BaseModel):
     """AI-generated copy for onboarding numerology blueprint screen."""

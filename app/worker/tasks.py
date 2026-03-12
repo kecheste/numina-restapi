@@ -125,7 +125,13 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
                         extracted["lifePath"] = res_num["life_path"]
                         extracted["soulUrge"] = res_num["soul_urge"]
                         extracted["expression_number"] = res_num["expression_number"]
-                        extracted["birthday_number"] = res_num["birthday_number"]
+                        extracted["birth_day"] = res_num["birth_day"]
+
+                        # Save to user record for persistence
+                        user.life_path_number = res_num["life_path"]
+                        user.soul_urge_number = res_num["soul_urge"]
+                        user.expression_number = res_num["expression_number"]
+                        user.birth_day = res_num["birth_day"]
             except Exception as e:
                 logger.warning("Numerology compute failed for user_id=%s: %s", user_id, e)
 
@@ -136,12 +142,12 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             lp = extracted.get("lifePath") or 0
             su = extracted.get("soulUrge") or 0
             expr = extracted.get("expression_number") or 0
-            bday = extracted.get("birthday_number") or (user.birth_day if user else 0)
+            bday = extracted.get("birth_day") or (user.birth_day if user else 0)
 
             llm_result = await call_llm_for_numerology_narrative(
                 life_path=lp,
                 soul_urge=su,
-                birthday_number=bday,
+                birth_day=bday,
                 expression_number=expr,
                 user_context=user_ctx,
             )
@@ -597,7 +603,7 @@ async def refine_numerology_blueprint(ctx: dict[str, Any], user_id: int) -> None
         llm_result = await call_llm_for_numerology_blueprint(
             life_path=num_data["life_path"],
             soul_urge=num_data["soul_urge"],
-            birthday_number=num_data["birthday_number"],
+            birth_day=num_data["birth_day"],
             expression_number=num_data["expression_number"],
         )
         

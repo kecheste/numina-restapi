@@ -83,7 +83,7 @@ def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> d
         return {}
     list_keys = (
         "insights", "recommendations", "sureThings", "growthAreas", "themes",
-        "strengths", "shadowPatterns", "coreTraits", "tryThis", "avoidThis",
+        "strengths", "challenges", "shadowPatterns", "coreTraits", "tryThis", "avoidThis",
     )
     out = {}
     for k in allowed_keys:
@@ -695,12 +695,12 @@ def _validate_numerology_blueprint(
     obj: dict[str, Any],
     life_path: int,
     soul_urge: int,
-    birthday_number: int,
+    birth_day: int,
     expression_number: int,
 ) -> dict[str, Any]:
     """Ensure exactly 4 items: Life Path, Soul Urge, Birthday Number, Expression (with correct numbers)."""
     fallback = _fallback_numerology_blueprint(
-        life_path, soul_urge, birthday_number, expression_number
+        life_path, soul_urge, birth_day, expression_number
     )
     if not isinstance(obj, dict):
         return fallback
@@ -710,7 +710,7 @@ def _validate_numerology_blueprint(
     expected = [
         ("Life Path", life_path),
         ("Soul Urge", soul_urge),
-        ("Birthday Number", birthday_number),
+        ("Birthday Number", birth_day),
         ("Expression", expression_number),
     ]
     out_items: list[dict[str, str]] = []
@@ -741,14 +741,14 @@ def _validate_numerology_blueprint(
 def _fallback_numerology_blueprint(
     life_path: int,
     soul_urge: int,
-    birthday_number: int,
+    birth_day: int,
     expression_number: int,
 ) -> dict[str, Any]:
     return {
         "items": [
             {"number": str(life_path), "title": "Life Path", "description": "Your life path reflects your core purpose and lessons."},
             {"number": str(soul_urge), "title": "Soul Urge", "description": "Your soul urge reveals what your heart truly desires."},
-            {"number": str(birthday_number), "title": "Birthday Number", "description": "Your birthday number adds a personal layer to your cosmic profile."},
+            {"number": str(birth_day), "title": "Birthday Number", "description": "Your birthday number adds a personal layer to your cosmic profile."},
             {"number": str(expression_number), "title": "Expression", "description": "Your expression number reflects how you show up in the world."},
         ],
     }
@@ -757,18 +757,18 @@ def _fallback_numerology_blueprint(
 async def call_llm_for_numerology_blueprint(
     life_path: int,
     soul_urge: int,
-    birthday_number: int,
+    birth_day: int,
     expression_number: int,
 ) -> dict[str, Any]:
     """Generate short AI copy for onboarding numerology blueprint screen."""
     if not settings.openai_api_key:
         return _fallback_numerology_blueprint(
-            life_path, soul_urge, birthday_number, expression_number
+            life_path, soul_urge, birth_day, expression_number
         )
     user_content = NUMEROLOGY_BLUEPRINT_USER.format(
         life_path=life_path,
         soul_urge=soul_urge,
-        birthday_number=birthday_number,
+        birth_day=birth_day,
         expression_number=expression_number,
     )
     try:
@@ -787,19 +787,19 @@ async def call_llm_for_numerology_blueprint(
         data = _extract_json_from_response(raw)
         if data:
             return _validate_numerology_blueprint(
-                data, life_path, soul_urge, birthday_number, expression_number
+                data, life_path, soul_urge, birth_day, expression_number
             )
     except Exception as e:
         logger.warning("LLM numerology blueprint call failed: %s", e)
     return _fallback_numerology_blueprint(
-        life_path, soul_urge, birthday_number, expression_number
+        life_path, soul_urge, birth_day, expression_number
     )
 
 
 async def call_llm_for_numerology_narrative(
     life_path: int,
     soul_urge: int,
-    birthday_number: int,
+    birth_day: int,
     expression_number: int,
     user_context: str | None = None,
 ) -> dict[str, Any]:
@@ -820,7 +820,7 @@ async def call_llm_for_numerology_narrative(
         "life_path": life_path,
         "soul_urge": soul_urge,
         "expression": expression_number,
-        "birthday": birthday_number
+        "birthday": birth_day
     }, indent=2)
 
     user_content = NUMEROLOGY_NARRATIVE_USER.format(

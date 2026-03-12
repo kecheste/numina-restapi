@@ -85,6 +85,6 @@ def compute_numerology(
     return {
         "life_path": life_path,
         "soul_urge": soul_urge,
-        "birthday_number": birthday_number,
+        "birth_day": birthday_number,
         "expression_number": expression_number,
     }

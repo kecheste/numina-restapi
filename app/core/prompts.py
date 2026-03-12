@@ -241,7 +241,7 @@ ASTROLOGY_CHART_NARRATIVE_JSON_KEYS = frozenset({
 NUMEROLOGY_BLUEPRINT_USER = """The user's numerology (from birth date and name):
 - Life path number: {life_path}
 - Soul urge number: {soul_urge}
-- Birthday number: {birthday_number}
+- Birthday number: {birth_day}
 - Expression number: {expression_number}
 
 Return exactly one JSON object with this key only:

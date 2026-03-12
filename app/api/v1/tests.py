@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import AsyncSessionLocal
+
 from app.constants.questions import QUESTIONS_BY_TEST_ID
 from app.constants.tests import TESTS, get_test_id
 from app.core.dependencies import get_current_active_user, get_db, get_optional_current_user
@@ -248,7 +250,7 @@ async def get_numerology(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Return the current user's numerology (life path, soul urge, birthday number, expression).
+    Return the current user's numerology (life path, soul urge, birth day, expression).
     Computed from stored birth date and name. Persists values to user profile.
     """
     if (
@@ -281,11 +283,26 @@ async def get_numerology(
     )
     await db.commit()
 
+    blueprint = user.numerology_blueprint or []
+    lp_desc = next((i["description"] for i in blueprint if i["title"] == "Life Path"), None)
+    su_desc = next((i["description"] for i in blueprint if i["title"] == "Soul Urge"), None)
+    bd_desc = next((i["description"] for i in blueprint if i["title"] == "Birthday Number"), None)
+    ex_desc = next((i["description"] for i in blueprint if i["title"] == "Expression"), None)
+
+    if not blueprint:
+        from app.core.queue import enqueue_numerology_blueprint
+        await enqueue_numerology_blueprint(user.id)
+
     return NumerologyResponse(
         life_path=result["life_path"],
         soul_urge=result["soul_urge"],
-        birthday_number=result["birthday_number"],
+        birth_day=result["birth_day"],
         expression_number=result["expression_number"],
+        life_path_description=lp_desc,
+        soul_urge_description=su_desc,
+        birth_day_description=bd_desc,
+        expression_description=ex_desc,
+        items=[NumerologyBlueprintItem(**i) for i in blueprint] if blueprint else None
     )
 
 

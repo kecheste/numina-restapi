@@ -26,12 +26,24 @@ def compute_shadow_work(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
         items = list(answers)
 
     vals = []
+    LABEL_TO_VAL = {
+        "Strongly Disagree": 1.0,
+        "Disagree": 2.0,
+        "Neutral": 3.0,
+        "Agree": 4.0,
+        "Strongly Agree": 5.0,
+    }
+
     for it in items:
         val = it.get("answer", it) if isinstance(it, dict) else it
-        try:
-            vals.append(float(val))
-        except (ValueError, TypeError):
-            vals.append(3.0) # Fallback
+        
+        if isinstance(val, str) and val in LABEL_TO_VAL:
+            vals.append(LABEL_TO_VAL[val])
+        else:
+            try:
+                vals.append(float(val))
+            except (ValueError, TypeError):
+                vals.append(3.0)
 
     while len(vals) < 12:
         vals.append(3.0)
