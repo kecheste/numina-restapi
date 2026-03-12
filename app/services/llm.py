@@ -178,13 +178,13 @@ async def call_llm_for_shadow_work(computed_scores: dict[str, Any]) -> dict[str,
         from openai import AsyncOpenAI
         client = AsyncOpenAI(api_key=settings.openai_api_key)
         response = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o-mini", 
             messages=[
                 {"role": "system", "content": SHADOW_WORK_SYSTEM},
                 {"role": "user", "content": user_content},
             ],
             max_tokens=OUTPUT_MAX_TOKENS,
-            temperature=0.5,
+            temperature=0.6,
         )
         raw = (response.choices[0].message.content or "").strip()
         data = _extract_json_from_response(raw)
