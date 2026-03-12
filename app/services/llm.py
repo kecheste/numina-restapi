@@ -21,6 +21,9 @@ from app.core.prompts import (
     CHAKRA_PREVIEW_USER_APPENDIX,
     NUMEROLOGY_BLUEPRINT_JSON_KEYS,
     NUMEROLOGY_BLUEPRINT_USER,
+    NUMEROLOGY_NARRATIVE_JSON_KEYS,
+    NUMEROLOGY_NARRATIVE_SYSTEM,
+    NUMEROLOGY_NARRATIVE_USER,
     SHADOW_WORK_JSON_KEYS,
     SHADOW_WORK_SYSTEM,
     SHADOW_WORK_USER,
@@ -807,36 +810,24 @@ async def call_llm_for_numerology_narrative(
             "summary": "Your numbers reveal a path of discovery and growth.",
         }
 
-    system_prompt = (
-        "You are an expert Pythagorean Numerologist and soul guide. "
-        "Provide a profound, deeply personal narration for a user's numerology profile. "
-        "Explain the synergy between their Life Path, Soul Urge, Birthday Number, and Expression. "
-        "Focus on their spiritual journey, vocational alignment, and relationship dynamics."
-    )
-
-    user_content = (
-        f"Numerology Profile:\n"
-        f"- Life Path: {life_path}\n"
-        f"- Soul Urge: {soul_urge}\n"
-        f"- Birthday Number: {birthday_number}\n"
-        f"- Expression: {expression_number}\n"
-    )
+    user_context = (user_context or "").strip()
     if user_context:
-        user_content += f"\nUser Context:\n{user_context}"
+        user_context = "Known about this user:\n" + user_context
+    else:
+        user_context = ""
 
-    user_content += (
-        "\n\nReturn a JSON object exactly matching this structure:\n"
-        "{\n"
-        '  "title": "A thematic title for their profile (e.g. The Master Builder)",\n'
-        '  "summary": "String: 2-3 paragraphs separated by \\n\\n. Paragraph 1: core numbers/theme. Paragraph 2: deeper dynamic/inner workings. Paragraph 3: life direction/patterns",\n'
-        '  "shortDescription": "String: a single paragraph summarizing the result, distinct from the summary paragraphs above",\n'
-        '  "coreTraits": ["String — exactly ONE short descriptive phrase (e.g. \'You prefer plans, but value integrity over control\')", "String — etc."],\n'
-        '  "strengths": ["Strength 1", "Strength 2"],\n'
-        '  "challenges": ["Challenge 1", "Challenge 2"],\n'
-        '  "spiritualInsight": "A specific esoteric insight about their numbers",\n'
-        '  "tryThis": ["Practical action 1", "Practical action 2"],\n'
-        '  "avoidThis": ["What to avoid 1", "What to avoid 2"]\n'
-        "}"
+    input_json = json.dumps({
+        "life_path": life_path,
+        "soul_urge": soul_urge,
+        "expression": expression_number,
+        "birthday": birthday_number
+    }, indent=2)
+
+    user_content = NUMEROLOGY_NARRATIVE_USER.format(
+        test_title="Numerology Profile",
+        category="Numerology",
+        user_context=user_context,
+        input_json=input_json
     )
 
     try:
@@ -845,18 +836,19 @@ async def call_llm_for_numerology_narrative(
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": NUMEROLOGY_NARRATIVE_SYSTEM},
                 {"role": "user", "content": user_content},
             ],
             max_tokens=1000,
-            temperature=0.7,
+            temperature=0.6,
         )
         raw = (response.choices[0].message.content or "").strip()
         data = _extract_json_from_response(raw)
-        return data or {}
+        if data:
+            return _validate_and_filter(data, NUMEROLOGY_NARRATIVE_JSON_KEYS)
     except Exception as e:
         logger.warning("LLM numerology narrative call failed: %s", e)
-        return {}
+    return {}
 
 
 _MBTI_TYPE_NAMES: dict[str, str] = {

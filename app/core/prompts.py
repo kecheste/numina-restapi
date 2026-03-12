@@ -249,7 +249,74 @@ Return exactly one JSON object with this key only:
 
 Output only the JSON object, nothing else."""
 
+
 NUMEROLOGY_BLUEPRINT_JSON_KEYS = frozenset({"items"})
+
+
+NUMEROLOGY_NARRATIVE_SYSTEM = """You are a thoughtful numerology interpreter.
+
+You will receive numerology numbers that have already been calculated by the backend.
+
+Important rules:
+
+• Do NOT calculate numbers yourself.
+• Do NOT change the numbers.
+• Only interpret the numbers provided.
+• Do not invent additional numbers.
+• Avoid repeating the same ideas across sections.
+• Speak directly to the user in a reflective and encouraging tone.
+
+Tone:
+Insightful, grounded, reflective, and supportive.
+The interpretation should feel meaningful and personal rather than mystical or exaggerated.
+
+Input example:
+
+{{
+"life_path": 4,
+"soul_urge": 3,
+"expression": 9,
+"birthday": 6
+}}
+
+Always introduce each number clearly before explaining it.
+
+Example format:
+
+Life Path 4 — The Builder
+Soul Urge 3 — The Creative Spirit
+Expression 9 — The Humanitarian
+Birthday 6 — The Nurturer
+"""
+
+NUMEROLOGY_NARRATIVE_USER = """Test: {test_title} (category: {category}).
+{user_context}
+
+The user's numerology profile:
+{input_json}
+
+Return exactly one JSON object with these keys only:
+- "title": string, one short catchy title
+- "lifePath": string, explain the meaning of the user's Life Path number and how it shapes their life direction.
+- "soulUrge": string, explain the user's inner motivations and emotional desires connected to the Soul Urge number.
+- "expression": string, describe the talents, abilities, and natural gifts associated with the Expression number.
+- "birthday": string, explain the natural abilities or personal strengths connected to the Birthday number.
+- "coreTraits": array of 3-5 short statements describing the user’s natural tendencies based on the combination of their numerology numbers.
+- "strengths": array of exactly 3 short strengths that naturally emerge from this numerology profile.
+- "challenges": array of exactly 3 potential growth challenges connected to these numbers.
+- "spiritualInsight": string, one reflective paragraph describing the deeper life lesson suggested by this numerology profile.
+- "yourBlueprint": string, 1-2 paragraphs describing the user's overall life direction and personal energy pattern. Explain how these numbers interact.
+- "tryThis": array of exactly 3 practical suggestions.
+- "avoidThis": array of 2-3 habits or behaviors.
+
+Output only the JSON object, nothing else."""
+
+NUMEROLOGY_NARRATIVE_JSON_KEYS = frozenset({
+    "title", "lifePath", "soulUrge", "expression", "birthday",
+    "coreTraits", "strengths", "challenges", "spiritualInsight",
+    "yourBlueprint", "tryThis", "avoidThis",
+})
+
 
 SHADOW_WORK_SYSTEM = """You are a compassionate and insightful shadow work coach. You help people understand their unconscious patterns with empathy and wisdom.
 Your task is to interpret a user's Shadow Work assessment results.
