@@ -308,100 +308,22 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
 ]
 
 SHADOW_WORK_LENS_QUESTIONS: list[QuestionOut] = [
-    QuestionOut(
-        id=1,
-        prompt="I often feel guilty about expressing anger or frustration.",
-        answer_type="slider",
-        options=None,
-        slider_min=1,
-        slider_max=5,
-        required=True,
-    ),
-    QuestionOut(
-        id=2,
-        prompt="There are creative urges I've been too afraid to explore.",
-        answer_type="slider",
-        options=None,
-        slider_min=1,
-        slider_max=5,
-        required=True,
-    ),
-    QuestionOut(
-        id=3,
-        prompt="I sometimes judge myself harshly for my desires or impulses.",
-        answer_type="slider",
-        options=None,
-        slider_min=1,
-        slider_max=5,
-        required=True,
-    ),
-    QuestionOut(
-        id=4,
-        prompt="I hold back part of myself to avoid conflict or rejection.",
-        answer_type="slider",
-        options=None,
-        slider_min=1,
-        slider_max=5,
-        required=True,
-    ),
-    QuestionOut(
-        id=5,
-        prompt="I experience sudden mood shifts that surprise me.",
-        answer_type="slider",
-        options=None,
-        slider_min=1,
-        slider_max=5,
-        required=True,
-    ),
-    QuestionOut(
-        id=6,
-        prompt="I keep certain talents or gifts hidden from others.",
-        answer_type="slider",
-        options=None,
-        slider_min=1,
-        slider_max=5,
-        required=True,
-    ),
-    QuestionOut(
-        id=7,
-        prompt="Rate: I'm drawn to understanding my dreams, even if they unsettle me.",
-        answer_type="slider",
-        options=None,
-        slider_min=1,
-        slider_max=5,
-        required=True,
-    ),
-    QuestionOut(
-        id=8,
-        prompt="When you experience an intense emotion, which do you most often do?",
-        answer_type="single_choice",
-        options=[
-            'I lecture myself to "just calm down."',
-            "I push the feeling away and busy myself.",
-            "I journal or express it creatively.",
-            "I share it with someone I trust.",
-        ],
-        required=True,
-    ),
-    QuestionOut(
-        id=9,
-        prompt='Which phrase best describes your relationship with your "inner critic"?',
-        answer_type="single_choice",
-        options=[
-            "It keeps me safe but holds me back.",
-            "It rarely speaks—I ignore my inner voice.",
-            "It offers harsh feedback I try to shut out.",
-            "It's a guide I'm learning to dialogue with.",
-        ],
-        required=True,
-    ),
-    QuestionOut(
-        id=10,
-        prompt='In your everyday routine, how often do you check in with difficult or "shadow" emotions?',
-        answer_type="single_choice",
-        options=["Never", "Occasionally", "Sometimes", "Often", "Daily"],
-        required=True,
-    ),
+    # Vulnerability avoidance
+    QuestionOut(id=1, prompt="I find it hard to let people see when I am struggling.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    QuestionOut(id=2, prompt="I often keep deeper feelings to myself, even with people I trust.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    QuestionOut(id=3, prompt="When I feel emotionally exposed, I pull back quickly.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    # Self-criticism
+    QuestionOut(id=4, prompt="I am harsher on myself than I would ever be on someone else.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    QuestionOut(id=5, prompt="When I make mistakes, my inner voice becomes very critical.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    QuestionOut(id=6, prompt="Even when I achieve something, I focus on what was not good enough.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    # Emotional suppression / control
+    QuestionOut(id=7, prompt="I prefer to stay composed rather than openly show difficult emotions.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    QuestionOut(id=8, prompt="I tend to control or contain feelings instead of expressing them.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    QuestionOut(id=9, prompt="I worry that showing emotion will make me look weak or unstable.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    # Withdrawal / avoidance
+    QuestionOut(id=10, prompt="When stress becomes intense, I disappear into myself instead of reaching out.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    QuestionOut(id=11, prompt="I avoid conversations or situations that may trigger discomfort.", answer_type="slider", slider_min=1, slider_max=5, required=True),
+    QuestionOut(id=12, prompt="When something hurts me deeply, I distract myself rather than face it directly.", answer_type="slider", slider_min=1, slider_max=5, required=True),
 ]
 
 CORE_VALUES_OPTIONS = [

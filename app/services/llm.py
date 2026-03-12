@@ -21,6 +21,9 @@ from app.core.prompts import (
     CHAKRA_PREVIEW_USER_APPENDIX,
     NUMEROLOGY_BLUEPRINT_JSON_KEYS,
     NUMEROLOGY_BLUEPRINT_USER,
+    SHADOW_WORK_JSON_KEYS,
+    SHADOW_WORK_SYSTEM,
+    SHADOW_WORK_USER,
     SYNTHESIS_FULL_JSON_KEYS,
     SYNTHESIS_FULL_USER_TEMPLATE,
     SYNTHESIS_PREVIEW_JSON_KEYS,
@@ -61,7 +64,15 @@ def _extract_json_from_response(raw: str) -> dict[str, Any] | None:
 def get_case_insensitive_val(o: dict, k: str):
     if k in o: return o[k]
     snake = re.sub(r'(?<!^)(?=[A-Z])', '_', k).lower()
-    return o.get(snake)
+    if snake in o: return o[snake]
+    def normalize(s: str) -> str:
+        return s.lower().replace("_", "").replace(" ", "").replace("-", "")
+    
+    norm_k = normalize(k)
+    for ok in o.keys():
+        if normalize(ok) == norm_k:
+            return o[ok]
+    return None
 
 
 def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> dict[str, Any]:
@@ -144,6 +155,69 @@ def _validate_chakra_alignment_result(obj: dict[str, Any]) -> dict[str, Any]:
     return base
 
 
+def _validate_shadow_work_result(obj: dict[str, Any]) -> dict[str, Any]:
+    """Validate and normalize Shadow Work Lens result."""
+    base = _validate_and_filter(obj, SHADOW_WORK_JSON_KEYS)
+    # Ensure extracted_json is present and correctly formatted if the LLM moved things
+    if "extracted_json" not in base or not isinstance(base["extracted_json"], dict):
+        # Fallback if LLM missed it or put it elsewhere
+        base["extracted_json"] = obj.get("extracted_json") or obj.get("scores") or {}
+    return base
+
+
+async def call_llm_for_shadow_work(computed_scores: dict[str, Any]) -> dict[str, Any]:
+    """Dedicated LLM call for Shadow Work Lens interpretation."""
+    if not settings.openai_api_key:
+        return _fallback_shadow_work_json()
+
+    user_content = SHADOW_WORK_USER.format(
+        input_json=json.dumps(computed_scores, indent=2)
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": SHADOW_WORK_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.5,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        if data:
+            return _validate_shadow_work_result(data)
+    except Exception as e:
+        logger.warning("LLM shadow work call failed: %s", e)
+    return _fallback_shadow_work_json()
+
+
+def _fallback_shadow_work_json() -> dict[str, Any]:
+    return {
+        "title": "Your Shadow Pattern",
+        "summary": "We are preparing a full psychological interpretation of your shadow results.",
+        "shortDescription": "We are preparing a compassionate interpretation of your primary shadow pattern.",
+        "shadowPattern": "We are preparing a compassionate interpretation of your primary shadow pattern.",
+        "secondaryPattern": "Your secondary tendency interacts with your primary pattern in unique ways.",
+        "howItShowsUp": "These patterns often appear during times of stress or emotional exposure.",
+        "hiddenStrength": "Within every shadow lies a hidden strength waiting to be integrated.",
+        "growthEdge": "Awareness is the first step toward transforming these unconscious habits.",
+        "tryThis": [
+            "Practice naming feelings without judgment",
+            "Notice when you feel the urge to pull back or criticize",
+            "Offer yourself the same compassion you would a friend"
+        ],
+        "avoidThis": [
+            "Harsh self-criticism for having these patterns",
+            "Ignoring the physical sensations that accompany stress"
+        ],
+        "extracted_json": {}
+    }
+
+
 async def call_llm_for_test_result(
     computed_input: dict[str, Any] | list[Any],
     test_title: str,
@@ -207,6 +281,7 @@ def _fallback_test_result_json(include_chakra_preview: bool = False) -> dict[str
     out: dict[str, Any] = {
         "title": "Your Result",
         "summary": "Your responses have been recorded. Insights are being prepared.",
+        "shortDescription": "We are preparing a concise summary of your unique path.",
         "coreTraits": ["Reflective", "Growing"],
         "strengths": ["Self-awareness", "Willingness to explore"],
         "challenges": ["Patience", "Integration"],

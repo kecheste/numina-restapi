@@ -31,6 +31,7 @@ from app.services.llm import (
     call_llm_for_numerology_blueprint,
     call_llm_for_numerology_narrative,
     call_llm_for_test_result,
+    call_llm_for_shadow_work,
 )
 
 from .helpers import (
@@ -334,12 +335,17 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             user_ctx = await get_user_context(session, user_id)
             row.extracted_json = extracted
             row.score = 8.0
-            llm_result = await call_llm_for_test_result(
-                extracted,
-                row.test_title,
-                row.category,
-                user_context=user_ctx,
-            )
+            
+            if test_id == 8:
+                llm_result = await call_llm_for_shadow_work(extracted)
+            else:
+                llm_result = await call_llm_for_test_result(
+                    extracted,
+                    row.test_title,
+                    row.category,
+                    user_context=user_ctx,
+                )
+            
             row.llm_result_json = llm_result
             row.personality_type = llm_result.get("title") or (
                 "Shadow Work Profile" if isinstance(extracted.get("scores"), dict) else "Soul Compass" if "coreDrive" in extracted else "Your Result"

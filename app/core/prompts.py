@@ -250,3 +250,39 @@ Return exactly one JSON object with this key only:
 Output only the JSON object, nothing else."""
 
 NUMEROLOGY_BLUEPRINT_JSON_KEYS = frozenset({"items"})
+
+SHADOW_WORK_SYSTEM = """You are a compassionate and insightful shadow work coach. You help people understand their unconscious patterns with empathy and wisdom.
+Your task is to interpret a user's Shadow Work assessment results.
+You write only valid JSON. No markdown, no code fences.
+Keep each field concise but psychologically meaningful.
+Tone: insightful, compassionate, reflective, never judgmental.
+Address the user as "you"."""
+
+SHADOW_WORK_USER = """The backend has already computed the user's shadow pattern scores.
+Do NOT change or reinterpret the computed values.
+
+Computed Scores (0-100):
+{input_json}
+
+Use the data provided to generate a thoughtful interpretation.
+
+Return exactly one JSON object with these keys only:
+- "title": a short catchy title for these results.
+- "summary": 2-3 paragraphs (the full detailed interpretation).
+- "shortDescription": a single paragraph (2-3 sentences) summarizing everything.
+- "shadowPattern": explain the primary shadow pattern (1 paragraph).
+- "secondaryPattern": explain the secondary tendency and its interaction.
+- "howItShowsUp": real-life behaviors or emotional reactions.
+- "hiddenStrength": strengths or growth potential within these traits.
+- "growthEdge": what personal growth could look like.
+- "tryThis": array of 3 practical reflective suggestions.
+- "avoidThis": array of 2-3 common traps or behaviors to be mindful of.
+- "extracted_json": include the input_json scores here as well.
+
+Avoid clinical or harsh language. Speak directly to the user as "you".
+Output only the JSON object, nothing else."""
+
+SHADOW_WORK_JSON_KEYS = frozenset({
+    "title", "summary", "shortDescription", "shadowPattern", "secondaryPattern", 
+    "howItShowsUp", "hiddenStrength", "growthEdge", "tryThis", "avoidThis", "extracted_json"
+})

@@ -27,7 +27,7 @@ TESTS: list[TestItem] = [
     {"id": 4, "slug": "human-design", "title": "Human Design", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": True, "auto_generated": True},
     {"id": 5, "slug": "transits", "title": "Transits", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": True, "auto_generated": False},
     {"id": 6, "slug": "zodiac-element-modality", "title": "Zodiac Element & Modality", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": True, "auto_generated": False},
-    {"id": 8, "slug": "shadow-work-lens", "title": "Shadow Work Lens", "category": "Psychological Profile", "category_id": "psychological", "questions": 10, "premium": True, "auto_generated": False},
+    {"id": 8, "slug": "shadow-work-lens", "title": "Shadow Work Lens", "category": "Psychological Profile", "category_id": "psychological", "questions": 12, "premium": True, "auto_generated": False},
     {"id": 9, "slug": "big-five", "title": "Big Five", "category": "Psychological Profile", "category_id": "psychological", "questions": 10, "premium": True, "auto_generated": False},
     {"id": 10, "slug": "core-values-sort", "title": "Core Values Sort", "category": "Psychological Profile", "category_id": "psychological", "questions": 5, "premium": True, "auto_generated": False},
     {"id": 11, "slug": "cognitive-style", "title": "Cognitive Style", "category": "Psychological Profile", "category_id": "psychological", "questions": 6, "premium": True, "auto_generated": False},

@@ -59,7 +59,7 @@ class Settings(BaseSettings):
 
     ai_input_max_chars: int = 3500
 
-    ai_result_output_max_tokens: int = 600
+    ai_result_output_max_tokens: int = 1000
 
     cors_origins_env: str = Field(default="", validation_alias="CORS_ORIGINS")
 
