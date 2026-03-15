@@ -444,8 +444,8 @@ Input Data:
 Return exactly one JSON object with these keys only:
 - "title": the archetype title (e.g., "The Harmonized Mind").
 - "coreTraits": array of 3-4 short statements summarizing their state. Max 50 character each.
-- "strengths": array of 3 key strengths. Max 50 character each.
-- "challenges": array of 3 current areas of friction. Max 50 character each.
+- "strengths": array of 3 key strengths.
+- "challenges": array of 3 current areas of friction.
 - "spiritualInsight": 1 paragraph with a deeper spiritual or existential perspective.
 - "summary": 2-3 paragraphs (labeled "Your Blueprint" in UI) interpreting their specific archetype mix.
 - "tryThis": array of 3 practical reflective suggestions. Max 50 character each.
