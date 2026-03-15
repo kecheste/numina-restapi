@@ -1,5 +1,3 @@
-"""Test attempt and AI-refined result (frontend-aligned)."""
-
 from datetime import datetime
 
 from sqlalchemy import DateTime, Float, Integer, String, Text, func
@@ -8,10 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
-
 class TestResult(Base):
-    """A user's test attempt. After submit, status=pending_ai; worker sets completed."""
-
     __tablename__ = "test_results"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -35,7 +30,5 @@ class TestResult(Base):
     insights: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     recommendations: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     narrative: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # Compact JSON from extractor/compute stub; narrative LLM uses only this (not raw answers)
     extracted_json: Mapped[dict | list | None] = mapped_column(JSONB, nullable=True)
-    # Structured LLM response for result screen: { title, summary, insights, recommendations, takeaway }
     llm_result_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)

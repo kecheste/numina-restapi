@@ -34,11 +34,112 @@ from app.services.result_calculation.soul_compass import compute_soul_compass
 
 logger = logging.getLogger(__name__)
 
-# Test IDs that use compute stub: raw answers stored, extract to compact JSON, narrative from JSON only
+def compute_mind_mirror(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
+    """
+    Extract Mind Mirror answers into a structured dict for the narrative LLM.
+    Mind Mirror relies on text and single-choice answers.
+    """
+    if isinstance(answers, dict):
+        return answers
+    
+    out = {}
+    for item in (answers or []):
+        if not isinstance(item, dict):
+            continue
+        qid = item.get("id") or item.get("question_id")
+        ans = item.get("answer")
+        if qid == 1: out["thought_concern"] = ans
+        elif qid == 2: out["emotional_state"] = ans
+        elif qid == 3: out["reflective_situation"] = ans
+        elif qid == 4: out["imbalance_area"] = ans
+        elif qid == 5: out["intention"] = ans
+    
+    return out
+
+
+def compute_energy_archetype(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
+    """
+    Calculate Energy Archetype scores and identify primary/secondary archetypes.
+    
+    Dimensions:
+    - Visionary: q1, q6, q8
+    - Analyst: q2, q7
+    - Integrator: q3, q9, q11
+    - Overloaded: q4, q5, q10, q12
+    """
+    if isinstance(answers, dict):
+        return answers
+
+    # 1) Map answers to qX variables (default to 3/neutral if missing)
+    ans_map = {item.get("id") or item.get("question_id"): item.get("answer") for item in (answers or []) if isinstance(item, dict)}
+    
+    def get_ans(qid: int) -> float:
+        val = ans_map.get(qid)
+        if val is None:
+            return 3.0
+        
+        mapping = {
+            "strongly disagree": 1.0,
+            "disagree": 2.0,
+            "neutral": 3.0,
+            "agree": 4.0,
+            "strongly agree": 5.0
+        }
+        
+        if isinstance(val, str):
+            mapped = mapping.get(val.strip().lower())
+            if mapped is not None:
+                return mapped
+        
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            return 3.0
+
+    # 2) Calculate raw averages
+    raw = {
+        "visionary": sum([get_ans(1), get_ans(6), get_ans(8)]) / 3,
+        "analyst": sum([get_ans(2), get_ans(7)]) / 2,
+        "integrator": sum([get_ans(3), get_ans(9), get_ans(11)]) / 3,
+        "overloaded": sum([get_ans(4), get_ans(5), get_ans(10), get_ans(12)]) / 4,
+    }
+
+    # 3) Convert to percent (1-5 scale)
+    def to_percent(avg_score: float) -> int:
+        return int(round(((avg_score - 1) / 4) * 100))
+
+    scores = {k: to_percent(v) for k, v in raw.items()}
+
+    # 4) Rank archetypes
+    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    primary = ranked[0][0]
+    secondary = ranked[1][0]
+
+    title_map = {
+        "visionary": "The Inspired Generator",
+        "analyst": "The Structured Thinker",
+        "integrator": "The Harmonized Mind",
+        "overloaded": "The Overloaded Circuit",
+    }
+
+    # 5) Calculate balance score
+    balance_score = max(0, min(100, scores["integrator"] - scores["overloaded"] + 50))
+
+    return {
+        "primary_archetype": primary,
+        "secondary_archetype": secondary,
+        "title": title_map.get(primary, "The Harmonized Mind"),
+        "scores": scores,
+        "balance_score": balance_score,
+    }
+
 TEXT_TEST_COMPUTE_STUBS: dict[int, Callable[..., dict[str, Any]]] = {
     8: compute_shadow_work,   # Shadow Work Lens
+    12: compute_mind_mirror,  # Mind Mirror
+    14: compute_energy_archetype, # Energy Archetype
     24: compute_soul_compass, # Soul Compass
 }
+
 
 AI_RATE_LIMIT_PREFIX = "user:ai_requests:"
 
@@ -315,24 +416,24 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
             parts.append({"test": r.test_title, "data": blob})
     input_str = json.dumps(parts, indent=0)
     if count >= SYNTHESIS_FULL_MIN_TESTS:
-        full_json = await call_llm_for_synthesis(input_str, count, full=True)
-        await session.execute(delete(UserSynthesis).where(
-            UserSynthesis.user_id == user_id,
-            UserSynthesis.synthesis_type == "full",
-        ))
-        session.add(UserSynthesis(user_id=user_id, synthesis_type="full", result_json=full_json))
+        # full_json = await call_llm_for_synthesis(input_str, count, full=True)
+        # await session.execute(delete(UserSynthesis).where(
+        #     UserSynthesis.user_id == user_id,
+        #     UserSynthesis.synthesis_type == "full",
+        # ))
+        # session.add(UserSynthesis(user_id=user_id, synthesis_type="full", result_json=full_json))
         logger.info("Synthesis full generated for user_id=%s", user_id)
-        await session.execute(delete(UserSynthesis).where(
-            UserSynthesis.user_id == user_id,
-            UserSynthesis.synthesis_type == "preview",
-        ))
-        session.add(UserSynthesis(user_id=user_id, synthesis_type="preview", result_json=full_json))
+        # await session.execute(delete(UserSynthesis).where(
+        #     UserSynthesis.user_id == user_id,
+        #     UserSynthesis.synthesis_type == "preview",
+        # ))
+        # session.add(UserSynthesis(user_id=user_id, synthesis_type="preview", result_json=full_json))
     else:
-        preview_json = await call_llm_for_synthesis(input_str, count, full=False)
-        await session.execute(delete(UserSynthesis).where(
-            UserSynthesis.user_id == user_id,
-            UserSynthesis.synthesis_type == "preview",
-        ))
-        session.add(UserSynthesis(user_id=user_id, synthesis_type="preview", result_json=preview_json))
+        # preview_json = await call_llm_for_synthesis(input_str, count, full=False)
+        # await session.execute(delete(UserSynthesis).where(
+        #     UserSynthesis.user_id == user_id,
+        #     UserSynthesis.synthesis_type == "preview",
+        # ))
+        # session.add(UserSynthesis(user_id=user_id, synthesis_type="preview", result_json=preview_json))
         logger.info("Synthesis preview generated for user_id=%s", user_id)
     await session.commit()

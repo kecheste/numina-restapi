@@ -89,7 +89,6 @@ Return only the JSON object.
 """
 
 TEST_RESULT_USER_TEMPLATE = """Test: {test_title} (category: {category}).
-{user_context}
 
 Computed/structured result for this user (use only this; do not invent data):
 {input_json}
@@ -106,7 +105,8 @@ Return exactly one JSON object with these keys only:
 - "avoidThis": array of 2-4 short strings (warnings)
 - "synchronicities": optional array of objects with "test" and "connection" (if overlaps with other tests exist)
 
-Output only the JSON object, nothing else."""
+Output only the JSON object, nothing else.
+NB: for MBTI Test, Interpret mainly through cognitive style, thinking patterns and decision-making."""
 
 CHAKRA_PREVIEW_USER_APPENDIX = """
 Additionally include these two keys (required for this test):
@@ -119,6 +119,7 @@ Also include the full chakra alignment result so we can display it on the result
 - "statusSummary": string, 2-4 sentences summarizing the user's chakra balance (which chakras are strong, blocked, overactive; overall energetic picture).
 - "chakras": array of exactly 7 objects in this order: Root, Sacral, Solar Plexus, Heart, Throat, Third Eye, Crown. Each object must have: "id" (one of: root, sacral, solarPlexus, heart, throat, thirdEye, crown), "name" (e.g. "Root Chakra"), "status" (one of: Balanced, Blocked, Open, Overactive, Slightly Blocked, Slightly Open), "description" (1-2 sentences for this chakra), "tryItems" (string or null; practical tips when status is not Balanced), "avoidItems" (string or null; what to avoid when not Balanced).
 - For "synchronicities" use objects with "label" (e.g. "Life Path 7") and "description" (short connection) instead of "test" and "connection".
+NB: Interpret through energy balance, strengths and potential energetic blockages.
 """
 TEST_RESULT_JSON_KEYS = frozenset({
     "title", "summary", "shortDescription", "coreTraits", "strengths", "challenges",
@@ -231,7 +232,9 @@ Return exactly one JSON object with these keys only:
 
 Avoid repeating the same traits or words across different sections (for example "practical", "grounded", etc.). Each section should highlight a slightly different angle of the personality.
 
-Output only the JSON object, nothing else."""
+Output only the JSON object, nothing else.
+
+NB: Interpret through emotional patterns, relational tendencies and personality dynamics."""
 
 ASTROLOGY_CHART_NARRATIVE_JSON_KEYS = frozenset({
     "title", "coreTraits", "narrative", "shortDescription", "strengths", "challenges",
@@ -270,15 +273,6 @@ Tone:
 Insightful, grounded, reflective, and supportive.
 The interpretation should feel meaningful and personal rather than mystical or exaggerated.
 
-Input example:
-
-{{
-"life_path": 4,
-"soul_urge": 3,
-"expression": 9,
-"birthday": 6
-}}
-
 Always introduce each number clearly before explaining it.
 
 Example format:
@@ -287,27 +281,28 @@ Life Path 4 — The Builder
 Soul Urge 3 — The Creative Spirit
 Expression 9 — The Humanitarian
 Birthday 6 — The Nurturer
+
+NB: Interpret the user through life themes, motivations and tendencies derived from numbers.
 """
 
 NUMEROLOGY_NARRATIVE_USER = """Test: {test_title} (category: {category}).
-{user_context}
 
 The user's numerology profile:
 {input_json}
 
 Return exactly one JSON object with these keys only:
-- "title": string, one short catchy title
-- "lifePath": string, explain the meaning of the user's Life Path number and how it shapes their life direction.
-- "soulUrge": string, explain the user's inner motivations and emotional desires connected to the Soul Urge number.
-- "expression": string, describe the talents, abilities, and natural gifts associated with the Expression number.
-- "birthday": string, explain the natural abilities or personal strengths connected to the Birthday number.
-- "coreTraits": array of 3-5 short statements describing the user’s natural tendencies based on the combination of their numerology numbers.
+- "title": string, one short catchy title for this numerology profile.
+- "lifePath": string, introduce the Life Path number (e.g. "Life Path 4 — The Builder"), then on the next line explain how it shapes the user's life direction. 2-3 sentences.
+- "soulUrge": string, introduce the Soul Urge number (e.g. "Soul Urge 3 — The Creative Spirit"), then on the next line explain inner motivations and emotional desires. 2-3 sentences.
+- "expression": string, introduce the Expression number (e.g. "Expression 9 — The Humanitarian"), then on the next line describe talents, abilities, and natural gifts. 2-3 sentences.
+- "birthday": string, introduce the Birthday number (e.g. "Birthday 6 — The Nurturer"), then on the next line explain natural abilities or personal strengths. 2-3 sentences.
+- "coreTraits": array of 3-5 short statements describing the user's natural tendencies based on the combination of their numerology numbers.
 - "strengths": array of exactly 3 short strengths that naturally emerge from this numerology profile.
 - "challenges": array of exactly 3 potential growth challenges connected to these numbers.
 - "spiritualInsight": string, one reflective paragraph describing the deeper life lesson suggested by this numerology profile.
-- "yourBlueprint": string, 1-2 paragraphs describing the user's overall life direction and personal energy pattern. Explain how these numbers interact.
-- "tryThis": array of exactly 3 practical suggestions.
-- "avoidThis": array of 2-3 habits or behaviors.
+- "yourBlueprint": string, 1-2 paragraphs (separated by \n\n) describing the user's overall life direction and personal energy pattern. Explain how these numbers interact with each other.
+- "tryThis": array of exactly 3 practical suggestions that help the user align with their strengths and life path.
+- "avoidThis": array of 2-3 habits or behaviors that may block the user's growth.
 
 Output only the JSON object, nothing else."""
 
@@ -347,9 +342,161 @@ Return exactly one JSON object with these keys only:
 - "extracted_json": include the input_json scores here as well.
 
 Avoid clinical or harsh language. Speak directly to the user as "you".
-Output only the JSON object, nothing else."""
+Output only the JSON object, nothing else.
+
+NB: Interpret through unconscious patterns, blind spots and internal resistance."""
 
 SHADOW_WORK_JSON_KEYS = frozenset({
     "title", "summary", "shortDescription", "shadowPattern", "secondaryPattern", 
     "howItShowsUp", "hiddenStrength", "growthEdge", "tryThis", "avoidThis", "extracted_json"
+})
+
+MODULE_LENS_MAPPING = {
+"mindMirror": {
+    "lens": "Reflective cognition and inner narrative patterns",
+    "focus": [
+        "thinking patterns",
+        "dominant mental themes",
+        "emotional tone",
+        "areas of imbalance (mind, heart, body, spirit)",
+        "self-correction intentions"
+    ],
+    "instruction": """
+Analyze the user's responses to identify patterns in thinking,
+emotional tone, recent reflections, and areas of imbalance.
+
+Focus on:
+- recurring thoughts
+- emotional tendencies
+- internal tension or stress themes
+- balance between mind, heart, body, and spirit
+- intentions for adjustment or growth
+
+Your writing should be insightful, compassionate, and focused on helping the user see their own inner landscape clearly.
+Avoid clinical or diagnostic language. Focus on self-awareness and potential for correction.
+"""
+    }
+}
+
+MIND_MIRROR_SYSTEM = """You are an intuitive psychologist and reflective guide. 
+Your task is to analyze the user's recent mental and emotional landscape through the "Mind Mirror" lens.
+You help the user see their own internal narrative patterns, emotional tone, and areas of imbalance.
+You write only valid JSON. No markdown, no code fences.
+Keep each field concise but psychologically meaningful.
+Tone: calm, insightful, compassionate, and reflective.
+Address the user as "you"."""
+
+MIND_MIRROR_USER = """Analyze the user's responses to identify patterns in thinking, emotional tone, recent reflections, and areas of imbalance.
+
+You must provide a high-quality, psychologically insightful analysis for EVERY field requested below.
+
+User Responses:
+{input_json}
+
+Return exactly one JSON object with these keys. Ensure EVERY key is present:
+1. "title": a short catchy title for these results.
+2. "summary": 2-3 paragraphs explaining the overall mental and emotional landscape.
+3. "shortDescription": a single paragraph (2-3 sentences) summarizing EVERYTHING.
+4. "mentalPattern": identify and explain the dominant thinking pattern (1 paragraph).
+5. "emotionalTone": describe the recent emotional state and its underlying theme (1 paragraph).
+6. "currentImbalance": identify which areas (Mind/Heart/Body/Spirit) need attention and why (1 paragraph).
+7. "hiddenInsight": reveal a less obvious pattern or tension in their responses (1 paragraph).
+8. "growthDirection": propose a specific path for self-correction or balance (1 paragraph).
+9. "coreTraits": array of 3-5 keywords summarizing their current state.
+10. "strengths": array of 2-3 mental or emotional strengths identified.
+11. "challenges": array of 2-3 current areas of friction or imbalance.
+12. "yourBlueprint": array of 3 core pillars for their mental well-being.
+13. "tryThis": array of 3 practical reflective exercises or mindset shifts.
+14. "avoidThis": array of 2-3 habits that reinforce current imbalances.
+
+Avoid clinical or diagnostic language. Focus on self-awareness.
+Output only the JSON object, nothing else.
+
+NB: Interpret through self-reflection patterns and internal narrative tendencies."""
+
+MIND_MIRROR_JSON_KEYS = frozenset({
+    "title", "summary", "shortDescription", "mentalPattern", "emotionalTone",
+    "currentImbalance", "hiddenInsight", "growthDirection", "coreTraits",
+    "strengths", "challenges", "yourBlueprint", "tryThis", "avoidThis",
+})
+
+ENERGY_ARCHETYPE_SYSTEM = """You are an expert in behavioral archetypes and energy dynamics. 
+Your task is to interpret an Energy Archetype assessment.
+You help the user understand how they balance thought, emotion, and action.
+You write only valid JSON. No markdown, no code fences.
+Tone: reflective, insightful, calm, and clear.
+Address the user as "you"."""
+
+ENERGY_ARCHETYPE_USER = """Analyze the user's Energy Archetype results.
+
+The backend has already calculated the user's primary and secondary archetypes.
+Do NOT recalculate scores or invent new archetypes.
+
+Archetype Labels:
+- The Harmonized Mind → Integrator
+- The Inspired Generator → Visionary
+- The Structured Thinker → Analyst
+- The Overloaded Circuit → Overloaded
+
+Input Data:
+{input_json}
+
+Return exactly one JSON object with these keys only:
+- "title": the archetype title (e.g., "The Harmonized Mind").
+- "coreTraits": array of 3-4 short statements summarizing their state. Max 50 character each.
+- "strengths": array of 3 key strengths. Max 50 character each.
+- "challenges": array of 3 current areas of friction. Max 50 character each.
+- "spiritualInsight": 1 paragraph with a deeper spiritual or existential perspective.
+- "summary": 2-3 paragraphs (labeled "Your Blueprint" in UI) interpreting their specific archetype mix.
+- "tryThis": array of 3 practical reflective suggestions. Max 50 character each.
+- "avoidThis": array of 2-3 pitfalls or habits to be mindful of. Max 50 character each.
+
+Important Rules:
+- Do not repeat the same phrases across sections.
+- Focus on how the person balances thought and emotion.
+- Use the archetype title naturally in the interpretation.
+
+Avoid clinical or diagnostic language. Output only the JSON object, nothing else.
+
+NB: Interpret through energetic behavior patterns and natural vitality expression."""
+
+ENERGY_ARCHETYPE_JSON_KEYS = frozenset({
+    "title", "coreTraits", "strengths", "challenges", "spiritualInsight",
+    "summary", "tryThis", "avoidThis", "extracted_json"
+})
+
+HUMAN_DESIGN_SYSTEM = """You are an expert in Human Design, Astrology, and I Ching.
+Your task is to interpret a user's Human Design chart based on their Personality and Design gates.
+You provide clear, practical, and deeply insightful analysis.
+You write only valid JSON. No markdown, no code fences.
+Tone: clear, practical, insightful.
+Address the user as "you"."""
+
+HUMAN_DESIGN_USER = """Analyze the user's Human Design gates.
+
+Input Data (Personality and Design gates):
+{input_json}
+
+Return exactly one JSON object with these keys only:
+- "title": A descriptive title for their specific configuration (e.g., "The Practical Visionary").
+- "shortDescription": A 2-3 sentence high-level summary of their design.
+- "coreTraits": An array of 3-4 key attributes of their Human Design.
+- "strengths": An array of 3 core strengths derived from their gates.
+- "challenges": An array of 3 potential shadow aspects or challenges.
+- "summary": 2-3 paragraphs (labeled "Your Blueprint" in UI) giving a deep, insightful interpretation of their life strategy and authority based on these gates.
+- "tryThis": An array of 3 practical, actionable experiments for the user to try.
+- "avoidThis": An array of 2-3 common pitfalls for their specific design.
+
+Important Rules:
+- Interpret through the lens of life strategy, decision-making, and natural energetic flow.
+- Ensure the tone is practical yet profound.
+- Do not repeat the same information across different sections.
+
+Output only the JSON object, nothing else.
+
+NB: Interpret through human design gates, life strategy and energetic blueprint."""
+
+HUMAN_DESIGN_JSON_KEYS = frozenset({
+    "title", "shortDescription", "coreTraits", "strengths", "challenges",
+    "summary", "tryThis", "avoidThis", "extracted_json"
 })

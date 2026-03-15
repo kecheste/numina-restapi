@@ -61,6 +61,15 @@ def _auto_generated_already_taken(user: UserModel, test_id: int) -> bool:
             and user.birth_day is not None
             and bool((user.name or "").strip())
         )
+    if test_id == 4:  # Human Design
+        return (
+            user.birth_year is not None
+            and user.birth_month is not None
+            and user.birth_day is not None
+            and user.birth_place_lat is not None
+            and user.birth_place_lng is not None
+            and user.birth_place_timezone is not None
+        )
     return False
 
 @router.get("/tests", response_model=TestsListResponse)
@@ -430,6 +439,33 @@ async def post_onboarding_finish(
                 await db.refresh(lp_res)
                 await enqueue_refine_test_result(lp_res.id)
 
+        # 2b. Auto-generate Human Design (4)
+        if (
+            user.birth_place_lat is not None
+            and user.birth_place_lng is not None
+            and user.birth_place_timezone is not None
+        ):
+            hd_exists_q = await db.execute(
+                select(TestResult).where(
+                    TestResult.user_id == user.id,
+                    TestResult.test_id == 4
+                ).limit(1)
+            )
+            if hd_exists_q.scalar_one_or_none() is None:
+                hd_res = TestResult(
+                    user_id=user.id,
+                    test_id=4,
+                    test_title="Human Design",
+                    category="Cosmic Identity",
+                    answers={},
+                    status="pending_ai",
+                    extracted_json={},
+                )
+                db.add(hd_res)
+                await db.commit()
+                await db.refresh(hd_res)
+                await enqueue_refine_test_result(hd_res.id)
+
     # 3. Trigger Synthesis (Ensure it's ready for first home view)
     async with AsyncSessionLocal() as session:
         from app.worker.helpers import generate_synthesis_for_user
@@ -514,8 +550,51 @@ async def submit_test(
     user: UserModel = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a test result and enqueue exactly one AI refinement job. Poll GET /tests/results/{result_id} for completion."""
+    """Create a test result and enqueue exactly one AI refinement job. Returns existing result if already exists.
+    Guarantees at most one result row per user per test_id."""
+
+    existing_q = await db.execute(
+        select(TestResult).where(
+            TestResult.user_id == user.id,
+            TestResult.test_id == body.test_id,
+            TestResult.status.in_(["pending_ai", "completed"]),
+        ).order_by(TestResult.completed_at.desc()).limit(1)
+    )
+    existing = existing_q.scalar_one_or_none()
+    if existing is not None:
+        return SubmitTestResponse(result_id=existing.id, status=existing.status)
+
     answers_data = [item.model_dump() for item in body.answers]
+
+    extracted_json_data = None
+    if body.test_id == 1:
+        if (
+            user.birth_year is not None
+            and user.birth_month is not None
+            and user.birth_day is not None
+            and user.birth_place_lat is not None
+            and user.birth_place_lng is not None
+            and user.birth_place_timezone is not None
+        ):
+            astro_result = compute_astrology(
+                birth_year=user.birth_year,
+                birth_month=user.birth_month,
+                birth_day=user.birth_day,
+                birth_time=user.birth_time,
+                birth_place_lat=user.birth_place_lat,
+                birth_place_lng=user.birth_place_lng,
+                birth_place_timezone=user.birth_place_timezone,
+            )
+            if astro_result:
+                extracted_json_data = {
+                    **astro_result,
+                    "sun_description": user.sun_description or "",
+                    "moon_description": user.moon_description or "",
+                    "rising_description": user.rising_description or "",
+                    "cosmic_traits_summary": user.cosmic_traits_summary or "",
+                }
+                answers_data = extracted_json_data
+
     row = TestResult(
         user_id=user.id,
         test_id=body.test_id,
@@ -523,18 +602,18 @@ async def submit_test(
         category=body.category,
         answers=answers_data,
         status="pending_ai",
+        extracted_json=extracted_json_data,
     )
     db.add(row)
     await db.commit()
     await db.refresh(row)
+
 
     enqueued = await enqueue_refine_test_result(row.id)
     if not enqueued:
         pass
 
     return SubmitTestResponse(result_id=row.id, status="pending_ai")
-
-
 
 
 @router.get("/tests/results", response_model=list[TestResultResponse])

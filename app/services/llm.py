@@ -1,7 +1,3 @@
-"""
-LLM calls with input cap and strict JSON output. Used for test result and synthesis.
-"""
-
 import json
 import logging
 import re
@@ -19,6 +15,12 @@ from app.core.prompts import (
     CHAKRA_ALIGNMENT_APPENDIX,
     CHAKRA_PREVIEW_JSON_KEYS,
     CHAKRA_PREVIEW_USER_APPENDIX,
+    MIND_MIRROR_JSON_KEYS,
+    MIND_MIRROR_SYSTEM,
+    MIND_MIRROR_USER,
+    ENERGY_ARCHETYPE_JSON_KEYS,
+    ENERGY_ARCHETYPE_SYSTEM,
+    ENERGY_ARCHETYPE_USER,
     NUMEROLOGY_BLUEPRINT_JSON_KEYS,
     NUMEROLOGY_BLUEPRINT_USER,
     NUMEROLOGY_NARRATIVE_JSON_KEYS,
@@ -35,6 +37,9 @@ from app.core.prompts import (
     TEST_RESULT_JSON_KEYS,
     TEST_RESULT_SYSTEM,
     TEST_RESULT_USER_TEMPLATE,
+    HUMAN_DESIGN_JSON_KEYS,
+    HUMAN_DESIGN_SYSTEM,
+    HUMAN_DESIGN_USER,
 )
 
 logger = logging.getLogger(__name__)
@@ -84,6 +89,7 @@ def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> d
     list_keys = (
         "insights", "recommendations", "sureThings", "growthAreas", "themes",
         "strengths", "challenges", "shadowPatterns", "coreTraits", "tryThis", "avoidThis",
+        "yourBlueprint",
     )
     out = {}
     for k in allowed_keys:
@@ -131,7 +137,9 @@ def _validate_chakra_alignment_result(obj: dict[str, Any]) -> dict[str, Any]:
     for c in raw_chakras:
         if not isinstance(c, dict):
             continue
-        cid = str(c.get("id") or "").strip() or None
+        cid = str(c.get("id") or "").strip()
+        if not cid:
+            continue
         if cid in CHAKRA_IDS:
             by_id[cid] = {
                 "id": cid,
@@ -161,9 +169,7 @@ def _validate_chakra_alignment_result(obj: dict[str, Any]) -> dict[str, Any]:
 def _validate_shadow_work_result(obj: dict[str, Any]) -> dict[str, Any]:
     """Validate and normalize Shadow Work Lens result."""
     base = _validate_and_filter(obj, SHADOW_WORK_JSON_KEYS)
-    # Ensure extracted_json is present and correctly formatted if the LLM moved things
     if "extracted_json" not in base or not isinstance(base["extracted_json"], dict):
-        # Fallback if LLM missed it or put it elsewhere
         base["extracted_json"] = obj.get("extracted_json") or obj.get("scores") or {}
     return base
 
@@ -220,6 +226,173 @@ def _fallback_shadow_work_json() -> dict[str, Any]:
         "extracted_json": {}
     }
 
+def _validate_mind_mirror_result(obj: dict[str, Any]) -> dict[str, Any]:
+    """Validate and normalize Mind Mirror result."""
+    return _validate_and_filter(obj, MIND_MIRROR_JSON_KEYS)
+
+async def call_llm_for_mind_mirror(responses: list[Any] | dict[str, Any]) -> dict[str, Any]:
+    """Dedicated LLM call for Mind Mirror analysis."""
+    if not settings.openai_api_key:
+        return _fallback_mind_mirror_json()
+
+    user_content = MIND_MIRROR_USER.format(
+        input_json=json.dumps(responses, indent=2)
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": MIND_MIRROR_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.4,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        if data:
+            return _validate_mind_mirror_result(data)
+    except Exception as e:
+        logger.warning("LLM mind mirror call failed: %s", e)
+    return _fallback_mind_mirror_json()
+
+
+def _validate_energy_archetype_result(obj: Any) -> dict[str, Any]:
+    return _validate_and_filter(obj, ENERGY_ARCHETYPE_JSON_KEYS)
+
+
+async def call_llm_for_energy_archetype(responses: dict[str, Any]) -> dict[str, Any]:
+    """Dedicated LLM call for Energy Archetype analysis."""
+    if not settings.openai_api_key:
+        return _fallback_energy_archetype_json()
+
+    user_content = ENERGY_ARCHETYPE_USER.format(
+        input_json=json.dumps(responses, indent=2)
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": ENERGY_ARCHETYPE_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.4,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        if data:
+            return _validate_energy_archetype_result(data)
+    except Exception as e:
+        logger.warning("LLM energy archetype call failed: %s", e)
+    return _fallback_energy_archetype_json()
+
+
+def _validate_energy_archetype_result(obj: Any, extracted: dict[str, Any] | None = None) -> dict[str, Any]:
+    res = _validate_and_filter(obj, ENERGY_ARCHETYPE_JSON_KEYS)
+    if extracted:
+        res["extracted_json"] = extracted
+    return res
+
+
+async def call_llm_for_human_design(computed_input: dict[str, Any]) -> dict[str, Any]:
+    """Calculate Human Design insights via LLM. input_json contains personality and design gates."""
+    if not settings.openai_api_key:
+        return {
+            "title": "Natural Origin",
+            "summary": "Your Human Design reveals a unique energetic blueprint. Explore your gates to understand your strategy.",
+        }
+
+    input_str = json.dumps(computed_input, indent=0)
+    input_str = _cap_input(input_str, max_chars=6000)
+    
+    user_content = HUMAN_DESIGN_USER.format(input_json=input_str)
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": HUMAN_DESIGN_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.4,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = _extract_json_from_response(content) or {}
+        return _validate_human_design_result(data, extracted=computed_input)
+    except Exception as e:
+        logger.exception("LLM human design call failed: %s", e)
+        return {
+            "title": "Natural Origin",
+            "summary": "Your Human Design reveals a unique energetic blueprint. Explore your gates to understand your strategy.",
+            "extracted_json": computed_input,
+        }
+
+
+def _validate_human_design_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
+    res = _validate_and_filter(data, HUMAN_DESIGN_JSON_KEYS)
+    if extracted:
+        res["extracted_json"] = extracted
+    return res
+
+
+def _fallback_energy_archetype_json() -> dict[str, Any]:
+    return {
+        "title": "The Harmonized Mind",
+        "coreTraits": ["Balanced approach", "Integration of thought and feeling"],
+        "strengths": ["Self-awareness", "Logical empathy", "Steady focus"],
+        "challenges": ["Maintaining flow", "Decision fatigue", "Over-analysis"],
+        "spiritualInsight": "Your journey is one of bridge-building between the seen and unseen, the logical and the intuitive.",
+        "summary": "You possess a rare ability to synthesize information from both your head and your heart. This balance allows you to move through life with a sense of grounded purpose, even when external circumstances are chaotic.",
+        "tryThis": [
+            "Practice a daily check-in that balances logic and intuition",
+            "Engage in activities that require both mental focus and physical awareness",
+            "Study systems that integrate disparate fields of knowledge"
+        ],
+        "avoidThis": [
+            "Falling into the trap of 'correctness' over resonance",
+            "Dismissing subtle cues in favor of hard data"
+        ],
+        "extracted_json": {}
+    }
+
+
+def _fallback_mind_mirror_json() -> dict[str, Any]:
+    return {
+        "title": "Your Mind Mirror",
+        "summary": "We are preparing a full reflective interpretation of your mental and emotional state.",
+        "shortDescription": "A reflection of your current internal landscape is being prepared.",
+        "mentalPattern": "We are identifying the dominant patterns in your current thinking.",
+        "emotionalTone": "Your recent emotional state is being analyzed for deeper themes.",
+        "currentImbalance": "We are looking for areas where your energy might be out of balance.",
+        "hiddenInsight": "A deeper look into your responses is revealing subtle internal tensions.",
+        "growthDirection": "A path for reconnection and balance is being formulated.",
+        "coreTraits": ["Reflective", "Searching"],
+        "strengths": ["Self-awareness", "Introspection"],
+        "challenges": ["Mental pressure", "Finding balance"],
+        "yourBlueprint": ["Regular reflection", "Emotional honesty", "Mind-body connection"],
+        "tryThis": [
+            "Journal about your top concern for 5 minutes",
+            "Practice a short grounding breath exercise",
+            "Notice where in your body you feel tension"
+        ],
+        "avoidThis": [
+            "Over-analyzing without taking action",
+            "Dismissing your emotional needs as 'extra'"
+        ],
+        "extracted_json": {}
+    }
+
 
 async def call_llm_for_test_result(
     computed_input: dict[str, Any] | list[Any],
@@ -237,17 +410,11 @@ async def call_llm_for_test_result(
         return _fallback_test_result_json(include_chakra_preview=include_chakra_preview)
 
     input_str = json.dumps(computed_input, indent=0) if isinstance(computed_input, dict) else json.dumps(computed_input)
-    user_context = (user_context or "").strip()
-    if user_context:
-        user_context = "Known about this user (use to enrich the result, keep brief):\n" + user_context
-    else:
-        user_context = ""
 
     input_str = _cap_input(input_str, max_chars=6000)
     user_content = TEST_RESULT_USER_TEMPLATE.format(
         test_title=test_title,
         category=category,
-        user_context=user_context,
         input_json=input_str,
     )
     if include_chakra_preview:
@@ -810,12 +977,6 @@ async def call_llm_for_numerology_narrative(
             "summary": "Your numbers reveal a path of discovery and growth.",
         }
 
-    user_context = (user_context or "").strip()
-    if user_context:
-        user_context = "Known about this user:\n" + user_context
-    else:
-        user_context = ""
-
     input_json = json.dumps({
         "life_path": life_path,
         "soul_urge": soul_urge,
@@ -826,7 +987,6 @@ async def call_llm_for_numerology_narrative(
     user_content = NUMEROLOGY_NARRATIVE_USER.format(
         test_title="Numerology Profile",
         category="Numerology",
-        user_context=user_context,
         input_json=input_json
     )
 
@@ -859,20 +1019,22 @@ _MBTI_TYPE_NAMES: dict[str, str] = {
 }
 
 _MBTI_NARRATIVE_SYSTEM = """\
-You are a compassionate, psychologically insightful personality coach writing for a mobile spiritual-wellness app.
-Your writing is warm, reflective, and grounded in real psychology — never generic horoscope copy.
-Always respond with ONLY valid JSON — no prose outside the JSON block.
+    You are a compassionate, psychologically insightful personality coach writing for a mobile spiritual-wellness app.
+    Your writing is warm, reflective, and grounded in real psychology — never generic horoscope copy.
+    Always respond with ONLY valid JSON — no prose outside the JSON block.
 
-Return this exact JSON shape:
-{
-  "title": "string — MBTI type name (e.g. 'The Architect')",
-  "coreTraits": ["string — a short descriptive phrase, not a single word (e.g. 'You recharge alone, but care deeply about others')", "string — another short phrase", "string — etc."],
-  "narrative": "string — 2-3 paragraphs separated by \\n\\n. Paragraph 1: core personality/theme. Paragraph 2: deeper dynamic/inner workings. Paragraph 3: life direction/patterns",
-  "shortDescription": "string — a single paragraph summarizing the narrative, completely distinct from the paragraphs above",
-  "strengths": ["string — a short phrase describing a strength (e.g. 'Deep spiritual insight')", "string — etc."],
-  "challenges": ["string — a short phrase describing a challenge"],
-  "spiritualInsight": "string — 1 sentence linking the personality type to inner growth"
-}
+    Return this exact JSON shape:
+    {
+        "title": "string — MBTI type name (e.g. 'The Architect')",
+        "coreTraits": ["string — a short descriptive phrase, not a single word (e.g. 'You recharge alone, but care deeply about others')", "string — another short phrase", "string — etc."],
+        "narrative": "string — 2-3 paragraphs separated by \\n\\n. Paragraph 1: core personality/theme. Paragraph 2: deeper dynamic/inner workings. Paragraph 3: life direction/patterns",
+        "shortDescription": "string — a single paragraph summarizing the narrative, completely distinct from the paragraphs above",
+        "strengths": ["string — a short phrase describing a strength (e.g. 'Deep spiritual insight')", "string — etc."],
+        "challenges": ["string — a short phrase describing a challenge"],
+        "spiritualInsight": "string — 1 sentence linking the personality type to inner growth"
+    }
+
+    NB: Interpret mainly through cognitive style, thinking patterns and decision-making.
 """
 
 

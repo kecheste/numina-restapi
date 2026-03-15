@@ -37,11 +37,11 @@ class Settings(BaseSettings):
     app_name: str = "Numina API"
     api_v1_prefix: str = "/api/v1"
 
-    database_url: str
+    database_url: str = ''
 
     redis_url: str = "redis://localhost:6379/0"
 
-    jwt_secret_key: str
+    jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "numina-api"
     jwt_audience: str = "numina-api"

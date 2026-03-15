@@ -24,6 +24,7 @@ from app.services.result_calculation.numerology import compute_numerology
 from app.services.result_calculation.mbti import compute_mbti_detailed
 from app.services.result_calculation.life_path_number import compute_life_path_number
 from app.services.result_calculation.soul_urge import compute_soul_urge
+from app.services.result_calculation.human_design import calculate_human_design
 from app.services.llm import (
     call_llm_for_astrology_blueprint,
     call_llm_for_astrology_chart_narrative,
@@ -32,6 +33,9 @@ from app.services.llm import (
     call_llm_for_numerology_narrative,
     call_llm_for_test_result,
     call_llm_for_shadow_work,
+    call_llm_for_mind_mirror,
+    call_llm_for_energy_archetype,
+    call_llm_for_human_design,
 )
 
 from .helpers import (
@@ -49,7 +53,6 @@ logger = logging.getLogger(__name__)
 
 
 async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
-    """Load TestResult by id, (optionally) call AI, cache, save, set status=completed."""
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(TestResult).where(TestResult.id == result_id)
@@ -65,7 +68,6 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         test_id = row.test_id
         answer_hash_val = answer_hash(row.answers)
 
-        # 1) Rate limit
         if not await check_rate_limit(user_id):
             logger.warning("AI rate limit exceeded for user_id=%s", user_id)
             row.status = "completed"
@@ -77,7 +79,6 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             await session.commit()
             return
 
-        # 2) Cache lookup
         cache_key = cache_key_ai_result(test_id, user_id, answer_hash_val)
         cached = await cache_get(cache_key)
         if cached:
@@ -94,7 +95,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             await session.commit()
             return
 
-        # 3) Test 2 (Numerology): combined Life Path + Soul Urge from profile → one LLM result
+        # Numerology
         if test_id == 2:
             extracted = {}
             try:
@@ -127,7 +128,6 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
                         extracted["expression_number"] = res_num["expression_number"]
                         extracted["birth_day"] = res_num["birth_day"]
 
-                        # Save to user record for persistence
                         user.life_path_number = res_num["life_path"]
                         user.soul_urge_number = res_num["soul_urge"]
                         user.expression_number = res_num["expression_number"]
@@ -151,6 +151,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
                 expression_number=expr,
                 user_context=user_ctx,
             )
+            llm_result["extracted_json"] = extracted
             row.llm_result_json = llm_result
             row.personality_type = llm_result.get("title") or row.test_title
             row.insights = llm_result.get("coreTraits") or []
@@ -173,8 +174,8 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             logger.info("Refined result_id=%s (Numerology)", result_id)
             return
 
-        # 3b) Auto-generated premium: Human Design (4), Energy Synthesis (18) – compute from profile, then one LLM call
-        if test_id in (4, 18):
+        # Energy Synthesis (18)
+        if test_id == 18:
             extracted = {}
             try:
                 user_result = await session.execute(
@@ -182,42 +183,27 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
                 )
                 user = user_result.scalar_one_or_none()
                 if user:
-                    if test_id == 4:
-                        # Human Design: birth data for chart-style narrative (full chart computed elsewhere or by LLM from data)
-                        if (
-                            user.birth_year is not None
-                            and user.birth_month is not None
-                            and user.birth_day is not None
-                        ):
-                            extracted["birthDate"] = f"{user.birth_year}-{user.birth_month:02d}-{user.birth_day:02d}"
-                            extracted["zodiac"] = zodiac_from_date(user.birth_month, user.birth_day)
-                        if user.birth_time:
-                            extracted["birthTime"] = user.birth_time
-                        if user.birth_place_lat is not None and user.birth_place_lng is not None:
-                            extracted["birthPlace"] = "provided"
-                    elif test_id == 18:
-                        # Energy Synthesis: aggregate from user context (zodiac, MBTI, life path, etc.)
-                        lp = None
-                        if (
-                            user.birth_year is not None
-                            and user.birth_month is not None
-                            and user.birth_day is not None
-                        ):
-                            try:
-                                lp = compute_life_path_number(
-                                    user.birth_year,
-                                    user.birth_month,
-                                    user.birth_day,
-                                )
-                            except Exception:
-                                pass
-                        if lp:
-                            extracted["lifePath"] = lp.get("lifePath")
-                        extracted["zodiac"] = (
-                            zodiac_from_date(user.birth_month, user.birth_day)
-                            if user.birth_month is not None and user.birth_day is not None
-                            else None
-                        )
+                    lp = None
+                    if (
+                        user.birth_year is not None
+                        and user.birth_month is not None
+                        and user.birth_day is not None
+                    ):
+                        try:
+                            lp = compute_life_path_number(
+                                user.birth_year,
+                                user.birth_month,
+                                user.birth_day,
+                            )
+                        except Exception:
+                            pass
+                    if lp:
+                        extracted["lifePath"] = lp.get("lifePath")
+                    extracted["zodiac"] = (
+                        zodiac_from_date(user.birth_month, user.birth_day)
+                        if user.birth_month is not None and user.birth_day is not None
+                        else None
+                    )
             except Exception as e:
                 logger.warning(
                     "Auto-generated compute failed for test_id=%s user_id=%s: %s",
@@ -256,7 +242,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             logger.info("Refined result_id=%s (auto-generated %s)", result_id, row.test_title)
             return
 
-        # 4) Deterministic Life Path (19) and Soul Urge (20): compute from profile, then one LLM call
+        # Life Path (19) and Soul Urge (20)
         if test_id in (19, 20):
             extracted: dict[str, Any] = {}
             try:
@@ -330,32 +316,18 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             logger.info("Refined result_id=%s (deterministic numerology)", result_id)
             return
 
-        # 5) Text tests with compute stub: store raw in answers, run stub -> extracted_json, then one LLM call -> llm_result_json
-        stub_fn = TEXT_TEST_COMPUTE_STUBS.get(test_id)
-        if stub_fn is not None:
+        # Shadow Work Lens (8)
+        if test_id == 8:
             try:
-                extracted = stub_fn(row.answers)
+                extracted = TEXT_TEST_COMPUTE_STUBS[8](row.answers)
             except Exception as e:
-                logger.warning("Compute stub failed for test_id=%s: %s", test_id, e)
+                logger.warning("Compute stub failed for test_id=8: %s", e)
                 extracted = {}
-            user_ctx = await get_user_context(session, user_id)
             row.extracted_json = extracted
             row.score = 8.0
-            
-            if test_id == 8:
-                llm_result = await call_llm_for_shadow_work(extracted)
-            else:
-                llm_result = await call_llm_for_test_result(
-                    extracted,
-                    row.test_title,
-                    row.category,
-                    user_context=user_ctx,
-                )
-            
+            llm_result = await call_llm_for_shadow_work(extracted)
             row.llm_result_json = llm_result
-            row.personality_type = llm_result.get("title") or (
-                "Shadow Work Profile" if isinstance(extracted.get("scores"), dict) else "Soul Compass" if "coreDrive" in extracted else "Your Result"
-            )
+            row.personality_type = llm_result.get("title") or "Shadow Work Profile"
             row.insights = llm_result.get("coreTraits") or llm_result.get("tryThis") or []
             row.recommendations = llm_result.get("tryThis") or llm_result.get("avoidThis") or []
             row.narrative = llm_result.get("summary") or ""
@@ -373,10 +345,132 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             await session.commit()
             async with AsyncSessionLocal() as syn_session:
                 await generate_synthesis_for_user(syn_session, user_id)
-            logger.info("Refined result_id=%s (stub test)", result_id)
+            logger.info("Refined result_id=%s (Shadow Work)", result_id)
             return
 
-        # 6) MBTI Type (ID 7): fully deterministic scoring, AI only writes narrative
+        # Mind Mirror (12)
+        if test_id == 12 or str(test_id) == "12":
+            logger.info("DEBUG: Entering Mind Mirror branch for result_id=%s", result_id)
+            try:
+                extracted = TEXT_TEST_COMPUTE_STUBS[12](row.answers)
+            except Exception as e:
+                logger.warning("Compute stub failed for test_id=12: %s", e)
+                extracted = {}
+            row.extracted_json = extracted
+            row.score = 8.0
+            llm_result = await call_llm_for_mind_mirror(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or "Mind Mirror"
+            row.insights = llm_result.get("coreTraits") or llm_result.get("tryThis") or []
+            row.recommendations = llm_result.get("tryThis") or llm_result.get("avoidThis") or []
+            row.narrative = llm_result.get("summary") or ""
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Mind Mirror)", result_id)
+            return
+
+        # Energy Archetype (14)
+        if test_id == 14:
+            logger.info("DEBUG: Entering Energy Archetype branch for result_id=%s", result_id)
+            try:
+                extracted = TEXT_TEST_COMPUTE_STUBS[14](row.answers)
+            except Exception as e:
+                logger.warning("Compute stub failed for test_id=14: %s", e)
+                extracted = {}
+            row.extracted_json = extracted
+            row.score = 8.0
+            llm_result = await call_llm_for_energy_archetype(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or "Energy Archetype"
+            row.insights = llm_result.get("coreTraits") or llm_result.get("tryThis") or []
+            row.recommendations = llm_result.get("tryThis") or llm_result.get("avoidThis") or []
+            row.narrative = llm_result.get("summary") or ""
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Energy Archetype)", result_id)
+            return
+
+        # Human Design (4)
+        if test_id == 4:
+            logger.info("DEBUG: Entering Human Design branch for result_id=%s", result_id)
+            user = await session.get(UserModel, user_id)
+            if not user or user.birth_year is None or user.birth_month is None or user.birth_day is None:
+                logger.warning("Human Design failed: incomplete birth data for user_id=%s", user_id)
+                row.status = "failed"
+                await session.commit()
+                return
+
+            # Format for the calculator: "YYYY-MM-DD", "HH:MM"
+            birth_date_str = f"{user.birth_year:04d}-{user.birth_month:02d}-{user.birth_day:02d}"
+            birth_time_str = user.birth_time or "12:00"
+            timezone_str = user.birth_place_timezone or "UTC"
+            lat = user.birth_place_lat or 0.0
+            lon = user.birth_place_lng or 0.0
+
+            try:
+                extracted = calculate_human_design(
+                    birth_date=birth_date_str,
+                    birth_time=birth_time_str,
+                    timezone=timezone_str,
+                    lat=lat,
+                    lon=lon
+                )
+            except Exception as e:
+                logger.exception("calculate_human_design failed: %s", e)
+                extracted = {}
+
+            row.extracted_json = extracted
+            row.score = 10.0
+
+            llm_result = await call_llm_for_human_design(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or "Human Design"
+            row.insights = llm_result.get("coreTraits") or []
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("summary") or ""
+            
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Human Design)", result_id)
+            return
+
+        # MBTI Type (7)
         if test_id == 7:
             mbti_result = compute_mbti_detailed(row.answers)
             mbti_type = mbti_result.get("type") or ""
@@ -384,7 +478,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             confidence = mbti_result.get("confidence", {})
 
             row.personality_type = mbti_type
-            row.extracted_json = mbti_result  # stores type, dimensions, confidence
+            row.extracted_json = mbti_result
             row.score = 10.0
 
             user_ctx = await get_user_context(session, user_id)
@@ -429,9 +523,8 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
 
         computed_type: str | None = None
         
-        # 6b) Specialized Astrology Chart Narrative (ID 1)
-        if test_id == 1 and row.test_title == "Astrology Chart Narrative":
-            # Answers should be the computed astrology dict
+        # Astrology Chart Narrative (1)
+        if test_id == 1:
             ad = row.answers if isinstance(row.answers, dict) else {}
             el = ad.get("element_distribution") or {}
             llm_result = await call_llm_for_astrology_chart_narrative(
@@ -468,7 +561,6 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             logger.info("Refined result_id=%s (Astrology Chart Narrative)", result_id)
             return
 
-        # 7) Light extraction for standard tests (score, type, insights, recs)
         out = await call_openai_for_insights(
             row.test_title,
             row.category,
@@ -484,7 +576,6 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             "recommendations": out.get("recommendations", []),
         }
 
-        # 8) Single LLM call for structured JSON (title, summary, coreTraits, strengths, challenges, spiritualInsight, tryThis, avoidThis)
         user_ctx = await get_user_context(session, user_id)
         llm_result = await call_llm_for_test_result(
             computed_for_llm,
@@ -502,7 +593,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         out["narrative"] = row.narrative
         out["llm_result_json"] = row.llm_result_json
         row.status = "completed"
-        # Save onboarding fields to user profile for My Soul page
+
         if test_id == 7:
             mbti_type = (computed_type or "").strip().upper() if computed_type and len(computed_type) >= 4 else (row.personality_type or "").strip()[:4].upper() or None
             mbti_descriptor = (llm_result.get("title") or "").strip() or None
