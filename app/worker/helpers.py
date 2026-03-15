@@ -34,6 +34,28 @@ from app.services.result_calculation.soul_compass import compute_soul_compass
 
 logger = logging.getLogger(__name__)
 
+def _map_text_to_score(val: Any) -> float:
+    if val is None:
+        return 3.0
+    
+    mapping = {
+        "strongly disagree": 1.0,
+        "disagree": 2.0,
+        "neutral": 3.0,
+        "agree": 4.0,
+        "strongly agree": 5.0
+    }
+    
+    if isinstance(val, str):
+        mapped = mapping.get(val.strip().lower())
+        if mapped is not None:
+            return mapped
+    
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return 3.0
+
 def compute_mind_mirror(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
     """
     Extract Mind Mirror answers into a structured dict for the narrative LLM.
@@ -74,27 +96,7 @@ def compute_energy_archetype(answers: list[Any] | dict[str, Any]) -> dict[str, A
     ans_map = {item.get("id") or item.get("question_id"): item.get("answer") for item in (answers or []) if isinstance(item, dict)}
     
     def get_ans(qid: int) -> float:
-        val = ans_map.get(qid)
-        if val is None:
-            return 3.0
-        
-        mapping = {
-            "strongly disagree": 1.0,
-            "disagree": 2.0,
-            "neutral": 3.0,
-            "agree": 4.0,
-            "strongly agree": 5.0
-        }
-        
-        if isinstance(val, str):
-            mapped = mapping.get(val.strip().lower())
-            if mapped is not None:
-                return mapped
-        
-        try:
-            return float(val)
-        except (ValueError, TypeError):
-            return 3.0
+        return _map_text_to_score(ans_map.get(qid))
 
     # 2) Calculate raw averages
     raw = {
@@ -126,15 +128,172 @@ def compute_energy_archetype(answers: list[Any] | dict[str, Any]) -> dict[str, A
     balance_score = max(0, min(100, scores["integrator"] - scores["overloaded"] + 50))
 
     return {
-        "primary_archetype": primary,
-        "secondary_archetype": secondary,
-        "title": title_map.get(primary, "The Harmonized Mind"),
         "scores": scores,
-        "balance_score": balance_score,
+        "primary": primary,
+        "secondary": secondary,
+        "title": title_map.get(primary, "Energy Archetype"),
+        "balance_score": balance_score
     }
 
+
+def compute_big_five(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
+    """
+    Calculate Big Five personality dimension percentages.
+    
+    Dimensions:
+    - Openness: q1, q2, q3, q4
+    - Conscientiousness: q5, q6, q7, q8
+    - Extraversion: q9, q10, q11, q12
+    - Agreeableness: q13, q14, q15, q16
+    - Neuroticism: q17, q18, q19, q20
+    """
+    if isinstance(answers, dict):
+        return answers
+
+    ans_map = {item.get("id") or item.get("question_id"): item.get("answer") for item in (answers or []) if isinstance(item, dict)}
+
+    def get_ans(qid: int) -> float:
+        return _map_text_to_score(ans_map.get(qid))
+
+    def avg(lst):
+        return sum(lst) / len(lst) if lst else 3.0
+
+    def to_percent(avg_score):
+        return int(round(((avg_score - 1) / 4) * 100))
+
+    results = {
+        "openness": to_percent(avg([get_ans(1), get_ans(2), get_ans(3), get_ans(4)])),
+        "conscientiousness": to_percent(avg([get_ans(5), get_ans(6), get_ans(7), get_ans(8)])),
+        "extraversion": to_percent(avg([get_ans(9), get_ans(10), get_ans(11), get_ans(12)])),
+        "agreeableness": to_percent(avg([get_ans(13), get_ans(14), get_ans(15), get_ans(16)])),
+        "neuroticism": to_percent(avg([get_ans(17), get_ans(18), get_ans(19), get_ans(20)])),
+    }
+
+    return results
+
+def compute_starseed(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
+    """
+    Calculate Starseed Origins archetypal resonance.
+    
+    Mapping logic:
+    - pleiadian: q4_heal, q8, q9
+    - arcturian: q2_science, q6_logic, q7_structured
+    - sirian: q4_teach, q5_teaching, q9
+    - lyran: q3_earth, q4_protect, q11
+    - andromedan: q2_space, q3_sky, q12
+    - venusian: q5_oneonone, q3_water, q11
+    """
+    if isinstance(answers, dict):
+        return answers
+
+    ans_map = {item.get("id") or item.get("question_id"): item.get("answer") for item in (answers or []) if isinstance(item, dict)}
+
+    def get_val(qid: int) -> Any:
+        return ans_map.get(qid)
+
+    def get_score(qid: int) -> float:
+        return _map_text_to_score(get_val(qid))
+
+    def is_match(qid: int, target: str) -> float:
+        val = get_val(qid)
+        if isinstance(val, list):
+            return 5.0 if any(target.lower() in str(v).lower() for v in val) else 1.0
+        if isinstance(val, str):
+            return 5.0 if target.lower() in val.lower() else 1.0
+        return 1.0
+
+    def avg_scores(lst):
+        return sum(lst) / len(lst) if lst else 3.0
+
+    def to_percent(avg_score):
+        return int(round(((avg_score - 1) / 4) * 100))
+
+    # Calculate dimension scores (1-5 range)
+    dists = {
+        "pleiadian": avg_scores([is_match(4, "heal"), get_score(8), get_score(9)]),
+        "arcturian": avg_scores([is_match(2, "science"), is_match(6, "logic"), is_match(7, "structured")]),
+        "sirian": avg_scores([is_match(4, "teach"), is_match(5, "teaching"), get_score(9)]),
+        "lyran": avg_scores([is_match(3, "earth"), is_match(4, "protect"), get_score(11)]),
+        "andromedan": avg_scores([is_match(2, "space"), is_match(3, "sky"), get_score(12)]),
+        "venusian": avg_scores([is_match(5, "oneonone"), is_match(3, "water"), get_score(11)]),
+    }
+
+    scores = {k: to_percent(v) for k, v in dists.items()}
+    
+    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    primary = ranked[0][0]
+    secondary = ranked[1][0]
+
+    titles = {
+        "pleiadian": "Pleiadian Healer",
+        "arcturian": "Arcturian Innovator",
+        "sirian": "Sirian Teacher",
+        "lyran": "Lyran Guardian",
+        "andromedan": "Andromedan Explorer",
+        "venusian": "Venusian Harmonizer"
+    }
+
+    return {
+        "primary_origin": primary,
+        "secondary_origin": secondary,
+        "title": titles.get(primary, "Starseed Origins"),
+        "scores": scores
+    }
+
+def compute_core_values(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
+    """
+    Calculate Core Values Sort scores and identify primary, secondary, and third values.
+    
+    Mapping:
+    - growth: q5
+    - connection: q6
+    - freedom: q7
+    - security: q8
+    - impact: q9
+    - creativity: q10
+    - harmony: q11
+    - achievement: q12
+    """
+    if isinstance(answers, dict):
+        return answers
+
+    ans_map = {item.get("id") or item.get("question_id"): item.get("answer") for item in (answers or []) if isinstance(item, dict)}
+
+    def to_percent(val: Any) -> int:
+        score = _map_text_to_score(val)
+        return int(round(((score - 1) / 4) * 100))
+
+    scores = {
+        "growth": to_percent(ans_map.get(5)),
+        "connection": to_percent(ans_map.get(6)),
+        "freedom": to_percent(ans_map.get(7)),
+        "security": to_percent(ans_map.get(8)),
+        "impact": to_percent(ans_map.get(9)),
+        "creativity": to_percent(ans_map.get(10)),
+        "harmony": to_percent(ans_map.get(11)),
+        "achievement": to_percent(ans_map.get(12)),
+    }
+
+    # Sort by score descending
+    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    
+    primary = ranked[0][0]
+    secondary = ranked[1][0]
+    third = ranked[2][0]
+
+    return {
+        "primary_value": primary,
+        "secondary_value": secondary,
+        "third_value": third,
+        "scores": scores
+    }
+
+
 TEXT_TEST_COMPUTE_STUBS: dict[int, Callable[..., dict[str, Any]]] = {
+    3: compute_starseed,      # Starseed Origins
     8: compute_shadow_work,   # Shadow Work Lens
+    9: compute_big_five,      # Big Five
+    10: compute_core_values,  # Core Values Sort
     12: compute_mind_mirror,  # Mind Mirror
     14: compute_energy_archetype, # Energy Archetype
     24: compute_soul_compass, # Soul Compass

@@ -40,6 +40,15 @@ from app.core.prompts import (
     HUMAN_DESIGN_JSON_KEYS,
     HUMAN_DESIGN_SYSTEM,
     HUMAN_DESIGN_USER,
+    BIG_FIVE_SYSTEM,
+    BIG_FIVE_USER,
+    BIG_FIVE_JSON_KEYS,
+    STARSEED_SYSTEM,
+    STARSEED_USER,
+    STARSEED_JSON_KEYS,
+    CORE_VALUES_SYSTEM,
+    CORE_VALUES_USER,
+    CORE_VALUES_JSON_KEYS,
 )
 
 logger = logging.getLogger(__name__)
@@ -259,10 +268,8 @@ async def call_llm_for_mind_mirror(responses: list[Any] | dict[str, Any]) -> dic
         logger.warning("LLM mind mirror call failed: %s", e)
     return _fallback_mind_mirror_json()
 
-
 def _validate_energy_archetype_result(obj: Any) -> dict[str, Any]:
     return _validate_and_filter(obj, ENERGY_ARCHETYPE_JSON_KEYS)
-
 
 async def call_llm_for_energy_archetype(responses: dict[str, Any]) -> dict[str, Any]:
     """Dedicated LLM call for Energy Archetype analysis."""
@@ -341,6 +348,114 @@ async def call_llm_for_human_design(computed_input: dict[str, Any]) -> dict[str,
 
 def _validate_human_design_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
     res = _validate_and_filter(data, HUMAN_DESIGN_JSON_KEYS)
+    if extracted:
+        res["extracted_json"] = extracted
+    return res
+
+async def call_llm_for_big_five(calculated_data: dict) -> dict:
+    """Interpret Big Five results into a structured result."""
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        input_json = json.dumps(calculated_data, indent=2)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": BIG_FIVE_SYSTEM},
+                {"role": "user", "content": BIG_FIVE_USER.format(input_json=input_json)},
+            ],
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.6,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        return _validate_big_five_result(data or {}, extracted=calculated_data)
+    except Exception as e:
+        logger.warning("LLM Big Five call failed: %s", e)
+        return {
+            "title": "The Big Five Explorer",
+            "summary": "Your Big Five profile revealed key insights into your natural tendencies. Explore your dimensions to understand your path.",
+            "extracted_json": calculated_data,
+        }
+
+def _validate_big_five_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
+    res = _validate_and_filter(data, BIG_FIVE_JSON_KEYS)
+    if extracted:
+        res["extracted_json"] = extracted
+    return res
+
+
+async def call_llm_for_starseed(calculated_data: dict) -> dict:
+    """Interpret Starseed Origins results into a structured result."""
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        input_json = json.dumps(calculated_data.get("scores", {}), indent=2)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": STARSEED_SYSTEM},
+                {"role": "user", "content": STARSEED_USER.format(
+                    primary_origin=calculated_data.get("primary_origin", "unknown"),
+                    secondary_origin=calculated_data.get("secondary_origin", "unknown"),
+                    input_json=input_json
+                )},
+            ],
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.7,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        return _validate_starseed_result(data or {}, extracted=calculated_data)
+    except Exception as e:
+        logger.warning("LLM Starseed call failed: %s", e)
+        return {
+            "title": calculated_data.get("title", "Starseed Origins"),
+            "summary": "Your cosmic resonance reveals a unique archetypal pattern. Explore your origins to understand your purpose.",
+            "extracted_json": calculated_data,
+        }
+
+
+def _validate_starseed_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
+    res = _validate_and_filter(data, STARSEED_JSON_KEYS)
+    if extracted:
+        res["extracted_json"] = extracted
+    return res
+
+
+async def call_llm_for_core_values(calculated_data: dict) -> dict:
+    """Interpret Core Values Sort results into a structured result."""
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": CORE_VALUES_SYSTEM},
+                {"role": "user", "content": CORE_VALUES_USER.format(
+                    primary_value=calculated_data.get("primary_value", "unknown"),
+                    secondary_value=calculated_data.get("secondary_value", "unknown"),
+                    third_value=calculated_data.get("third_value", "unknown"),
+                    scores=json.dumps(calculated_data.get("scores", {}), indent=2)
+                )},
+            ],
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.7,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        return _validate_core_values_result(data or {}, extracted=calculated_data)
+    except Exception as e:
+        logger.warning("LLM Core Values call failed: %s", e)
+        return {
+            "title": "Your Core Values",
+            "summary": "Your core values drive your life decisions and sense of fulfillment. Explore your profile to understand your path.",
+            "extracted_json": calculated_data,
+        }
+
+
+def _validate_core_values_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
+    res = _validate_and_filter(data, CORE_VALUES_JSON_KEYS)
     if extracted:
         res["extracted_json"] = extracted
     return res

@@ -36,6 +36,9 @@ from app.services.llm import (
     call_llm_for_mind_mirror,
     call_llm_for_energy_archetype,
     call_llm_for_human_design,
+    call_llm_for_big_five,
+    call_llm_for_starseed,
+    call_llm_for_core_values,
 )
 
 from .helpers import (
@@ -379,6 +382,105 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             async with AsyncSessionLocal() as syn_session:
                 await generate_synthesis_for_user(syn_session, user_id)
             logger.info("Refined result_id=%s (Mind Mirror)", result_id)
+            return
+
+        # Starseed Origins (3)
+        if test_id == 3 or str(test_id) == "3":
+            logger.info("DEBUG: Entering Starseed Origins branch for result_id=%s", result_id)
+            try:
+                extracted = TEXT_TEST_COMPUTE_STUBS[3](row.answers)
+            except Exception as e:
+                logger.warning("Compute stub failed for test_id=3: %s", e)
+                extracted = {}
+            row.extracted_json = extracted
+            row.score = 7.0
+            llm_result = await call_llm_for_starseed(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or extracted.get("title") or "Starseed Explorer"
+            row.insights = llm_result.get("coreTraits") or llm_result.get("tryThis") or []
+            row.recommendations = llm_result.get("tryThis") or llm_result.get("avoidThis") or []
+            row.narrative = llm_result.get("summary") or ""
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Starseed Origins)", result_id)
+            return
+
+        # Core Values Sort (10)
+        if test_id == 10 or str(test_id) == "10":
+            logger.info("DEBUG: Entering Core Values branch for result_id=%s", result_id)
+            try:
+                extracted = TEXT_TEST_COMPUTE_STUBS[10](row.answers)
+            except Exception as e:
+                logger.warning("Compute stub failed for test_id=10: %s", e)
+                extracted = {}
+            row.extracted_json = extracted
+            row.score = 6.0
+            llm_result = await call_llm_for_core_values(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or "Core Values Explorer"
+            row.insights = llm_result.get("coreTraits") or llm_result.get("tryThis") or []
+            row.recommendations = llm_result.get("tryThis") or llm_result.get("avoidThis") or []
+            row.narrative = llm_result.get("summary") or ""
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Core Values)", result_id)
+            return
+
+        # Big Five (9)
+        if test_id == 9 or str(test_id) == "9":
+            logger.info("DEBUG: Entering Big Five branch for result_id=%s", result_id)
+            try:
+                extracted = TEXT_TEST_COMPUTE_STUBS[9](row.answers)
+            except Exception as e:
+                logger.warning("Compute stub failed for test_id=9: %s", e)
+                extracted = {}
+            row.extracted_json = extracted
+            row.score = 9.0
+            llm_result = await call_llm_for_big_five(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or "Big Five Explorer"
+            row.insights = llm_result.get("coreTraits") or llm_result.get("tryThis") or []
+            row.recommendations = llm_result.get("tryThis") or llm_result.get("avoidThis") or []
+            row.narrative = llm_result.get("summary") or ""
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Big Five)", result_id)
             return
 
         # Energy Archetype (14)
