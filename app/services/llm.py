@@ -49,6 +49,9 @@ from app.core.prompts import (
     CORE_VALUES_SYSTEM,
     CORE_VALUES_USER,
     CORE_VALUES_JSON_KEYS,
+    EMOTIONAL_REGULATION_SYSTEM,
+    EMOTIONAL_REGULATION_USER,
+    EMOTIONAL_REGULATION_JSON_KEYS,
 )
 
 logger = logging.getLogger(__name__)
@@ -313,12 +316,37 @@ async def call_llm_for_human_design(computed_input: dict[str, Any]) -> dict[str,
     if not settings.openai_api_key:
         return {
             "title": "Natural Origin",
-            "summary": "Your Human Design reveals a unique energetic blueprint. Explore your gates to understand your strategy.",
+            "summary": "Your Human Design reveals a unique energetic blueprint based on your birth data.",
+            "energyBlueprint": "Explore your Type, Strategy, and Authority to understand how you naturally interact with the world.",
+            "decisionGuidance": "Your specific authority provides a reliable way to make decisions that align with your true nature.",
         }
 
-    input_str = json.dumps(computed_input, indent=0)
-    input_str = _cap_input(input_str, max_chars=6000)
-    
+    input_data = {
+        "type": computed_input.get("type"),
+        "strategy": computed_input.get("strategy"),
+        "authority": computed_input.get("authority"),
+        "profile": computed_input.get("profile"),
+        "definition": computed_input.get("definition"),
+        "defined_centers": ", ".join(computed_input.get("defined_centers", [])),
+        "undefined_centers": ", ".join(computed_input.get("undefined_centers", [])),
+        "personality_gates": json.dumps(computed_input.get("personality_gates", {}), indent=2),
+        "design_gates": json.dumps(computed_input.get("design_gates", {}), indent=2),
+    }
+
+    input_str = f"""Type: {input_data['type']}
+        Strategy: {input_data['strategy']}
+        Authority: {input_data['authority']}
+        Profile: {input_data['profile']}
+        Definition: {input_data['definition']}
+        Defined Centers: {input_data['defined_centers']}
+        Undefined Centers: {input_data['undefined_centers']}
+
+        Personality Gates:
+        {input_data['personality_gates']}
+
+        Design Gates:
+        {input_data['design_gates']}"""
+
     user_content = HUMAN_DESIGN_USER.format(input_json=input_str)
 
     try:
@@ -1225,3 +1253,51 @@ async def call_llm_for_mbti_narrative(
     except Exception as e:
         logger.warning("LLM MBTI narrative call failed: %s", e)
     return _fallback_mbti_narrative(mbti_type)
+
+
+def _fallback_emotional_regulation(primary: str, secondary: str) -> dict[str, Any]:
+    return {
+        "title": primary.replace("_", " ").title() if primary else "Emotional Regulation",
+        "overview": "Your emotional regulation profile shows how you process and respond to inner feelings.",
+        "strengths": ["Self-awareness", "Resilience", "Emotional depth"],
+        "challenges": ["Over-processing", "Sudden surges"],
+        "summary": f"Your primary style is {primary} with secondary traits of {secondary}." if primary and secondary else "Your emotional style is unique to you.",
+        "tryThis": ["Daily mindfulness", "Journaling"],
+        "avoidThis": ["Ignoring feelings", "Suppression"],
+    }
+
+
+async def call_llm_for_emotional_regulation(extracted: dict[str, Any]) -> dict[str, Any]:
+    if not settings.openai_api_key:
+        return _fallback_emotional_regulation(
+            extracted.get("primary_type", ""), extracted.get("secondary_type", "")
+        )
+
+    user_content = EMOTIONAL_REGULATION_USER.format(
+        primary_type=extracted.get("primary_type", ""),
+        secondary_type=extracted.get("secondary_type", ""),
+        scores=json.dumps(extracted.get("scores", {}), indent=2),
+    )
+
+    try:
+        from openai import AsyncOpenAI
+
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": EMOTIONAL_REGULATION_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=1000,
+            temperature=0.5,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        if data:
+            return _validate_and_filter(data, EMOTIONAL_REGULATION_JSON_KEYS)
+    except Exception as e:
+        logger.warning("LLM emotional regulation call failed: %s", e)
+    return _fallback_emotional_regulation(
+        extracted.get("primary_type", ""), extracted.get("secondary_type", "")
+    )

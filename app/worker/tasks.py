@@ -39,6 +39,7 @@ from app.services.llm import (
     call_llm_for_big_five,
     call_llm_for_starseed,
     call_llm_for_core_values,
+    call_llm_for_emotional_regulation,
 )
 
 from .helpers import (
@@ -621,6 +622,38 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             async with AsyncSessionLocal() as syn_session:
                 await generate_synthesis_for_user(syn_session, user_id)
             logger.info("Refined result_id=%s (MBTI → %s)", result_id, mbti_type)
+            return
+
+        # Emotional Regulation Type (15)
+        if test_id == 15:
+            try:
+                extracted = TEXT_TEST_COMPUTE_STUBS[15](row.answers)
+            except Exception as e:
+                logger.warning("Compute stub failed for test_id=15: %s", e)
+                extracted = {}
+            row.extracted_json = extracted
+            row.score = 8.5
+            llm_result = await call_llm_for_emotional_regulation(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or "Emotional Regulator"
+            row.insights = llm_result.get("strengths") or []
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("summary") or ""
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Emotional Regulation)", result_id)
             return
 
         computed_type: str | None = None

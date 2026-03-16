@@ -31,6 +31,7 @@ from app.services.llm import (
 from app.services.result_calculation.life_path_number import compute_life_path_number
 from app.services.result_calculation.shadow_work import compute_shadow_work
 from app.services.result_calculation.soul_compass import compute_soul_compass
+from app.services.result_calculation.emotional_regulation import compute_emotional_regulation
 
 logger = logging.getLogger(__name__)
 
@@ -296,6 +297,7 @@ TEXT_TEST_COMPUTE_STUBS: dict[int, Callable[..., dict[str, Any]]] = {
     10: compute_core_values,  # Core Values Sort
     12: compute_mind_mirror,  # Mind Mirror
     14: compute_energy_archetype, # Energy Archetype
+    15: compute_emotional_regulation, # Emotional Regulation Type
     24: compute_soul_compass, # Soul Compass
 }
 

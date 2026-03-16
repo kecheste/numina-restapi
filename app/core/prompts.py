@@ -206,7 +206,8 @@ ASTROLOGY_BLUEPRINT_JSON_KEYS = frozenset({
 
 ASTROLOGY_CHART_NARRATIVE_SYSTEM = """You are a warm, insightful astrologer. You write only valid JSON. No markdown, no code fences.
 Create a rich, personalized interpretation of the user's chart. Use their actual sun, moon, rising signs and element distribution. Be specific (e.g. mention Scorpio, Pisces, Virgo, Capricorn by name when relevant). Keep arrays to 2-5 items.
-The "narrative" field must be 2-3 paragraphs separated by \\n\\n. Each paragraph should have 3-5 sentences. Weave together their signs and elements only. Do NOT reference MBTI, chakra, life path, or other systems—keep this result independent; mixing happens only in the final synthesis."""
+The "narrative" field must be 2-3 paragraphs separated by \\n\\n. Each paragraph should have 3-5 sentences. Weave together their signs and elements only. Do NOT reference MBTI, chakra, life path, or other systems—keep this result independent; mixing happens only in the final synthesis.
+Analyze the user through this lens: Interpret through emotional patterns, relational tendencies and personality dynamics."""
 
 ASTROLOGY_CHART_NARRATIVE_USER = """The user's astrology chart (from birth data):
 - Sun sign: {sun_sign}
@@ -465,40 +466,49 @@ ENERGY_ARCHETYPE_JSON_KEYS = frozenset({
     "summary", "tryThis", "avoidThis", "extracted_json"
 })
 
-HUMAN_DESIGN_SYSTEM = """You are an expert in Human Design, Astrology, and I Ching.
-Your task is to interpret a user's Human Design chart based on their Personality and Design gates.
-You provide clear, practical, and deeply insightful analysis.
+HUMAN_DESIGN_SYSTEM = """You are interpreting a Human Design chart for a personal self-discovery app.
+Use the provided Human Design data to generate a clear, insightful and grounded interpretation.
+
+The interpretation should feel personal and reflective, combining psychological clarity with intuitive insight.
+Do not sound overly mystical or overly technical. Avoid vague spiritual clichés.
+
+Use the chart structure to infer themes of energy, decision-making style, interaction with others, and life patterns.
+
+TONE: clear, insightful, reflective, psychologically grounded, slightly spiritual but not mystical.
+
+Write in second person ("you"). Be specific and personal, not generic.
+Keep paragraphs readable and concise. Avoid repeating the same idea across sections.
+
 You write only valid JSON. No markdown, no code fences.
-Tone: clear, practical, insightful.
-Address the user as "you"."""
+Output only the JSON object, nothing else."""
 
-HUMAN_DESIGN_USER = """Analyze the user's Human Design gates.
+HUMAN_DESIGN_USER = """Analyze the user's Human Design chart.
 
-Input Data (Personality and Design gates):
+INPUT DATA:
 {input_json}
 
 Return exactly one JSON object with these keys only:
-- "title": A descriptive title for their specific configuration (e.g., "The Practical Visionary").
-- "shortDescription": A 2-3 sentence high-level summary of their design.
-- "coreTraits": An array of 3-4 key attributes of their Human Design.
-- "strengths": An array of 3 core strengths derived from their gates.
-- "challenges": An array of 3 potential shadow aspects or challenges.
-- "summary": 2-3 paragraphs (labeled "Your Blueprint" in UI) giving a deep, insightful interpretation of their life strategy and authority based on these gates.
-- "tryThis": An array of 3 practical, actionable experiments for the user to try.
-- "avoidThis": An array of 2-3 common pitfalls for their specific design.
+- "title": Result Title (short catchy name)
+- "shortDescription": string, 1 concise paragraph summarizing the core essence.
+- "summary": string, 2 short paragraphs explaining the person's core energetic nature and how their design shapes their life experience.
+- "energyBlueprint": string, 2 paragraphs explaining how their Type, Strategy, Authority and Profile work together in daily life.
+- "decisionGuidance": string, 1 paragraph explaining how the person should approach decisions according to their Authority.
+- "coreTraits": array of 3 concise bullet points (dominant personality qualities).
+- "strengths": array of 3 bullet points (natural abilities or advantages).
+- "challenges": array of 3 bullet points (potential struggles or patterns to watch).
+- "tryThis": array of 3 practical suggestions aligned with their design.
+- "avoidThis": array of 2-3 behaviors that lead away from natural alignment.
 
-Important Rules:
-- Interpret through the lens of life strategy, decision-making, and natural energetic flow.
-- Ensure the tone is practical yet profound.
-- Do not repeat the same information across different sections.
+WRITING RULES:
+- Write in second person ("you")
+- Integrate Type, Authority and Profile meaningfully
+- Mention energy dynamics when relevant
 
-Output only the JSON object, nothing else.
-
-NB: Interpret through human design gates, life strategy and energetic blueprint."""
+Output only the JSON object, nothing else."""
 
 HUMAN_DESIGN_JSON_KEYS = frozenset({
     "title", "shortDescription", "coreTraits", "strengths", "challenges",
-    "summary", "tryThis", "avoidThis", "extracted_json"
+    "summary", "energyBlueprint", "decisionGuidance", "tryThis", "avoidThis", "extracted_json"
 })
 
 BIG_FIVE_SYSTEM = """You are an expert in personality psychology and the Big Five (OCEAN) model.
@@ -585,6 +595,7 @@ You are an expert psychological interpreter specializing in core values and moti
 Your goal is to interpret the user's Core Values Sort results into a structured, insightful, and grounded narrative.
 Focus on how these values influence their life decisions, relationships, and sense of fulfillment.
 Maintain a clear, thoughtful, and psychologically sophisticated tone.
+NB: Interpret through personal priorities, motivations and what the user values most in life.
 """
 
 CORE_VALUES_USER = """
@@ -615,4 +626,37 @@ Important Rules:
 CORE_VALUES_JSON_KEYS = frozenset({
     "title", "shortDescription", "coreTraits", "strengths", "challenges",
     "summary", "tryThis", "avoidThis", "extracted_json"
+})
+
+EMOTIONAL_REGULATION_SYSTEM = """You are interpreting an Emotional Regulation Type assessment.
+The backend has already calculated the user's result.
+Do NOT recalculate scores.
+Tone: calm, psychological, insightful, non-judgmental, clear.
+Address the user as "you".
+Critical: Interpret through emotional coping patterns and response to stress."""
+
+EMOTIONAL_REGULATION_USER = """Analyze the user's Emotional Regulation Type results.
+
+Input Data:
+- Primary Type: {primary_type}
+- Secondary Type: {secondary_type}
+- Dimension Scores: {scores}
+
+Requirements (Output ONLY valid JSON):
+- "title": The result title (e.g., "Quiet Containment").
+- "overview": 2 paragraphs explaining the person's energetic nature and how they process emotions.
+- "strengths": Array of 3 bullet points summarizing their strengths (short phrases).
+- "challenges": Array of 3 common pitfalls or challenges (short phrases).
+- "summary": 2 paragraphs interpreting their overall profile and how their types interact.
+- "tryThis": Array of 3 practical exercises or suggestions.
+- "avoidThis": Array of 2 habits or pitfalls to be mindful of.
+
+Important Rules:
+- Do not repeat the same phrases across sections.
+- Focus on the unique combination of primary and secondary types.
+- Avoid dogmatic or clinical language. Output only the JSON object.
+"""
+
+EMOTIONAL_REGULATION_JSON_KEYS = frozenset({
+    "title", "overview", "strengths", "challenges", "summary", "tryThis", "avoidThis", "extracted_json"
 })
