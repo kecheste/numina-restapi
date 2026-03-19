@@ -1371,3 +1371,251 @@ async def call_llm_for_emotional_regulation(extracted: dict[str, Any]) -> dict[s
     return _fallback_emotional_regulation(
         extracted.get("primary_type", ""), extracted.get("secondary_type", "")
     )
+
+
+async def call_llm_for_inner_child(computed_input: dict[str, Any]) -> dict[str, Any]:
+    """Interprets Inner Child Dialogue result via LLM."""
+    if not settings.openai_api_key:
+        return {
+            "title": computed_input.get("title", "Inner Child Dialogue"),
+            "summary": "Your Inner Child Dialogue result reveals your emotional patterns and healing potential.",
+            "energyBlueprint": "Explore your primary and secondary types to understand your inner child's voice.",
+        }
+
+    from app.core.prompts import INNER_CHILD_SYSTEM, INNER_CHILD_USER, INNER_CHILD_JSON_KEYS
+
+    answers = computed_input.get("answers", {})
+
+    user_content = INNER_CHILD_USER.format(
+        primary_type=computed_input.get("primary_type"),
+        secondary_type=computed_input.get("secondary_type"),
+        healing_score=computed_input.get("healing_score"),
+        scores=json.dumps(computed_input.get("scores", {}), indent=2),
+        q1=answers.get("q1", "N/A"),
+        q2=answers.get("q2", "N/A"),
+        q13=answers.get("q13", "N/A")
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": INNER_CHILD_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.4,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = _extract_json_from_response(content) or {}
+        res = _validate_and_filter(data, INNER_CHILD_JSON_KEYS)
+        res["extracted_json"] = computed_input
+        return res
+    except Exception as e:
+        logger.exception("LLM inner child call failed: %s", e)
+        return {
+            "title": computed_input.get("title", "Inner Child Dialogue"),
+            "summary": "Your result reveals a unique emotional blueprint. Explore your traits to understand your healing journey.",
+            "extracted_json": computed_input,
+        }
+
+async def call_llm_for_karmic_lessons(computed_input: dict[str, Any]) -> dict[str, Any]:
+    """Interprets Karmic Lessons result via LLM."""
+    if not settings.openai_api_key:
+        return {
+            "title": computed_input.get("title", "The Lesson of Spiritual Growth"),
+            "overview": "Your Karmic Lessons result reveals recurring life patterns and evolution opportunities.",
+            "energyBlueprint": "Explore your primary and secondary lessons to understand your soul's journey.",
+            "extracted_json": computed_input,
+        }
+
+    from app.core.prompts import KARMIC_LESSONS_SYSTEM, KARMIC_LESSONS_USER, KARMIC_LESSONS_JSON_KEYS
+
+    answers = computed_input.get("answers", {})
+
+    user_content = KARMIC_LESSONS_USER.format(
+        primary_lesson=computed_input.get("primary_lesson"),
+        secondary_lesson=computed_input.get("secondary_lesson"),
+        title=computed_input.get("title"),
+        recurrence_score=computed_input.get("recurrence_score"),
+        scores=json.dumps(computed_input.get("scores", {}), indent=2),
+        q1=answers.get("q1", "N/A"),
+        q2=answers.get("q2", "N/A")
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": KARMIC_LESSONS_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.4,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = _extract_json_from_response(content) or {}
+        res = _validate_and_filter(data, KARMIC_LESSONS_JSON_KEYS)
+        res["extracted_json"] = computed_input
+        return res
+    except Exception as e:
+        logger.exception("LLM karmic lessons call failed: %s", e)
+        return {
+            "title": computed_input.get("title", "Karmic Lessons"),
+            "overview": "Your result reveals a unique spiritual blueprint. Explore your traits to understand your growth journey.",
+            "extracted_json": computed_input,
+        }
+
+async def call_llm_for_past_life_vibes(computed_input: dict[str, Any]) -> dict[str, Any]:
+    """Interprets Past Life Vibes result via LLM."""
+    if not settings.openai_api_key:
+        return {
+            "title": computed_input.get("title", "Ancient Archetype"),
+            "overview": "Your Past Life Vibes result reveals your archetypal resonance with ancient wisdom.",
+            "energyBlueprint": "Explore your primary and secondary types to understand your soul's echoes.",
+            "extracted_json": computed_input,
+        }
+
+    from app.core.prompts import PAST_LIFE_SYSTEM, PAST_LIFE_USER, PAST_LIFE_JSON_KEYS
+
+    answers = computed_input.get("answers", {})
+
+    user_content = PAST_LIFE_USER.format(
+        primary_type=computed_input.get("primary_type"),
+        secondary_type=computed_input.get("secondary_type"),
+        resonance_score=computed_input.get("resonance_score"),
+        scores=json.dumps(computed_input.get("scores", {}), indent=2),
+        q1=answers.get("q1", "N/A"),
+        q2=json.dumps(answers.get("q2", []), indent=2)
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": PAST_LIFE_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.4,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = _extract_json_from_response(content) or {}
+        res = _validate_and_filter(data, PAST_LIFE_JSON_KEYS)
+        res["extracted_json"] = computed_input
+        return res
+    except Exception as e:
+        logger.exception("LLM past life vibes call failed: %s", e)
+        return {
+            "title": computed_input.get("title", "Past Life Vibes"),
+            "overview": "Your result reveals a unique archetypal blueprint. Explore your traits to understand your soul's journey.",
+            "extracted_json": computed_input,
+        }
+
+async def call_llm_for_somatic_connection(computed_input: dict[str, Any]) -> dict[str, Any]:
+    """Interprets Somatic Connection result via LLM."""
+    if not settings.openai_api_key:
+        return {
+            "title": computed_input.get("title", "Somatic Awareness"),
+            "overview": "Your Somatic Connection result reveals how you process emotions through your body.",
+            "energyBlueprint": "Explore your primary and secondary types to understand your body's wisdom.",
+            "extracted_json": computed_input,
+        }
+
+    from app.core.prompts import SOMATIC_SYSTEM, SOMATIC_USER, SOMATIC_JSON_KEYS
+
+    answers = computed_input.get("answers", {})
+
+    user_content = SOMATIC_USER.format(
+        primary_type=computed_input.get("primary_type"),
+        secondary_type=computed_input.get("secondary_type"),
+        somatic_score=computed_input.get("somatic_score"),
+        scores=json.dumps(computed_input.get("scores", {}), indent=2),
+        q1=answers.get("q1", "N/A"),
+        q2=answers.get("q2", "N/A")
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": SOMATIC_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.4,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = _extract_json_from_response(content) or {}
+        res = _validate_and_filter(data, SOMATIC_JSON_KEYS)
+        res["extracted_json"] = computed_input
+        return res
+    except Exception as e:
+        logger.exception("LLM somatic connection call failed: %s", e)
+        return {
+            "title": computed_input.get("title", "Somatic Connection"),
+            "overview": "Your result reveals a unique somatic blueprint. Explore your traits to understand your body's emotional archive.",
+            "extracted_json": computed_input,
+        }
+
+async def call_llm_for_stress_balance(computed_input: dict[str, Any]) -> dict[str, Any]:
+    """Interprets Stress Balance Index result via LLM."""
+    if not settings.openai_api_key:
+        return {
+            "title": computed_input.get("title", "Stress Balance"),
+            "overview": "Your Stress Balance result reveals how you manage pressure and detect stress.",
+            "energyBlueprint": "Explore your primary and secondary types to understand your stress-response patterns.",
+            "extracted_json": computed_input,
+        }
+
+    from app.core.prompts import STRESS_BALANCE_SYSTEM, STRESS_BALANCE_USER, STRESS_BALANCE_JSON_KEYS
+
+    answers = computed_input.get("answers", {})
+
+    user_content = STRESS_BALANCE_USER.format(
+        primary_type=computed_input.get("primary_type"),
+        secondary_type=computed_input.get("secondary_type"),
+        balance_score=computed_input.get("balance_score"),
+        scores=json.dumps(computed_input.get("scores", {}), indent=2),
+        q1=answers.get("q1", "N/A"),
+        q2=answers.get("q2", "N/A"),
+        q3=answers.get("q3", "N/A")
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": STRESS_BALANCE_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.4,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = _extract_json_from_response(content) or {}
+        res = _validate_and_filter(data, STRESS_BALANCE_JSON_KEYS)
+        res["extracted_json"] = computed_input
+        return res
+    except Exception as e:
+        logger.exception("LLM stress balance call failed: %s", e)
+        return {
+            "title": computed_input.get("title", "Stress Balance"),
+            "overview": "Your result reveals a unique stress blueprint. Explore your traits to understand how you handle pressure.",
+            "extracted_json": computed_input,
+        }

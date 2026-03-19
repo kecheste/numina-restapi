@@ -34,13 +34,13 @@ TESTS: list[TestItem] = [
     {"id": 12, "slug": "mind-mirror", "title": "Mind Mirror", "category": "Psychological Profile", "category_id": "psychological", "questions": 5, "premium": True, "auto_generated": False},
     {"id": 14, "slug": "energy-archetype", "title": "Energy Archetype", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 12, "premium": True, "auto_generated": False},
     {"id": 15, "slug": "emotional-regulation-type", "title": "Emotional Regulation Type", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 12, "premium": True, "auto_generated": False},
-    {"id": 16, "slug": "stress-balance-index", "title": "Stress Balance Index", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 3, "premium": True, "auto_generated": False},
-    {"id": 17, "slug": "somatic-connection", "title": "Somatic Connection", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 5, "premium": True, "auto_generated": False},
+    {"id": 16, "slug": "stress-balance-index", "title": "Stress Balance Index", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 12, "premium": True, "auto_generated": False},
+    {"id": 17, "slug": "somatic-connection", "title": "Somatic Connection", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 12, "premium": True, "auto_generated": False},
     {"id": 18, "slug": "energy-synthesis", "title": "Energy Synthesis", "category": "Energy & Wellbeing", "category_id": "energy", "questions": 0, "premium": True, "auto_generated": True},
     {"id": 20, "slug": "soul-urge-hearts-desire", "title": "Soul Urge / Heart's Desire", "category": "Soul Path & Karma", "category_id": "soul", "questions": 0, "premium": True, "auto_generated": True},
-    {"id": 21, "slug": "past-life-vibes", "title": "Past Life Vibes", "category": "Soul Path & Karma", "category_id": "soul", "questions": 6, "premium": True, "auto_generated": False},
-    {"id": 22, "slug": "karmic-lessons", "title": "Karmic Lessons", "category": "Soul Path & Karma", "category_id": "soul", "questions": 6, "premium": True, "auto_generated": False},
-    {"id": 23, "slug": "inner-child-dialogue", "title": "Inner Child Dialogue", "category": "Soul Path & Karma", "category_id": "soul", "questions": 6, "premium": True, "auto_generated": False},
+    {"id": 21, "slug": "past-life-vibes", "title": "Past Life Vibes", "category": "Soul Path & Karma", "category_id": "soul", "questions": 12, "premium": True, "auto_generated": False},
+    {"id": 22, "slug": "karmic-lessons", "title": "Karmic Lessons", "category": "Soul Path & Karma", "category_id": "soul", "questions": 12, "premium": True, "auto_generated": False},
+    {"id": 23, "slug": "inner-child-dialogue", "title": "Inner Child Dialogue", "category": "Soul Path & Karma", "category_id": "soul", "questions": 12, "premium": True, "auto_generated": False},
     {"id": 24, "slug": "soul-compass", "title": "Soul Compass", "category": "Soul Path & Karma", "category_id": "soul", "questions": 19, "premium": True, "auto_generated": False},
 ]
 

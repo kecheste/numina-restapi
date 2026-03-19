@@ -25,6 +25,11 @@ from app.services.result_calculation.mbti import compute_mbti_detailed
 from app.services.result_calculation.life_path_number import compute_life_path_number
 from app.services.result_calculation.soul_urge import compute_soul_urge
 from app.services.result_calculation.human_design import calculate_human_design
+from app.services.result_calculation.inner_child import calculate_inner_child
+from app.services.result_calculation.karmic_lessons import calculate_karmic_lessons
+from app.services.result_calculation.past_life_vibes import calculate_past_life_vibes
+from app.services.result_calculation.somatic_connection import calculate_somatic_connection
+from app.services.result_calculation.stress_balance import calculate_stress_balance
 from app.services.llm import (
     call_llm_for_astrology_blueprint,
     call_llm_for_astrology_chart_narrative,
@@ -35,11 +40,12 @@ from app.services.llm import (
     call_llm_for_shadow_work,
     call_llm_for_mind_mirror,
     call_llm_for_energy_archetype,
-    call_llm_for_human_design,
-    call_llm_for_big_five,
-    call_llm_for_starseed,
-    call_llm_for_core_values,
     call_llm_for_emotional_regulation,
+    call_llm_for_inner_child,
+    call_llm_for_karmic_lessons,
+    call_llm_for_past_life_vibes,
+    call_llm_for_somatic_connection,
+    call_llm_for_stress_balance,
 )
 
 from .helpers import (
@@ -653,6 +659,232 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             async with AsyncSessionLocal() as syn_session:
                 await generate_synthesis_for_user(syn_session, user_id)
             logger.info("Refined result_id=%s (Emotional Regulation)", result_id)
+            return
+
+        # Stress Balance Index (16)
+        if test_id == 16:
+            logger.info("DEBUG: Entering Stress Balance Index branch for result_id=%s", result_id)
+            try:
+                formatted_answers = {}
+                if isinstance(row.answers, list):
+                    for item in row.answers:
+                        qid = item.get("id") or item.get("question_id")
+                        ans = item.get("answer")
+                        if qid:
+                            formatted_answers[f"q{qid}"] = ans
+                else:
+                    formatted_answers = row.answers or {}
+
+                extracted = calculate_stress_balance(formatted_answers)
+            except Exception as e:
+                logger.exception("calculate_stress_balance failed for result_id=%s: %s", result_id, e)
+                extracted = {}
+
+            row.extracted_json = extracted
+            row.score = 8.5
+            llm_result = await call_llm_for_stress_balance(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or extracted.get("title") or "Stress Balance Index"
+            row.insights = llm_result.get("coreTraits") or [] 
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("overview") or ""
+            
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Stress Balance Index)", result_id)
+            return
+
+        # Somatic Connection (17)
+        if test_id == 17:
+            logger.info("DEBUG: Entering Somatic Connection branch for result_id=%s", result_id)
+            try:
+                formatted_answers = {}
+                if isinstance(row.answers, list):
+                    for item in row.answers:
+                        qid = item.get("id") or item.get("question_id")
+                        ans = item.get("answer")
+                        if qid:
+                            formatted_answers[f"q{qid}"] = ans
+                else:
+                    formatted_answers = row.answers or {}
+
+                extracted = calculate_somatic_connection(formatted_answers)
+            except Exception as e:
+                logger.exception("calculate_somatic_connection failed for result_id=%s: %s", result_id, e)
+                extracted = {}
+
+            row.extracted_json = extracted
+            row.score = 8.5
+            llm_result = await call_llm_for_somatic_connection(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or extracted.get("title") or "Somatic Connection"
+            row.insights = llm_result.get("coreTraits") or [] # LLM might not return coreTraits if I forgot in user prompt
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("overview") or ""
+            
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Somatic Connection)", result_id)
+            return
+
+        # Karmic Lessons (22)
+        if test_id == 22:
+            logger.info("DEBUG: Entering Karmic Lessons branch for result_id=%s", result_id)
+            try:
+                formatted_answers = {}
+                if isinstance(row.answers, list):
+                    for item in row.answers:
+                        qid = item.get("id") or item.get("question_id")
+                        ans = item.get("answer")
+                        if qid:
+                            formatted_answers[f"q{qid}"] = ans
+                else:
+                    formatted_answers = row.answers or {}
+
+                extracted = calculate_karmic_lessons(formatted_answers)
+            except Exception as e:
+                logger.exception("calculate_karmic_lessons failed for result_id=%s: %s", result_id, e)
+                extracted = {}
+
+            row.extracted_json = extracted
+            row.score = 8.5
+            llm_result = await call_llm_for_karmic_lessons(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or extracted.get("title") or "Karmic Lessons"
+            row.insights = llm_result.get("coreTraits") or []
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("overview") or ""
+            
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Karmic Lessons)", result_id)
+            return
+
+        # Past Life Vibes (21)
+        if test_id == 21:
+            logger.info("DEBUG: Entering Past Life Vibes branch for result_id=%s", result_id)
+            try:
+                formatted_answers = {}
+                if isinstance(row.answers, list):
+                    for item in row.answers:
+                        qid = item.get("id") or item.get("question_id")
+                        ans = item.get("answer")
+                        if qid:
+                            formatted_answers[f"q{qid}"] = ans
+                else:
+                    formatted_answers = row.answers or {}
+
+                extracted = calculate_past_life_vibes(formatted_answers)
+            except Exception as e:
+                logger.exception("calculate_past_life_vibes failed for result_id=%s: %s", result_id, e)
+                extracted = {}
+
+            row.extracted_json = extracted
+            row.score = 8.5
+            llm_result = await call_llm_for_past_life_vibes(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or extracted.get("title") or "Past Life Vibes"
+            row.insights = llm_result.get("coreTraits") or []
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("overview") or ""
+            
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Past Life Vibes)", result_id)
+            return
+
+        # Inner Child Dialogue (23)
+        if test_id == 23:
+            logger.info("DEBUG: Entering Inner Child Dialogue branch for result_id=%s", result_id)
+            try:
+                formatted_answers = {}
+                if isinstance(row.answers, list):
+                    for item in row.answers:
+                        qid = item.get("id") or item.get("question_id")
+                        ans = item.get("answer")
+                        if qid:
+                            formatted_answers[f"q{qid}"] = ans
+                else:
+                    formatted_answers = row.answers or {}
+
+                logger.info("DEBUG: formatted_answers for result_id=%s: %s", result_id, formatted_answers)
+                extracted = calculate_inner_child(formatted_answers)
+            except Exception as e:
+                logger.exception("calculate_inner_child failed for result_id=%s: %s", result_id, e)
+                extracted = {}
+
+            row.extracted_json = extracted
+            row.score = 8.5
+            llm_result = await call_llm_for_inner_child(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or extracted.get("title") or "Inner Child Dialogue"
+            row.insights = llm_result.get("coreTraits") or []
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("summary") or ""
+            
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Inner Child Dialogue)", result_id)
             return
 
         computed_type: str | None = None
