@@ -527,7 +527,16 @@ Return exactly one JSON object with these keys only:
 - "tryThis": array of exactly 3 practical actions (no vague advice).
 - "avoidThis": array of 2-3 pitfalls or real mistakes they tend to make based on their design.
 
-Output only the JSON object, nothing else."""
+Output only the JSON object, nothing else.
+
+STRICT RULES:
+
+- Use provided gate meanings as PRIMARY source of truth
+- Every section MUST reference or reflect these traits
+- Do NOT write generic Human Design descriptions
+- If traits are provided, build sentences directly from them
+- Avoid repeating same idea in different words
+- Keep language specific, grounded, and tied to behavior"""
 
 HUMAN_DESIGN_JSON_KEYS = frozenset({
     "title", "summary", "coreTraits", "strengths", "challenges",

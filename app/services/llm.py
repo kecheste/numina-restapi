@@ -343,26 +343,45 @@ def _build_human_design_traits(hd_data: dict[str, Any]) -> dict[str, Any]:
 
     scored.sort(key=lambda x: x[0], reverse=True)
 
-    top_gate_meanings = [
-        {"source": label, "gate": gate, "meaning": GATE_MEANING_MAP[gate], "score": round(score, 3)}
-        for score, label, gate in scored[:8]
-    ]
+    seen_top: set[int] = set()
+    top_gate_meanings = []
+    for score, label, gate in scored:
+        if gate not in seen_top:
+            seen_top.add(gate)
+            top_gate_meanings.append({
+                "source": label,
+                "gate": gate,
+                "meaning": GATE_MEANING_MAP[gate].capitalize(),
+                "score": round(score, 3)
+            })
+        if len(top_gate_meanings) == 8:
+            break
 
-    personality_traits = [
-        GATE_MEANING_MAP[gate]
-        for _, label, gate in sorted(
-            [(s, l, g) for s, l, g in scored if l.startswith("personality_")],
-            key=lambda x: x[0], reverse=True
-        )
-    ][:5]
+    seen_p: set[str] = set()
+    personality_traits: list[str] = []
+    for _, label, gate in sorted(
+        [(s, l, g) for s, l, g in scored if l.startswith("personality_")],
+        key=lambda x: x[0], reverse=True
+    ):
+        meaning = GATE_MEANING_MAP[gate].capitalize()
+        if meaning not in seen_p:
+            seen_p.add(meaning)
+            personality_traits.append(meaning)
+        if len(personality_traits) == 5:
+            break
 
-    design_traits = [
-        GATE_MEANING_MAP[gate]
-        for _, label, gate in sorted(
-            [(s, l, g) for s, l, g in scored if l.startswith("design_")],
-            key=lambda x: x[0], reverse=True
-        )
-    ][:5]
+    seen_d: set[str] = set()
+    design_traits: list[str] = []
+    for _, label, gate in sorted(
+        [(s, l, g) for s, l, g in scored if l.startswith("design_")],
+        key=lambda x: x[0], reverse=True
+    ):
+        meaning = GATE_MEANING_MAP[gate].capitalize()
+        if meaning not in seen_d:
+            seen_d.add(meaning)
+            design_traits.append(meaning)
+        if len(design_traits) == 5:
+            break
 
     return {
         "top_gate_meanings": top_gate_meanings,
