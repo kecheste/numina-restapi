@@ -55,7 +55,6 @@ from .helpers import (
 
 logger = logging.getLogger(__name__)
 
-
 async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
     async with AsyncSessionLocal() as session:
         result = await session.execute(

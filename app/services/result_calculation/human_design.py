@@ -124,13 +124,12 @@ def calculate_human_design(
         (64, 47, "Head", "Ajna"), (61, 24, "Head", "Ajna"), (63, 4, "Head", "Ajna"),
         (17, 62, "Ajna", "Throat"), (11, 56, "Ajna", "Throat"), (43, 23, "Ajna", "Throat"),
         (1, 8, "G", "Throat"), (7, 31, "G", "Throat"), (10, 20, "G", "Throat"), (13, 33, "G", "Throat"),
-        (10, 57, "G", "Spleen"), (10, 34, "G", "Sacral"), (10, 15, "G", "G"), # 10-15 is G-G? actually 10-15 is G-G, but usually it's different centers. 
-
+        (10, 57, "G", "Spleen"), (10, 34, "G", "Sacral"),
         (25, 51, "G", "Heart"), (2, 14, "G", "Sacral"), (15, 5, "G", "Sacral"), (46, 29, "G", "Sacral"),
         (21, 45, "Heart", "Throat"), (40, 37, "Heart", "Solar Plexus"), (51, 25, "Heart", "G"), (26, 44, "Heart", "Spleen"),
         (6, 59, "Solar Plexus", "Sacral"), (37, 40, "Solar Plexus", "Heart"), (22, 12, "Solar Plexus", "Throat"), (36, 35, "Solar Plexus", "Throat"),
         (49, 19, "Solar Plexus", "Root"), (55, 39, "Solar Plexus", "Root"), (30, 41, "Solar Plexus", "Root"),
-        (5, 15, "Sacral", "G"), (14, 2, "Sacral", "G"), (29, 46, "Sacral", "G"), (34, 10, "Sacral", "G"), (34, 57, "Sacral", "Spleen"), (34, 20, "Sacral", "Throat"),
+        (14, 2, "Sacral", "G"), (29, 46, "Sacral", "G"), (34, 10, "Sacral", "G"), (34, 57, "Sacral", "Spleen"), (34, 20, "Sacral", "Throat"),
         (3, 60, "Sacral", "Root"), (9, 52, "Sacral", "Root"), (42, 53, "Sacral", "Root"), (59, 6, "Sacral", "Solar Plexus"), (50, 27, "Sacral", "Spleen"),
         (18, 58, "Spleen", "Root"), (28, 38, "Spleen", "Root"), (32, 54, "Spleen", "Root"), (44, 26, "Spleen", "Heart"), (50, 27, "Spleen", "Sacral"), (57, 10, "Spleen", "G"), (57, 34, "Spleen", "Sacral"), (57, 20, "Spleen", "Throat"), (48, 16, "Spleen", "Throat"),
         (53, 42, "Root", "Sacral"), (60, 3, "Root", "Sacral"), (52, 9, "Root", "Sacral"), (19, 49, "Root", "Solar Plexus"), (39, 55, "Root", "Solar Plexus"), (41, 30, "Root", "Solar Plexus"), (58, 18, "Root", "Spleen"), (38, 28, "Root", "Spleen"), (54, 32, "Root", "Spleen"),
@@ -139,12 +138,16 @@ def calculate_human_design(
     all_active_gates = set(personality_gates.values()) | set(design_gates.values())
     defined_centers = set()
     active_channels = []
+    
+    adj = {c: set() for c in CENTERS.keys()}
 
     for g1, g2, c1, c2 in CHANNELS:
         if g1 in all_active_gates and g2 in all_active_gates:
             defined_centers.add(c1)
             defined_centers.add(c2)
             active_channels.append(f"{g1}-{g2}")
+            adj[c1].add(c2)
+            adj[c2].add(c1)
 
     undefined_centers = [c for c in CENTERS.keys() if c not in defined_centers]
 
@@ -158,12 +161,26 @@ def calculate_human_design(
     defined_motors = [m for m in motors if m in defined_centers]
 
     def has_throat_motor_connection():
+        if "Throat" not in defined_centers:
+            return False
+            
         motor_centers = set(defined_motors)
-        if "Throat" not in defined_centers: return False
-        for g1, g2, c1, c2 in CHANNELS:
-            if g1 in all_active_gates and g2 in all_active_gates:
-                if (c1 == "Throat" and c2 in motor_centers) or (c2 == "Throat" and c1 in motor_centers):
-                    return True
+        
+        # Simple BFS to find if any motor is connected to Throat
+        visited = set()
+        queue = ["Throat"]
+        visited.add("Throat")
+        
+        while queue:
+            curr = queue.pop(0)
+            if curr in motor_centers:
+                return True
+            
+            for neighbor in adj.get(curr, []):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+        
         return False
 
     if not defined_centers:

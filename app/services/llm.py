@@ -56,6 +56,8 @@ from app.core.prompts import (
 
 logger = logging.getLogger(__name__)
 
+from app.constants.human_design_maps import GATE_MEANING_MAP, GATE_PRIORITY
+
 INPUT_MAX_CHARS = getattr(settings, "ai_input_max_chars", 3500)
 TEST_RESULT_PROMPT_MAX_CHARS = 8000
 OUTPUT_MAX_TOKENS = getattr(settings, "ai_result_output_max_tokens", 1000)
@@ -311,8 +313,49 @@ def _validate_energy_archetype_result(obj: Any, extracted: dict[str, Any] | None
     return res
 
 
+def _build_human_design_traits(hd_data: dict[str, Any]) -> dict[str, Any]:
+    """Enrich Human Design data with gate meanings and trait lists."""
+    personality_gates = hd_data.get("personality_gates", {})
+    design_gates = hd_data.get("design_gates", {})
+
+    ordered_gate_entries = []
+    for planet in GATE_PRIORITY:
+        p_gate = personality_gates.get(planet)
+        d_gate = design_gates.get(planet)
+        ordered_gate_entries.append((f"personality_{planet}", p_gate))
+        ordered_gate_entries.append((f"design_{planet}", d_gate))
+
+    top_gate_meanings = []
+    for label, gate in ordered_gate_entries:
+        if gate and gate in GATE_MEANING_MAP:
+            top_gate_meanings.append({
+                "source": label,
+                "gate": gate,
+                "meaning": GATE_MEANING_MAP[gate]
+            })
+    top_gate_meanings = top_gate_meanings[:8]
+
+    personality_traits = []
+    for label, gate in ordered_gate_entries:
+        if label.startswith("personality_") and gate and gate in GATE_MEANING_MAP:
+            personality_traits.append(GATE_MEANING_MAP[gate])
+    personality_traits = personality_traits[:5]
+
+    design_traits = []
+    for label, gate in ordered_gate_entries:
+        if label.startswith("design_") and gate and gate in GATE_MEANING_MAP:
+            design_traits.append(GATE_MEANING_MAP[gate])
+    design_traits = design_traits[:5]
+
+    return {
+        "top_gate_meanings": top_gate_meanings,
+        "personality_traits": personality_traits,
+        "design_traits": design_traits
+    }
+
+
 async def call_llm_for_human_design(computed_input: dict[str, Any]) -> dict[str, Any]:
-    """Calculate Human Design insights via LLM. input_json contains personality and design gates."""
+    """Calculate Human Design insights via LLM."""
     if not settings.openai_api_key:
         return {
             "title": "Natural Origin",
@@ -321,33 +364,23 @@ async def call_llm_for_human_design(computed_input: dict[str, Any]) -> dict[str,
             "decisionGuidance": "Your specific authority provides a reliable way to make decisions that align with your true nature.",
         }
 
-    input_data = {
-        "type": computed_input.get("type"),
-        "strategy": computed_input.get("strategy"),
-        "authority": computed_input.get("authority"),
-        "profile": computed_input.get("profile"),
-        "definition": computed_input.get("definition"),
-        "defined_centers": ", ".join(computed_input.get("defined_centers", [])),
-        "undefined_centers": ", ".join(computed_input.get("undefined_centers", [])),
-        "personality_gates": json.dumps(computed_input.get("personality_gates", {}), indent=2),
-        "design_gates": json.dumps(computed_input.get("design_gates", {}), indent=2),
-    }
 
-    input_str = f"""Type: {input_data['type']}
-        Strategy: {input_data['strategy']}
-        Authority: {input_data['authority']}
-        Profile: {input_data['profile']}
-        Definition: {input_data['definition']}
-        Defined Centers: {input_data['defined_centers']}
-        Undefined Centers: {input_data['undefined_centers']}
+    traits = _build_human_design_traits(computed_input)
+    computed_input.update(traits) # So they are saved in extracted_json
 
-        Personality Gates:
-        {input_data['personality_gates']}
-
-        Design Gates:
-        {input_data['design_gates']}"""
-
-    user_content = HUMAN_DESIGN_USER.format(input_json=input_str)
+    user_content = HUMAN_DESIGN_USER.format(
+        type=computed_input.get("type"),
+        strategy=computed_input.get("strategy"),
+        authority=computed_input.get("authority"),
+        profile=computed_input.get("profile"),
+        definition=computed_input.get("definition"),
+        centers=", ".join(computed_input.get("defined_centers", [])),
+        personality_gates=json.dumps(computed_input.get("personality_gates", {}), indent=2),
+        design_gates=json.dumps(computed_input.get("design_gates", {}), indent=2),
+        top_gate_meanings=json.dumps(traits["top_gate_meanings"], indent=2),
+        personality_traits=json.dumps(traits["personality_traits"], indent=2),
+        design_traits=json.dumps(traits["design_traits"], indent=2),
+    )
 
     try:
         from openai import AsyncOpenAI

@@ -466,49 +466,71 @@ ENERGY_ARCHETYPE_JSON_KEYS = frozenset({
     "summary", "tryThis", "avoidThis", "extracted_json"
 })
 
-HUMAN_DESIGN_SYSTEM = """You are interpreting a Human Design chart for a personal self-discovery app.
-Use the provided Human Design data to generate a clear, insightful and grounded interpretation.
+HUMAN_DESIGN_SYSTEM = """You are interpreting a Human Design chart.
 
-The interpretation should feel personal and reflective, combining psychological clarity with intuitive insight.
-Do not sound overly mystical or overly technical. Avoid vague spiritual clichés.
+IMPORTANT:
+- Do NOT generate generic personality descriptions.
+- Every statement MUST be derived from the input data.
+- Avoid vague adjectives (e.g. “insightful”, “powerful”, “unique”).
+- Make the output feel specific to THIS person only.
+- Use clear, grounded, real-life language (not abstract or mystical).
 
-Use the chart structure to infer themes of energy, decision-making style, interaction with others, and life patterns.
+STYLE RULES:
+- No generic phrases
+- No repetition
+- No “spiritual fluff”
+- No mentioning “blueprint” (REMOVE THIS WORD)
+- No copying same sentence patterns
+- Keep tone: clear, practical, grounded
 
-TONE: clear, insightful, reflective, psychologically grounded, slightly spiritual but not mystical.
-
-Write in second person ("you"). Be specific and personal, not generic.
-Keep paragraphs readable and concise. Avoid repeating the same idea across sections.
+- Use top_gate_meanings, personality_traits, and design_traits directly.
+- Do not ignore gate meanings.
+- If gate meanings are present, every major section must reflect them.
+- Conscious vs Unconscious must compare personality_traits vs design_traits.
+- Avoid generic statements unless they are clearly supported by the input.
 
 You write only valid JSON. No markdown, no code fences.
 Output only the JSON object, nothing else."""
 
 HUMAN_DESIGN_USER = """Analyze the user's Human Design chart.
 
-INPUT DATA:
-{input_json}
+INPUT:
+
+Type: {type}
+Strategy: {strategy}
+Authority: {authority}
+Profile: {profile}
+Definition: {definition}
+Centers: {centers}
+
+Personality Gates: {personality_gates}
+Design Gates: {design_gates}
+
+Top Gate Meanings: {top_gate_meanings}
+Personality traits (conscious): {personality_traits}
+Design traits (unconscious): {design_traits}
+
+---
+
+OUTPUT STRUCTURE:
 
 Return exactly one JSON object with these keys only:
-- "title": Result Title (short catchy name)
-- "shortDescription": string, 1 concise paragraph summarizing the core essence.
-- "summary": string, 2 short paragraphs explaining the person's core energetic nature and how their design shapes their life experience.
-- "energyBlueprint": string, 2 paragraphs explaining how their Type, Strategy, Authority and Profile work together in daily life.
-- "decisionGuidance": string, 1 paragraph explaining how the person should approach decisions according to their Authority.
-- "coreTraits": array of 3 concise bullet points (dominant personality qualities).
-- "strengths": array of 3 bullet points (natural abilities or advantages).
-- "challenges": array of 3 bullet points (potential struggles or patterns to watch).
-- "tryThis": array of 3 practical suggestions aligned with their design.
-- "avoidThis": array of 2-3 behaviors that lead away from natural alignment.
-
-WRITING RULES:
-- Write in second person ("you")
-- Integrate Type, Authority and Profile meaningfully
-- Mention energy dynamics when relevant
+- "title": string, Result Title (short catchy name)
+- "summary": string, Overview (2 paragraphs). Explain how this person operates in real life: how they make decisions, how they interact with others, where they struggle naturally. Use Type + Authority + Profile + Definition together.
+- "coreTraits": array of exactly 3 items. Each must come from gates OR profile and be specific behaviors (not adjectives). Format: short sentence (not single word).
+- "strengths": array of exactly 3 items. Derived from strongest repeated gates OR definition consistency. Explain what works naturally for them and where they outperform others.
+- "challenges": array of exactly 3 items. Derived from tension between personality vs design or type strategy misalignment. Explain what goes wrong in real situations (NOT generic weaknesses).
+- "consciousVsUnconscious": string, explain what they THINK they are vs how they ACTUALLY behave. Compare Personality gates (conscious) vs Design gates (unconscious). This must feel personal and slightly surprising.
+- "energyBlueprint": string, 2 paragraphs explaining mechanics: how their energy flows and when they feel “aligned” vs “off”. Use definition, centers (if available) and type. DO NOT repeat earlier text.
+- "decisionGuidance": string, Explain HOW they should decide in real situations based on authority and strategy. Include what to trust and what to ignore.
+- "tryThis": array of exactly 3 practical actions (no vague advice).
+- "avoidThis": array of 2-3 pitfalls or real mistakes they tend to make based on their design.
 
 Output only the JSON object, nothing else."""
 
 HUMAN_DESIGN_JSON_KEYS = frozenset({
-    "title", "shortDescription", "coreTraits", "strengths", "challenges",
-    "summary", "energyBlueprint", "decisionGuidance", "tryThis", "avoidThis", "extracted_json"
+    "title", "summary", "coreTraits", "strengths", "challenges",
+    "consciousVsUnconscious", "energyBlueprint", "decisionGuidance", "tryThis", "avoidThis", "extracted_json"
 })
 
 BIG_FIVE_SYSTEM = """You are an expert in personality psychology and the Big Five (OCEAN) model.

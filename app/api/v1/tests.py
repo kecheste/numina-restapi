@@ -61,15 +61,6 @@ def _auto_generated_already_taken(user: UserModel, test_id: int) -> bool:
             and user.birth_day is not None
             and bool((user.name or "").strip())
         )
-    if test_id == 4:  # Human Design
-        return (
-            user.birth_year is not None
-            and user.birth_month is not None
-            and user.birth_day is not None
-            and user.birth_place_lat is not None
-            and user.birth_place_lng is not None
-            and user.birth_place_timezone is not None
-        )
     return False
 
 @router.get("/tests", response_model=TestsListResponse)
@@ -439,32 +430,6 @@ async def post_onboarding_finish(
                 await db.refresh(lp_res)
                 await enqueue_refine_test_result(lp_res.id)
 
-        # 2b. Auto-generate Human Design (4)
-        if (
-            user.birth_place_lat is not None
-            and user.birth_place_lng is not None
-            and user.birth_place_timezone is not None
-        ):
-            hd_exists_q = await db.execute(
-                select(TestResult).where(
-                    TestResult.user_id == user.id,
-                    TestResult.test_id == 4
-                ).limit(1)
-            )
-            if hd_exists_q.scalar_one_or_none() is None:
-                hd_res = TestResult(
-                    user_id=user.id,
-                    test_id=4,
-                    test_title="Human Design",
-                    category="Cosmic Identity",
-                    answers={},
-                    status="pending_ai",
-                    extracted_json={},
-                )
-                db.add(hd_res)
-                await db.commit()
-                await db.refresh(hd_res)
-                await enqueue_refine_test_result(hd_res.id)
 
     # 3. Trigger Synthesis (Ensure it's ready for first home view)
     async with AsyncSessionLocal() as session:
