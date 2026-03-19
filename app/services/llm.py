@@ -312,45 +312,62 @@ def _validate_energy_archetype_result(obj: Any, extracted: dict[str, Any] | None
         res["extracted_json"] = extracted
     return res
 
+_PERSONALITY_WEIGHT = 1.0
+_DESIGN_WEIGHT = 1.15
+
 
 def _build_human_design_traits(hd_data: dict[str, Any]) -> dict[str, Any]:
-    """Enrich Human Design data with gate meanings and trait lists."""
+    """Enrich Human Design data with gate meanings and weighted trait lists."""
     personality_gates = hd_data.get("personality_gates", {})
     design_gates = hd_data.get("design_gates", {})
 
-    ordered_gate_entries = []
-    for planet in GATE_PRIORITY:
-        p_gate = personality_gates.get(planet)
-        d_gate = design_gates.get(planet)
-        ordered_gate_entries.append((f"personality_{planet}", p_gate))
-        ordered_gate_entries.append((f"design_{planet}", d_gate))
+    ordered_gate_entries: list[tuple[str, int | None, float]] = (
+        [(f"personality_{p}", personality_gates.get(p), _PERSONALITY_WEIGHT) for p in GATE_PRIORITY[:2]]
+        + [(f"design_{p}", design_gates.get(p), _DESIGN_WEIGHT) for p in GATE_PRIORITY[:2]]
+        + [
+            entry
+            for planet in GATE_PRIORITY[2:]
+            for entry in [
+                (f"personality_{planet}", personality_gates.get(planet), _PERSONALITY_WEIGHT),
+                (f"design_{planet}", design_gates.get(planet), _DESIGN_WEIGHT),
+            ]
+        ]
+    )
 
-    top_gate_meanings = []
-    for label, gate in ordered_gate_entries:
+    total = len(ordered_gate_entries)
+    scored: list[tuple[float, str, int]] = []
+    for idx, (label, gate, weight) in enumerate(ordered_gate_entries):
         if gate and gate in GATE_MEANING_MAP:
-            top_gate_meanings.append({
-                "source": label,
-                "gate": gate,
-                "meaning": GATE_MEANING_MAP[gate]
-            })
-    top_gate_meanings = top_gate_meanings[:8]
+            score = (total - idx) * weight
+            scored.append((score, label, gate))
 
-    personality_traits = []
-    for label, gate in ordered_gate_entries:
-        if label.startswith("personality_") and gate and gate in GATE_MEANING_MAP:
-            personality_traits.append(GATE_MEANING_MAP[gate])
-    personality_traits = personality_traits[:5]
+    scored.sort(key=lambda x: x[0], reverse=True)
 
-    design_traits = []
-    for label, gate in ordered_gate_entries:
-        if label.startswith("design_") and gate and gate in GATE_MEANING_MAP:
-            design_traits.append(GATE_MEANING_MAP[gate])
-    design_traits = design_traits[:5]
+    top_gate_meanings = [
+        {"source": label, "gate": gate, "meaning": GATE_MEANING_MAP[gate], "score": round(score, 3)}
+        for score, label, gate in scored[:8]
+    ]
+
+    personality_traits = [
+        GATE_MEANING_MAP[gate]
+        for _, label, gate in sorted(
+            [(s, l, g) for s, l, g in scored if l.startswith("personality_")],
+            key=lambda x: x[0], reverse=True
+        )
+    ][:5]
+
+    design_traits = [
+        GATE_MEANING_MAP[gate]
+        for _, label, gate in sorted(
+            [(s, l, g) for s, l, g in scored if l.startswith("design_")],
+            key=lambda x: x[0], reverse=True
+        )
+    ][:5]
 
     return {
         "top_gate_meanings": top_gate_meanings,
         "personality_traits": personality_traits,
-        "design_traits": design_traits
+        "design_traits": design_traits,
     }
 
 
@@ -375,6 +392,7 @@ async def call_llm_for_human_design(computed_input: dict[str, Any]) -> dict[str,
         profile=computed_input.get("profile"),
         definition=computed_input.get("definition"),
         centers=", ".join(computed_input.get("defined_centers", [])),
+        incarnation_cross=json.dumps(computed_input.get("incarnation_cross", {})),
         personality_gates=json.dumps(computed_input.get("personality_gates", {}), indent=2),
         design_gates=json.dumps(computed_input.get("design_gates", {}), indent=2),
         top_gate_meanings=json.dumps(traits["top_gate_meanings"], indent=2),

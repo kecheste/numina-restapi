@@ -502,6 +502,7 @@ Authority: {authority}
 Profile: {profile}
 Definition: {definition}
 Centers: {centers}
+Incarnation Cross: {incarnation_cross}
 
 Personality Gates: {personality_gates}
 Design Gates: {design_gates}
