@@ -33,9 +33,13 @@ from app.services.result_calculation.stress_balance import calculate_stress_bala
 from app.services.llm import (
     call_llm_for_astrology_blueprint,
     call_llm_for_astrology_chart_narrative,
+    call_llm_for_big_five,
+    call_llm_for_core_values,
+    call_llm_for_human_design,
     call_llm_for_mbti_narrative,
     call_llm_for_numerology_blueprint,
     call_llm_for_numerology_narrative,
+    call_llm_for_starseed,
     call_llm_for_test_result,
     call_llm_for_shadow_work,
     call_llm_for_mind_mirror,
