@@ -1466,6 +1466,14 @@ BIG_FIVE_QUESTIONS: list[QuestionOut] = [
     QuestionOut(id=20, prompt="I sometimes overthink situations.", answer_type="single_choice", options=["Strongly Disagree", "Disagree", "Neutral", "Agree", "Strongly Agree"], required=True),
 ]
 
+SOUL_COMPASS_QUESTIONS: list[QuestionOut] = [
+    QuestionOut(id=0, prompt="What is the important life decision you are evaluating?", answer_type="text", required=True),
+    QuestionOut(id=1, prompt="Mind (Clarity)", answer_type="slider", required=True, slider_min=0, slider_max=100),
+    QuestionOut(id=2, prompt="Heart (Emotion)", answer_type="slider", required=True, slider_min=0, slider_max=100),
+    QuestionOut(id=3, prompt="Body (Grounding)", answer_type="slider", required=True, slider_min=0, slider_max=100),
+    QuestionOut(id=4, prompt="Soul (Purpose)", answer_type="slider", required=True, slider_min=0, slider_max=100),
+]
+
 QUESTIONS_BY_TEST_ID: dict[int, list[QuestionOut]] = {
     3: STARSEED_ORIGINS_QUESTIONS,
     7: MBTI_TYPE_QUESTIONS,
@@ -1483,4 +1491,5 @@ QUESTIONS_BY_TEST_ID: dict[int, list[QuestionOut]] = {
     21: PAST_LIFE_VIBES_QUESTIONS,
     22: KARMIC_LESSONS_QUESTIONS,
     23: INNER_CHILD_DIALOGUE_QUESTIONS,
+    24: SOUL_COMPASS_QUESTIONS,
 }

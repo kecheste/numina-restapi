@@ -952,3 +952,55 @@ STRESS_BALANCE_JSON_KEYS = frozenset({
     "title", "overview", "strengths", "challenges",
     "energyBlueprint", "tryThis", "avoidThis", "extracted_json"
 })
+
+SOUL_COMPASS_SYSTEM = """You are an expert in spiritual alignment and holistic well-being.
+Your task is to interpret a Soul Compass alignment check.
+You help the user understand how their mind, heart, body, and soul are interacting in relation to a specific decision.
+You write only valid JSON. No markdown, no code fences.
+Tone: wise, calm, reflective, and practical.
+Address the user as "you".
+Do not tell the user what to choose.
+Help them notice where alignment or tension exists."""
+
+SOUL_COMPASS_USER = """Interpret this Soul Compass alignment check.
+
+Inputs:
+Mind: {mind}
+Heart: {heart}
+Body: {body}
+Soul: {soul}
+
+Alignment Score: {alignment_score}
+Imbalance: {imbalance}
+State: {alignment_state}
+Decision: {decision}
+
+Return exactly one JSON object with these keys only:
+- "title": a short catchy title for this alignment.
+- "decisionInsight": 2 paragraphs helping the user understand the interplay of these 4 dimensions.
+- "alignmentAnalysis": an object with "mind", "heart", "body", and "soul" keys, each containing a 1-2 sentence perspective on that specific dimension.
+- "whatThisMeans": 1 paragraph summarizing the current state of alignment.
+- "suggestedReflection": array of 3 bullet points for deeper inquiry.
+- "extracted_json": include the input values here.
+
+Wait, do not use "decisionInsight" as a key if the standard UI expects "summary". 
+Actually, I'll stick to the user's requested structure but map it to what the frontend will show.
+The user requested: 
+Decision Insight (2 paragraphs)
+Alignment Analysis (Mind, Heart, Body, Soul perspectives)
+What This Means (1 paragraph)
+Suggested Reflection (3 bullet points)
+
+I will use these keys:
+- "title": string
+- "decisionInsight": string (2 paragraphs)
+- "alignmentAnalysis": object with {mind, heart, body, soul}
+- "whatThisMeans": string (1 paragraph)
+- "suggestedReflection": array of 3 strings
+- "extracted_json": object
+
+Output only the JSON object, nothing else."""
+
+SOUL_COMPASS_JSON_KEYS = frozenset({
+    "title", "decisionInsight", "alignmentAnalysis", "whatThisMeans", "suggestedReflection", "extracted_json"
+})

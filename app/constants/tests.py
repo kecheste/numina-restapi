@@ -41,7 +41,7 @@ TESTS: list[TestItem] = [
     {"id": 21, "slug": "past-life-vibes", "title": "Past Life Vibes", "category": "Soul Path & Karma", "category_id": "soul", "questions": 12, "premium": True, "auto_generated": False},
     {"id": 22, "slug": "karmic-lessons", "title": "Karmic Lessons", "category": "Soul Path & Karma", "category_id": "soul", "questions": 12, "premium": True, "auto_generated": False},
     {"id": 23, "slug": "inner-child-dialogue", "title": "Inner Child Dialogue", "category": "Soul Path & Karma", "category_id": "soul", "questions": 12, "premium": True, "auto_generated": False},
-    {"id": 24, "slug": "soul-compass", "title": "Soul Compass", "category": "Soul Path & Karma", "category_id": "soul", "questions": 19, "premium": True, "auto_generated": False},
+    {"id": 24, "slug": "soul-compass", "title": "Soul Compass", "category": "Soul Path & Karma", "category_id": "soul", "questions": 5, "premium": True, "auto_generated": False},
 ]
 
 TESTS_BY_SLUG: dict[str, int] = {t["slug"]: t["id"] for t in TESTS}

@@ -52,6 +52,9 @@ from app.core.prompts import (
     EMOTIONAL_REGULATION_SYSTEM,
     EMOTIONAL_REGULATION_USER,
     EMOTIONAL_REGULATION_JSON_KEYS,
+    SOUL_COMPASS_SYSTEM,
+    SOUL_COMPASS_USER,
+    SOUL_COMPASS_JSON_KEYS,
 )
 
 logger = logging.getLogger(__name__)
@@ -1619,3 +1622,67 @@ async def call_llm_for_stress_balance(computed_input: dict[str, Any]) -> dict[st
             "overview": "Your result reveals a unique stress blueprint. Explore your traits to understand how you handle pressure.",
             "extracted_json": computed_input,
         }
+
+
+async def call_llm_for_soul_compass(computed_input: dict[str, Any]) -> dict[str, Any]:
+    """Dedicated LLM call for Soul Compass interpretation."""
+    if not settings.openai_api_key:
+        return _fallback_soul_compass_json(computed_input)
+
+    user_content = SOUL_COMPASS_USER.format(
+        mind=computed_input.get("mind", 0),
+        heart=computed_input.get("heart", 0),
+        body=computed_input.get("body", 0),
+        soul=computed_input.get("soul", 0),
+        alignment_score=computed_input.get("alignment_score", 0),
+        imbalance=computed_input.get("imbalance", 0),
+        alignment_state=computed_input.get("alignment_state", "Unknown"),
+        decision=computed_input.get("decision", "Not specified")
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": SOUL_COMPASS_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.6,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        if data:
+            return _validate_soul_compass_result(data, extracted=computed_input)
+    except Exception as e:
+        logger.warning("LLM soul compass call failed: %s", e)
+    return _fallback_soul_compass_json(computed_input)
+
+
+def _validate_soul_compass_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
+    res = _validate_and_filter(data, SOUL_COMPASS_JSON_KEYS)
+    if extracted:
+        res["extracted_json"] = extracted
+    return res
+
+
+def _fallback_soul_compass_json(extracted: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "title": "Your Soul Compass",
+        "decisionInsight": "Your internal compass is finding its orientation. The balance between your mind, heart, body, and soul suggests a path of integration and self-discovery.",
+        "alignmentAnalysis": {
+            "mind": "Your mind seeks clarity and logical structure.",
+            "heart": "Your heart resonates with emotional truth.",
+            "body": "Your body provides a grounded foundation.",
+            "soul": "Your soul pulls toward deeper purpose."
+        },
+        "whatThisMeans": "You are in a process of aligning your internal dimensions to make a choice that resonates with your whole self.",
+        "suggestedReflection": [
+            "What does your intuition say in the quiet moments?",
+            "Where do you feel the most resistance in your body?",
+            "If you knew you could not fail, what would you choose?"
+        ],
+        "extracted_json": extracted
+    }

@@ -30,6 +30,7 @@ from app.services.result_calculation.karmic_lessons import calculate_karmic_less
 from app.services.result_calculation.past_life_vibes import calculate_past_life_vibes
 from app.services.result_calculation.somatic_connection import calculate_somatic_connection
 from app.services.result_calculation.stress_balance import calculate_stress_balance
+from app.services.result_calculation.soul_compass import compute_soul_compass
 from app.services.llm import (
     call_llm_for_astrology_blueprint,
     call_llm_for_astrology_chart_narrative,
@@ -50,6 +51,7 @@ from app.services.llm import (
     call_llm_for_past_life_vibes,
     call_llm_for_somatic_connection,
     call_llm_for_stress_balance,
+    call_llm_for_soul_compass,
 )
 
 from .helpers import (
@@ -843,6 +845,54 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             async with AsyncSessionLocal() as syn_session:
                 await generate_synthesis_for_user(syn_session, user_id)
             logger.info("Refined result_id=%s (Past Life Vibes)", result_id)
+            return
+
+        # Soul Compass (24)
+        if test_id == 24:
+            logger.info("DEBUG: Entering Soul Compass branch for result_id=%s", result_id)
+            try:
+                # Extract values from answers
+                ans_map = {str(a.get("question_id")): a.get("answer") for a in row.answers if isinstance(a, dict)}
+                # Assuming frontend sends mind, heart, body, soul as question_ids or similar
+                # For custom flow, we might just send them directly in answers list if we control it
+                # Let's assume we send them with specific keys if it's a dict, or we extract them.
+                # Actually, I'll make the SoulCompassFlow send them with specific question_ids: 1, 2, 3, 4
+                mind = ans_map.get("1", 50)
+                heart = ans_map.get("2", 50)
+                body = ans_map.get("3", 50)
+                soul = ans_map.get("4", 50)
+                decision = ans_map.get("0", "Not specified")
+                
+                extracted = compute_soul_compass(mind, heart, body, soul)
+                extracted["decision"] = decision
+            except Exception as e:
+                logger.exception("compute_soul_compass failed for result_id=%s: %s", result_id, e)
+                extracted = {}
+
+            row.extracted_json = extracted
+            row.score = 8.5
+            llm_result = await call_llm_for_soul_compass(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or "Soul Compass Alignment"
+            row.insights = [llm_result.get("alignmentAnalysis", {}).get(k, "") for k in ["mind", "heart", "body", "soul"]]
+            row.recommendations = llm_result.get("suggestedReflection", [])
+            row.narrative = llm_result.get("whatThisMeans") or ""
+            
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Soul Compass)", result_id)
             return
 
         # Inner Child Dialogue (23)
