@@ -106,7 +106,7 @@ def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> d
     list_keys = (
         "insights", "recommendations", "sureThings", "growthAreas", "themes",
         "strengths", "challenges", "shadowPatterns", "coreTraits", "tryThis", "avoidThis",
-        "yourBlueprint",
+        "yourBlueprint", "personalityConscious", "designUnconscious",
     )
     out = {}
     for k in allowed_keys:
@@ -413,7 +413,9 @@ async def call_llm_for_human_design(computed_input: dict[str, Any]) -> dict[str,
         authority=computed_input.get("authority"),
         profile=computed_input.get("profile"),
         definition=computed_input.get("definition"),
-        centers=", ".join(computed_input.get("defined_centers", [])),
+        defined_centers=", ".join(computed_input.get("defined_centers", [])),
+        undefined_centers=", ".join(computed_input.get("undefined_centers", [])),
+        active_channels=", ".join(computed_input.get("active_channels", [])),
         incarnation_cross=json.dumps(computed_input.get("incarnation_cross", {})),
         personality_gates=json.dumps(computed_input.get("personality_gates", {}), indent=2),
         design_gates=json.dumps(computed_input.get("design_gates", {}), indent=2),

@@ -466,28 +466,7 @@ ENERGY_ARCHETYPE_JSON_KEYS = frozenset({
     "summary", "tryThis", "avoidThis", "extracted_json"
 })
 
-HUMAN_DESIGN_SYSTEM = """You are interpreting a Human Design chart.
-
-IMPORTANT:
-- Do NOT generate generic personality descriptions.
-- Every statement MUST be derived from the input data.
-- Avoid vague adjectives (e.g. “insightful”, “powerful”, “unique”).
-- Make the output feel specific to THIS person only.
-- Use clear, grounded, real-life language (not abstract or mystical).
-
-STYLE RULES:
-- No generic phrases
-- No repetition
-- No “spiritual fluff”
-- No mentioning “blueprint” (REMOVE THIS WORD)
-- No copying same sentence patterns
-- Keep tone: clear, practical, grounded
-
-- Use top_gate_meanings, personality_traits, and design_traits directly.
-- Do not ignore gate meanings.
-- If gate meanings are present, every major section must reflect them.
-- Conscious vs Unconscious must compare personality_traits vs design_traits.
-- Avoid generic statements unless they are clearly supported by the input.
+HUMAN_DESIGN_SYSTEM = """You are interpreting a Human Design chart for a results screen inside a premium self-discovery app. Your job is NOT to write a generic Human Design summary. Your job is to interpret the chart primarily from the gate / channel / center data, and only secondarily from type / strategy / authority / profile.
 
 You write only valid JSON. No markdown, no code fences.
 Output only the JSON object, nothing else."""
@@ -495,52 +474,85 @@ Output only the JSON object, nothing else."""
 HUMAN_DESIGN_USER = """Analyze the user's Human Design chart.
 
 INPUT:
+- Type: {type}
+- Strategy: {strategy}
+- Authority: {authority}
+- Profile: {profile}
+- Definition: {definition}
+- Personality Gates: {personality_gates}
+- Design Gates: {design_gates}
+- Personality Traits: {personality_traits}
+- Design Traits: {design_traits}
+- Top Gate Meanings: {top_gate_meanings}
+- Active Channels: {active_channels}
+- Defined Centers: {defined_centers}
+- Undefined Centers: {undefined_centers}
+- Incarnation Cross: {incarnation_cross}
 
-Type: {type}
-Strategy: {strategy}
-Authority: {authority}
-Profile: {profile}
-Definition: {definition}
-Centers: {centers}
-Incarnation Cross: {incarnation_cross}
+CORE RULES
+1. Prioritize interpretation in this order:
+a) top_gate_meanings
+b) active_channels
+c) defined / undefined centers
+d) personality vs design contrast
+e) type / strategy / authority / profile
+2. Do NOT let the result become a generic summary of Type + Strategy + Authority.
+3. Mention type / strategy / authority only briefly for framing.
+4. The real substance must come from gates, channels, and centers.
+5. Use the conscious traits as what the person identifies with.
+6. Use the unconscious traits as patterns others may notice or that operate beneath awareness.
+7. Make the "Conscious vs Unconscious" section feel like a real contrast, not a repetition.
+8. Avoid mystical fluff, empty spiritual language, or vague phrases like:
+- sacred journey
+- harmonious balance
+- cosmic flow
+- profound evolution
+- divine path
+9. Be specific, behavioral, and psychologically believable.
+10. Include tension or contradiction if the chart suggests it.
+11. Do not repeat the same idea across multiple sections.
+12. Keep each section doing a different job.
 
-Personality Gates: {personality_gates}
-Design Gates: {design_gates}
+STYLE
+- Insightful
+- grounded
+- premium
+- psychologically sharp
+- concise but deep
+- not cheesy
+- not generic
+- not overly mystical
 
-Top Gate Meanings: {top_gate_meanings}
-Personality traits (conscious): {personality_traits}
-Design traits (unconscious): {design_traits}
+WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys)
 
----
+- "title": Create a short result title, max 5 words. It should feel premium and specific, not generic. Avoid words like "blueprint".
+- "summary": Write 2 short paragraphs separated by \\n\\n. Paragraph 1: briefly frame the person using type / strategy / authority / profile, but do not stay generic. Paragraph 2: transition into the specific gate / center dynamics and mention the most important underlying pattern.
+- "personalityConscious": Array of 3 to 5 short bullet-style trait lines based mainly on personality_traits and personality_gates. These are qualities the person is more likely to identify with. Keep them specific and behavior-based.
+- "designUnconscious": Array of 3 to 5 short bullet-style trait lines based mainly on design_traits and design_gates. These are qualities that may show up automatically or be noticed more by others. Keep them specific and behavior-based.
+- "consciousVsUnconscious": Write 1 short paragraph. Explain the tension, contrast, or interplay between the conscious and unconscious sides. This section must feel insightful and personal. Do not repeat earlier lines word-for-word.
+- "coreTraits": Array of exactly 3 bullet points. These should be the 3 strongest overall traits emerging from the chart as a whole. Each bullet must be distinct.
+- "strengths": Array of exactly 3 bullet points. These must be practical strengths that come from the actual chart dynamics. Avoid generic praise.
+- "challenges": Array of exactly 3 bullet points. These must be believable friction points or blind spots. Make them slightly uncomfortable but fair. No generic lines like "you may overthink sometimes" unless strongly justified by the chart.
+- "energyBlueprint": Write 2 short paragraphs separated by \\n\\n. Explain how this person’s energy tends to work best, how defined/undefined centers affect consistency, sensitivity, or decision style, and how active channels shape behavior. This section should feel like an operating manual, not a horoscope.
+- "decisionGuidance": Write 1 strong paragraph. Explain how this person should make decisions in real life using authority + chart dynamics. This must feel practical and usable. Do not only restate the standard Human Design definition.
+- "tryThis": Array of exactly 3 practical bullet points. These must be concrete and behavior-based. Good examples: what to do in conversations, what to notice in work dynamics, how to respond under pressure. Bad examples: "believe in yourself", "trust the universe".
+- "avoidThis": Array of exactly 2 bullet points. These should be realistic mistakes this person is likely to make if out of alignment.
 
-OUTPUT STRUCTURE:
+IMPORTANT QUALITY FILTER
+Before finalizing, check:
+- Does this sound unique to this chart?
+- Is it driven more by gates/channels/centers than by generic Human Design type language?
+- Does each section add something new?
+- Did I avoid the word "blueprint" completely?
+- Did I avoid generic mystical filler?
+If not, rewrite internally before answering.
 
-Return exactly one JSON object with these keys only:
-- "title": string, Result Title (short catchy name)
-- "summary": string, Overview (2 paragraphs). Explain how this person operates in real life: how they make decisions, how they interact with others, where they struggle naturally. Use Type + Authority + Profile + Definition together.
-- "coreTraits": array of exactly 3 items. Each must come from gates OR profile and be specific behaviors (not adjectives). Format: short sentence (not single word).
-- "strengths": array of exactly 3 items. Derived from strongest repeated gates OR definition consistency. Explain what works naturally for them and where they outperform others.
-- "challenges": array of exactly 3 items. Derived from tension between personality vs design or type strategy misalignment. Explain what goes wrong in real situations (NOT generic weaknesses).
-- "consciousVsUnconscious": string, explain what they THINK they are vs how they ACTUALLY behave. Compare Personality gates (conscious) vs Design gates (unconscious). This must feel personal and slightly surprising.
-- "energyBlueprint": string, 2 paragraphs explaining mechanics: how their energy flows and when they feel “aligned” vs “off”. Use definition, centers (if available) and type. DO NOT repeat earlier text.
-- "decisionGuidance": string, Explain HOW they should decide in real situations based on authority and strategy. Include what to trust and what to ignore.
-- "tryThis": array of exactly 3 practical actions (no vague advice).
-- "avoidThis": array of 2-3 pitfalls or real mistakes they tend to make based on their design.
-
-Output only the JSON object, nothing else.
-
-STRICT RULES:
-
-- Use provided gate meanings as PRIMARY source of truth
-- Every section MUST reference or reflect these traits
-- Do NOT write generic Human Design descriptions
-- If traits are provided, build sentences directly from them
-- Avoid repeating same idea in different words
-- Keep language specific, grounded, and tied to behavior"""
+Output only the JSON object, nothing else."""
 
 HUMAN_DESIGN_JSON_KEYS = frozenset({
-    "title", "summary", "coreTraits", "strengths", "challenges",
-    "consciousVsUnconscious", "energyBlueprint", "decisionGuidance", "tryThis", "avoidThis", "extracted_json"
+    "title", "summary", "personalityConscious", "designUnconscious", 
+    "consciousVsUnconscious", "coreTraits", "strengths", "challenges", 
+    "energyBlueprint", "decisionGuidance", "tryThis", "avoidThis", "extracted_json"
 })
 
 BIG_FIVE_SYSTEM = """You are an expert in personality psychology and the Big Five (OCEAN) model.
