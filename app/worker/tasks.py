@@ -82,7 +82,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             return
 
         user_id = row.user_id
-        test_id = row.test_id
+        test_id = int(row.test_id)
         answer_hash_val = answer_hash(row.answers)
 
         if not await check_rate_limit(user_id):
@@ -605,8 +605,8 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             )
             row.llm_result_json = llm_result
             row.insights = llm_result.get("coreTraits") or []
-            row.recommendations = llm_result.get("strengths") or []
-            row.narrative = llm_result.get("narrative") or ""
+            row.recommendations = llm_result.get("tryThis") or llm_result.get("strengths") or []
+            row.narrative = llm_result.get("overview") or llm_result.get("narrative") or ""
             row.status = "completed"
 
             # Persist mbti_type and descriptor to user profile
@@ -1001,7 +1001,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             row.personality_type = llm_result.get("title") or "Your Astrology Chart"
             row.insights = llm_result.get("coreTraits") or []
             row.recommendations = llm_result.get("tryThis") or []
-            row.narrative = llm_result.get("narrative") or ""
+            row.narrative = llm_result.get("astrologicalPattern") or llm_result.get("narrative") or ""
             row.status = "completed"
             
             out = {
@@ -1052,25 +1052,6 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         out["narrative"] = row.narrative
         out["llm_result_json"] = row.llm_result_json
         row.status = "completed"
-
-        if test_id == 7:
-            mbti_type = (computed_type or "").strip().upper() if computed_type and len(computed_type) >= 4 else (row.personality_type or "").strip()[:4].upper() or None
-            mbti_descriptor = (llm_result.get("title") or "").strip() or None
-            if mbti_type or mbti_descriptor:
-                await session.execute(
-                    update(UserModel).where(UserModel.id == user_id).values(
-                        mbti_type=mbti_type[:20] if mbti_type else None,
-                        mbti_descriptor=mbti_descriptor[:100] if mbti_descriptor else None,
-                    )
-                )
-                await cache_delete(cache_key_user_profile(user_id))
-        elif test_id == 13:
-            chakra_label = extract_strongest_chakra_label(llm_result.get("strongestChakra"))
-            if chakra_label:
-                await session.execute(
-                    update(UserModel).where(UserModel.id == user_id).values(strongest_chakra=chakra_label)
-                )
-                await cache_delete(cache_key_user_profile(user_id))
         await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
         await session.commit()
         async with AsyncSessionLocal() as syn_session:

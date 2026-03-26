@@ -58,6 +58,9 @@ from app.core.prompts import (
     TRANSITS_SYSTEM,
     TRANSITS_USER,
     TRANSITS_JSON_KEYS,
+    MBTI_SYSTEM,
+    MBTI_USER,
+    MBTI_JSON_KEYS,
 )
 
 logger = logging.getLogger(__name__)
@@ -967,21 +970,11 @@ def _validate_astrology_chart_narrative(obj: dict[str, Any]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for k in ASTROLOGY_CHART_NARRATIVE_JSON_KEYS:
         v = get_case_insensitive_val(obj, k)
-        if k == "overlaps":
-            if isinstance(v, list) and v:
-                out[k] = [
-                    {"label": str(s.get("label", s.get("title", ""))), "description": str(s.get("description", ""))}
-                    for s in v if isinstance(s, dict)
-                ][:6]
-            else:
-                out[k] = []
-        elif k in ("coreTraits", "strengths", "challenges", "avoidThis", "tryThis"):
+        if k in ("coreTraits", "strengths", "challenges", "avoidThis", "tryThis"):
             out[k] = [str(x) for x in v][:8] if isinstance(v, list) else []
         else:
             s = str(v).strip() if v is not None and isinstance(v, str) else ""
             out[k] = s if s else fallback.get(k, "")
-            if k == "narrative" and out[k]:
-                pass
     return out
 
 
@@ -989,12 +982,14 @@ def _fallback_astrology_chart_narrative() -> dict[str, Any]:
     return {
         "title": "Your Astrology Chart",
         "coreTraits": ["Reflective", "Intuitive", "Grounded"],
-        "narrative": "Your chart blends your sun, moon, and rising signs with your element distribution. You carry both emotional depth and practical grounding. Use this awareness to make choices that honor your nature. Explore your birth chart in depth to uncover more layers and align with your purpose.",
+        "sunSign": "Your sun sign shapes your core identity and how you direct your energy in the world.",
+        "moonSign": "Your moon sign reveals your deepest emotional needs and how you process feelings in private.",
+        "risingSign": "Your rising sign dictates your initial approach to new situations and how others first perceive you.",
+        "astrologicalPattern": "Your chart blends your sun, moon, and rising signs into a unique energy signature.\n\nYou may feel tension between your desire for stability and your need for emotional depth.\n\nIn daily life, this plays out as a cautious approach to new relationships until you establish trust.",
         "strengths": ["Self-awareness", "Emotional depth"],
         "challenges": ["Integration", "Balance"],
-        "avoidThis": ["Ignoring your body's needs", "Overthinking"],
-        "overlaps": [],
         "tryThis": ["Journal by the moon", "Spend time in nature"],
+        "avoidThis": ["Ignoring your body's needs", "Overthinking"],
         "spiritualInsight": "Your birth chart is a map of your soul's journey—use it as a guide, not a limit.",
     }
 
@@ -1239,52 +1234,47 @@ _MBTI_TYPE_NAMES: dict[str, str] = {
     "ISTP": "The Virtuoso", "ISFP": "The Adventurer", "ESTP": "The Entrepreneur", "ESFP": "The Entertainer",
 }
 
-_MBTI_NARRATIVE_SYSTEM = """\
-    You are a compassionate, psychologically insightful personality coach writing for a mobile spiritual-wellness app.
-    Your writing is warm, reflective, and grounded in real psychology — never generic horoscope copy.
-    Always respond with ONLY valid JSON — no prose outside the JSON block.
-
-    Return this exact JSON shape:
-    {
-        "title": "string — MBTI type name (e.g. 'The Architect')",
-        "coreTraits": ["string — a short descriptive phrase, not a single word (e.g. 'You recharge alone, but care deeply about others')", "string — another short phrase", "string — etc."],
-        "narrative": "string — 2-3 paragraphs separated by \\n\\n. Paragraph 1: core personality/theme. Paragraph 2: deeper dynamic/inner workings. Paragraph 3: life direction/patterns",
-        "shortDescription": "string — a single paragraph summarizing the narrative, completely distinct from the paragraphs above",
-        "strengths": ["string — a short phrase describing a strength (e.g. 'Deep spiritual insight')", "string — etc."],
-        "challenges": ["string — a short phrase describing a challenge"],
-        "spiritualInsight": "string — 1 sentence linking the personality type to inner growth"
-    }
-
-    NB: Interpret mainly through cognitive style, thinking patterns and decision-making.
-"""
-
-
 def _fallback_mbti_narrative(mbti_type: str) -> dict[str, Any]:
-    name = _MBTI_TYPE_NAMES.get(mbti_type.upper(), "Your Type")
+    name = _MBTI_TYPE_NAMES.get(mbti_type.upper(), "Your Personality Type")
     return {
         "title": name,
-        "coreTraits": [
-            "You recharge alone, but care deeply about others",
-            "You think ahead, looking for connections and meaning",
-            "You're a mix of logic and emotional intelligence",
-            "You prefer plans, but value integrity over control",
-        ],
-        "narrative": (
+        "overview": (
             f"As an {mbti_type}, you bring a unique blend of inner depth and outward expression. "
             "Your personality type is shaped by how you gather information and make decisions. "
-            "You thrive in environments that respect your natural way of engaging with the world."
+            "You thrive in environments that respect your natural way of engaging with the world.\n\n"
+            "Your dimension scores reflect a balance between strong convictions and practical adaptability."
         ),
+        "coreTraits": [
+            "You process information internally but care about outcomes",
+            "You seek patterns and logic in daily situations",
+            "You balance structure with occasional spontaneity",
+        ],
         "strengths": [
-            "Deep intuitive thinking",
-            "Strong personal principles",
-            "High emotional intelligence",
+            "Deep intuitive processing",
+            "Structured problem-solving",
+            "Observant and grounded",
         ],
         "challenges": [
-            "Prone to perfectionism",
-            "Occasional overthinking",
+            "Can become rigid when stressed",
+            "May overthink simple decisions",
+            "Hesitant in unstructured environments",
         ],
-        "spiritualInsight": "Your growth path lies in balancing your inner world with the needs of the outer one.",
+        "cognitiveStyle": "You rely on proven frameworks but are also learning to trust your intuition.",
+        "tryThis": [
+            "Pause before reacting to sudden changes",
+            "Acknowledge the emotional context, not just the logical one",
+            "Experiment with breaking small routines"
+        ],
+        "avoidThis": [
+            "Over-planning every detail",
+            "Dismissing ideas that lack immediate proof"
+        ]
     }
+
+
+def _validate_mbti_result(data: dict[str, Any]) -> dict[str, Any]:
+    res = _validate_and_filter(data, MBTI_JSON_KEYS)
+    return res
 
 
 async def call_llm_for_mbti_narrative(
@@ -1294,7 +1284,6 @@ async def call_llm_for_mbti_narrative(
 ) -> dict[str, Any]:
     """
     Generate MBTI personality narrative from a deterministically computed type.
-    AI only writes the description — type is never determined by AI.
     """
     if not settings.openai_api_key:
         return _fallback_mbti_narrative(mbti_type)
@@ -1302,14 +1291,11 @@ async def call_llm_for_mbti_narrative(
     type_name = _MBTI_TYPE_NAMES.get(mbti_type.upper(), "")
     conf_lines = ""
     if confidence:
-        conf_lines = "\n".join(f"  - {dim}: {pct}% dominant" for dim, pct in confidence.items())
+        conf_lines = "\n".join(f"- {dim}: {pct}%" for dim, pct in confidence.items())
 
-    user_content = (
-        f"MBTI Type: {mbti_type}{f' ({type_name})' if type_name else ''}\n"
-        f"Dimension confidence:\n{conf_lines}\n"
-        f"{f'User context: {user_context}' if user_context else ''}\n\n"
-        "Write a short, reflective personality insight for this type. "
-        "Highlight a balance of their strengths and a subtle inner tension. Keep it concise and readable on mobile."
+    user_content = MBTI_USER.format(
+        mbti_type=f"{mbti_type}{f' ({type_name})' if type_name else ''}",
+        confidence_lines=conf_lines or "Not available",
     )
 
     try:
@@ -1318,19 +1304,23 @@ async def call_llm_for_mbti_narrative(
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": _MBTI_NARRATIVE_SYSTEM},
-                {"role": "user", "content": _cap_input(user_content, 1500)},
+                {"role": "system", "content": MBTI_SYSTEM},
+                {"role": "user", "content": user_content},
             ],
-            max_tokens=700,
+            response_format={"type": "json_object"},
+            max_tokens=2000,
             temperature=0.4,
         )
         raw = (response.choices[0].message.content or "").strip()
         data = _extract_json_from_response(raw)
-        if data and isinstance(data, dict) and data.get("narrative"):
-            return data
+        if data:
+            if not data.get("cognitiveStyle"):
+                logger.warning("MBTI LLM response missing cognitiveStyle for type=%s", mbti_type)
+            return _validate_mbti_result(data)
     except Exception as e:
-        logger.warning("LLM MBTI narrative call failed: %s", e)
+        logger.warning("LLM MBTI call failed: %s", e)
     return _fallback_mbti_narrative(mbti_type)
+
 
 
 def _fallback_emotional_regulation(primary: str, secondary: str) -> dict[str, Any]:

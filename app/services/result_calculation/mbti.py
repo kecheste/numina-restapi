@@ -130,7 +130,6 @@ def compute_mbti_detailed(
 
         type_letters.append(winner)
 
-        # Confidence = winning letter votes / total questions in dimension
         q_count = len(question_ids)
         winning_votes = dimensions[winner]
         confidence[_LABEL[winner]] = round(winning_votes / q_count * 100) if q_count else 0

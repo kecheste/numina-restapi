@@ -14,6 +14,8 @@ AI_RESULT_CACHE_TTL = 86400 * 7
 USER_PROFILE_CACHE_TTL = 300
 TEST_LIST_CACHE_TTL = 600
 
+PROMPT_VERSION = "v2" 
+
 def get_redis() -> redis.Redis | None:
     return _redis
 
@@ -88,5 +90,5 @@ def cache_key_test_list() -> str:
     return "tests:list"
 
 
-def cache_key_ai_result(test_id: int, user_id: int, answer_hash: str) -> str:
-    return f"ai:result:{test_id}:{user_id}:{answer_hash}"
+def cache_key_ai_result(test_id: int | str, user_id: int, answer_hash: str) -> str:
+    return f"ai:res:{PROMPT_VERSION}:{test_id}:{user_id}:{answer_hash}"
