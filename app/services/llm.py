@@ -55,6 +55,9 @@ from app.core.prompts import (
     SOUL_COMPASS_SYSTEM,
     SOUL_COMPASS_USER,
     SOUL_COMPASS_JSON_KEYS,
+    TRANSITS_SYSTEM,
+    TRANSITS_USER,
+    TRANSITS_JSON_KEYS,
 )
 
 logger = logging.getLogger(__name__)
@@ -434,7 +437,7 @@ async def call_llm_for_human_design(computed_input: dict[str, Any]) -> dict[str,
                 {"role": "user", "content": user_content},
             ],
             response_format={"type": "json_object"},
-            max_tokens=OUTPUT_MAX_TOKENS,
+            max_tokens=2000,
             temperature=0.4,
         )
         content = response.choices[0].message.content or "{}"
@@ -1687,4 +1690,84 @@ def _fallback_soul_compass_json(extracted: dict[str, Any]) -> dict[str, Any]:
             "If you knew you could not fail, what would you choose?"
         ],
         "extracted_json": extracted
+    }
+
+
+async def call_llm_for_transits(computed_input: dict[str, Any]) -> dict[str, Any]:
+    """Dedicated LLM call for Transit reading interpretation."""
+    if not settings.openai_api_key:
+        return _fallback_transits_json(computed_input)
+
+    user_content = TRANSITS_USER.format(
+        input_json=json.dumps(computed_input, indent=2)
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": TRANSITS_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.5,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        if data:
+            return _validate_transits_result(data, extracted=computed_input)
+    except Exception as e:
+        logger.warning("LLM transits call failed: %s", e)
+    return _fallback_transits_json(computed_input)
+
+
+def _validate_transits_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
+    res = _validate_and_filter(data, TRANSITS_JSON_KEYS)
+    if extracted:
+        res["extracted_json"] = extracted
+    return res
+
+
+def _fallback_transits_json(extracted: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "title": "A Period of Active Transit Energy",
+        "currentClimate": (
+            "The planetary movements are creating a notable backdrop to your life right now. "
+            "Several transits are in contact with your natal chart, activating specific areas of experience.\n\n"
+            "This is a period that calls for both awareness and intentional action. "
+            "The themes being triggered are worth working with consciously rather than reacting to automatically."
+        ),
+        "whatIsBeingActivated": [
+            "Your core identity and long-term sense of direction",
+            "Emotional responses and inner relational patterns",
+            "The balance between effort and flow in daily life",
+        ],
+        "supportiveOpenings": [
+            "Clarity about what genuinely matters to you",
+            "Capacity for focused, sustained effort when needed",
+            "Opportunities for honest self-reflection",
+        ],
+        "tensionsToWatch": [
+            "Impatience with the pace of change",
+            "Emotional reactivity in close relationships",
+            "Pressure to resolve things before they are ready",
+        ],
+        "timingInsight": (
+            "This is not primarily a time for dramatic action. "
+            "It is a period that rewards steady, deliberate movement and honest self-observation. "
+            "Rushing decisions or forcing outcomes is likely to create friction. "
+            "Working with the current energy rather than against it will produce the best results."
+        ),
+        "tryThis": [
+            "Identify one area of your life where you can apply consistent effort this month",
+            "Notice emotional reactions before responding — give yourself a beat",
+            "Carve out time for reflection before making significant decisions",
+        ],
+        "avoidThis": [
+            "Impulsive decisions driven by frustration or impatience",
+            "Ignoring emotional signals in favor of pushing through",
+        ],
+        "extracted_json": extracted,
     }

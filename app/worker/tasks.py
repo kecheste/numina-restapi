@@ -31,6 +31,7 @@ from app.services.result_calculation.past_life_vibes import calculate_past_life_
 from app.services.result_calculation.somatic_connection import calculate_somatic_connection
 from app.services.result_calculation.stress_balance import calculate_stress_balance
 from app.services.result_calculation.soul_compass import compute_soul_compass
+from app.services.result_calculation.transits import compute_transits
 from app.services.llm import (
     call_llm_for_astrology_blueprint,
     call_llm_for_astrology_chart_narrative,
@@ -52,6 +53,7 @@ from app.services.llm import (
     call_llm_for_somatic_connection,
     call_llm_for_stress_balance,
     call_llm_for_soul_compass,
+    call_llm_for_transits,
 )
 
 from .helpers import (
@@ -942,7 +944,44 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             return
 
         computed_type: str | None = None
-        
+
+        # Transits (5)
+        if test_id == 5:
+            logger.info("DEBUG: Entering Transits branch for result_id=%s", result_id)
+            try:
+                # answers is the pre-structured transit dict from the frontend
+                transit_input = row.answers if isinstance(row.answers, dict) else {}
+                extracted = compute_transits(transit_input)
+            except Exception as e:
+                logger.exception("compute_transits failed for result_id=%s: %s", result_id, e)
+                extracted = {}
+
+            row.extracted_json = extracted
+            row.score = 8.0
+            llm_result = await call_llm_for_transits(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or "Your Transit Reading"
+            row.insights = llm_result.get("whatIsBeingActivated") or llm_result.get("tryThis") or []
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("currentClimate") or ""
+
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Transits)", result_id)
+            return
+
         # Astrology Chart Narrative (1)
         if test_id == 1:
             ad = row.answers if isinstance(row.answers, dict) else {}

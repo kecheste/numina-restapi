@@ -1,9 +1,9 @@
-"""Schemas for test results (frontend-aligned)."""
-
+import ast
+import json
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 AnswerType = Literal[
     "text", "date", "time", "single_choice", "multiple_choice", "slider", "color"
@@ -201,6 +201,30 @@ class TestResultResponse(BaseModel):
     narrative: str | None = None  # LLM-generated prose from computed result
     extracted_json: dict[str, Any] | list[Any] | None = None  # compact JSON; narrative uses only this for text tests
     llm_result_json: dict[str, Any] | None = None  # structured LLM output: title, summary, insights, recommendations, takeaway
+
+    @field_validator("insights", "recommendations", mode="before")
+    @classmethod
+    def _coerce_list_field(cls, v: Any) -> Any:
+        """Handle legacy rows where a list was stored as a Python repr string."""
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return None
+            # Try JSON first (proper format)
+            try:
+                parsed = json.loads(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except (ValueError, TypeError):
+                pass
+            # Fall back to ast.literal_eval for Python repr strings like "['a', 'b']"
+            try:
+                parsed = ast.literal_eval(v)
+                if isinstance(parsed, list):
+                    return parsed
+            except (ValueError, SyntaxError):
+                pass
+        return v
 
 
 class SubmitTestRequest(BaseModel):

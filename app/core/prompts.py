@@ -466,7 +466,44 @@ ENERGY_ARCHETYPE_JSON_KEYS = frozenset({
     "summary", "tryThis", "avoidThis", "extracted_json"
 })
 
-HUMAN_DESIGN_SYSTEM = """You are interpreting a Human Design chart for a results screen inside a premium self-discovery app. Your job is NOT to write a generic Human Design summary. Your job is to interpret the chart primarily from the gate / channel / center data, and only secondarily from type / strategy / authority / profile.
+HUMAN_DESIGN_SYSTEM = """You are interpreting a Human Design chart for a premium self-discovery app.
+
+At least 60% of all personality statements must directly reflect specific gates or channels.
+If a statement cannot be traced back to a gate, channel, or center dynamic, it should NOT be included.
+
+FORBIDDEN GENERIC PATTERNS
+Do NOT use:
+- “natural leader”
+- “creative thinker”
+- “good communicator”
+- “innovative”
+- “adaptable”
+- “inner strength”
+
+DEPTH ENFORCEMENT
+When mentioning gates, you must:
+- explain what behavior they create in real life
+- describe how they influence decisions, reactions, or interactions
+- if multiple gates are referenced, explain how they interact or create tension
+
+CHANNEL INTERPRETATION RULE
+Each mentioned channel must be translated into:
+- a behavioral pattern OR
+- a recurring life dynamic OR
+- a tension the person experiences
+Not just described abstractly.
+
+All traits must be behavior-specific, not resume-style adjectives.
+
+UNIQUENESS TEST
+If this result could apply to another person with the same Type but different gates, it is invalid.
+
+The interpretation must be driven primarily by:
+1. top_gate_meanings
+2. active_channels
+3. defined / undefined centers
+4. conscious vs unconscious contrast
+5. type / strategy / authority / profile only as supporting context
 
 You write only valid JSON. No markdown, no code fences.
 Output only the JSON object, nothing else."""
@@ -489,69 +526,113 @@ INPUT:
 - Undefined Centers: {undefined_centers}
 - Incarnation Cross: {incarnation_cross}
 
-CORE RULES
-1. Prioritize interpretation in this order:
-a) top_gate_meanings
-b) active_channels
-c) defined / undefined centers
-d) personality vs design contrast
-e) type / strategy / authority / profile
-2. Do NOT let the result become a generic summary of Type + Strategy + Authority.
-3. Mention type / strategy / authority only briefly for framing.
-4. The real substance must come from gates, channels, and centers.
-5. Use the conscious traits as what the person identifies with.
-6. Use the unconscious traits as patterns others may notice or that operate beneath awareness.
-7. Make the "Conscious vs Unconscious" section feel like a real contrast, not a repetition.
-8. Avoid mystical fluff, empty spiritual language, or vague phrases like:
+CRITICAL RULE
+At least 60% of all personality statements must directly reflect specific gates or channels.
+If a statement cannot be traced back to a gate, channel, or center dynamic, it should NOT be included.
+
+DEPTH ENFORCEMENT
+When mentioning gates, you must:
+- explain what behavior they create in real life
+- describe how they influence decisions, reactions, or interactions
+- if multiple gates are referenced, explain how they interact or create tension
+Example:
+Bad: “Gate 1 gives creativity”
+Good: “Gate 1 drives a need to express something original, which can make you resist repeating what already exists”
+
+CHANNEL INTERPRETATION RULE
+Each mentioned channel must be translated into:
+- a behavioral pattern OR
+- a recurring life dynamic OR
+- a tension the person experiences
+Not just described abstractly.
+
+ANTI-GENERIC FILTER
+Replace any generic phrases like:
+- natural leader
+- creative thinker
+- good communicator
+- innovative
+- adaptable
+- inner strength
 - sacred journey
-- harmonious balance
-- cosmic flow
-- profound evolution
+- harmonious flow
 - divine path
-9. Be specific, behavioral, and psychologically believable.
-10. Include tension or contradiction if the chart suggests it.
-11. Do not repeat the same idea across multiple sections.
-12. Keep each section doing a different job.
+- profound evolution
+- cosmic balance
+- energetic blueprint
+- creative expression
+- strong communicator
+- resourceful
+With:
+- observable behaviors
+- specific tendencies
+- real-life patterns
+
+UNIQUENESS TEST
+Before finalizing, check:
+If this result could apply to another person with the same Type but different gates, it is invalid and must be rewritten.
+
+VERY IMPORTANT RULES
+1. The chart must feel specific. If the output could fit many people of the same Type, it is wrong.
+2. Use Type / Strategy / Authority only briefly in the opening frame.
+3. The real personality description must come from gates, channels, centers, and the contrast between conscious and unconscious traits.
+4. Mention channels as lived behavior, not just technical labels.
+5. Mention defined centers as stable energies and undefined centers as areas of sensitivity, inconsistency, amplification, or learning.
+6. Conscious = what the person identifies with more easily.
+7. Unconscious = what operates automatically or is more visible to others.
+8. Avoid vague spiritual filler.
+9. Avoid repetitive wording across sections.
+10. Each section must do a different job.
+11. Include tension, contradiction, or friction where the chart suggests it.
+12. Use concrete, behavior-based language.
+13. Do not over-praise. Be insightful, accurate, and slightly confronting when justified.
+14. Never use the word "blueprint".
 
 STYLE
-- Insightful
+- precise
+- psychologically sharp
 - grounded
 - premium
-- psychologically sharp
-- concise but deep
+- specific
 - not cheesy
+- not fluffy
 - not generic
-- not overly mystical
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys)
 
-- "title": Create a short result title, max 5 words. It should feel premium and specific, not generic. Avoid words like "blueprint".
-- "summary": Write 2 short paragraphs separated by \\n\\n. Paragraph 1: briefly frame the person using type / strategy / authority / profile, but do not stay generic. Paragraph 2: transition into the specific gate / center dynamics and mention the most important underlying pattern.
-- "personalityConscious": Array of 3 to 5 short bullet-style trait lines based mainly on personality_traits and personality_gates. These are qualities the person is more likely to identify with. Keep them specific and behavior-based.
-- "designUnconscious": Array of 3 to 5 short bullet-style trait lines based mainly on design_traits and design_gates. These are qualities that may show up automatically or be noticed more by others. Keep them specific and behavior-based.
-- "consciousVsUnconscious": Write 1 short paragraph. Explain the tension, contrast, or interplay between the conscious and unconscious sides. This section must feel insightful and personal. Do not repeat earlier lines word-for-word.
-- "coreTraits": Array of exactly 3 bullet points. These should be the 3 strongest overall traits emerging from the chart as a whole. Each bullet must be distinct.
-- "strengths": Array of exactly 3 bullet points. These must be practical strengths that come from the actual chart dynamics. Avoid generic praise.
-- "challenges": Array of exactly 3 bullet points. These must be believable friction points or blind spots. Make them slightly uncomfortable but fair. No generic lines like "you may overthink sometimes" unless strongly justified by the chart.
-- "energyBlueprint": Write 2 short paragraphs separated by \\n\\n. Explain how this person’s energy tends to work best, how defined/undefined centers affect consistency, sensitivity, or decision style, and how active channels shape behavior. This section should feel like an operating manual, not a horoscope.
-- "decisionGuidance": Write 1 strong paragraph. Explain how this person should make decisions in real life using authority + chart dynamics. This must feel practical and usable. Do not only restate the standard Human Design definition.
-- "tryThis": Array of exactly 3 practical bullet points. These must be concrete and behavior-based. Good examples: what to do in conversations, what to notice in work dynamics, how to respond under pressure. Bad examples: "believe in yourself", "trust the universe".
-- "avoidThis": Array of exactly 2 bullet points. These should be realistic mistakes this person is likely to make if out of alignment.
+- "title": Create a short result title, max 4 words. It should feel specific to the chart. Avoid words like Leader, Visionary, Explorer unless truly justified by the data. Never use the word "blueprint".
+- "summary": Write 2 short paragraphs separated by \n\n. Paragraph 1: briefly frame using Type / Strategy / Authority / Profile — keep it short. Paragraph 2: move immediately into the strongest gate / channel / center dynamics — this paragraph must already feel unique to this chart.
+- "personalityConscious": Array of 3 to 5 short bullet-style trait lines using mainly personality_traits and strongest personality gates. These sound like qualities the person recognizes in themselves. Keep them specific and behavior-based.
+- "designUnconscious": Array of 3 to 5 short bullet-style trait lines using mainly design_traits and strongest design gates. These sound like automatic behaviors or underlying tendencies others may notice.
+- "consciousVsUnconscious": Write 1 short paragraph. Explain the most important contrast between the conscious and unconscious pattern. This must reveal tension, not repeat the same idea.
+- "coreTraits": Array of exactly 3 bullet points. The 3 strongest overall traits from the full chart. Each must be distinct.
+- "strengths": Array of exactly 3 bullet points. Must come from actual chart mechanics, not generic compliments.
+- "challenges": Array of exactly 3 bullet points. Must be believable, specific, and slightly uncomfortable if needed. Avoid generic lines unless the chart truly supports them.
+- "energyBlueprint": Write 2 short paragraphs separated by \n\n.
+  - RULE: Reference at least one defined center AND one undefined center.
+  - RULE: Explain how this creates consistency vs inconsistency in behavior.
+  - RULE: Avoid generic phrases like “your energy thrives”.
+  - Paragraph 1: how this person's energy works best in life, work, and interaction.
+  - Paragraph 2: how channels + defined/undefined centers shape consistency, sensitivity, communication, emotional responses, identity, or drive. This section should feel like an operating manual, not a horoscope.
+- "decisionGuidance": Write 1 strong practical paragraph. How this person should make decisions in real life using authority plus the strongest gate/channel dynamics. Do not only restate the textbook Human Design authority definition.
+- "tryThis": Array of exactly 3 practical bullet points. Must be specific actions or behavioral adjustments. Good examples: what to notice in conversation, how to respond in work settings, what kind of environments support them, what to pause before doing. Bad examples: trust yourself, follow the universe, be authentic.
+- "avoidThis": Array of exactly 2 bullet points. Realistic traps this person is likely to fall into if out of alignment.
 
-IMPORTANT QUALITY FILTER
-Before finalizing, check:
-- Does this sound unique to this chart?
-- Is it driven more by gates/channels/centers than by generic Human Design type language?
+IMPORTANT QUALITY CHECK BEFORE FINALIZING
+Internally verify:
+- Does this feel unique to this chart?
+- Are gates/channels/centers clearly driving the interpretation?
+- Is the result more specific than a standard Human Design summary?
 - Does each section add something new?
-- Did I avoid the word "blueprint" completely?
-- Did I avoid generic mystical filler?
+- Did I avoid generic mystical language?
+- Did I avoid the word "blueprint"?
 If not, rewrite internally before answering.
 
 Output only the JSON object, nothing else."""
 
 HUMAN_DESIGN_JSON_KEYS = frozenset({
-    "title", "summary", "personalityConscious", "designUnconscious", 
-    "consciousVsUnconscious", "coreTraits", "strengths", "challenges", 
+    "title", "summary", "personalityConscious", "designUnconscious",
+    "consciousVsUnconscious", "coreTraits", "strengths", "challenges",
     "energyBlueprint", "decisionGuidance", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1015,4 +1096,57 @@ Output only the JSON object, nothing else."""
 
 SOUL_COMPASS_JSON_KEYS = frozenset({
     "title", "decisionInsight", "alignmentAnalysis", "whatThisMeans", "suggestedReflection", "extracted_json"
+})
+
+
+TRANSITS_SYSTEM = """You are interpreting an astrology Transit reading.
+
+This is NOT a natal chart reading.
+This is a timing-based interpretation of what is currently active for the user.
+
+You use:
+- natal placements (background context)
+- current transits (what is in the sky now)
+- major aspects (planetary contacts to natal points)
+- active themes (themes derived from the aspects)
+
+You focus on:
+- what kind of period the user is in right now
+- what emotional, mental, and relational tone is active
+- what pressures or opportunities are present
+- how the user can work with this energy wisely
+
+Important rules:
+- Do NOT make exact predictions or guarantees
+- Do NOT invent dramatic events
+- Speak in terms of tendencies, timing, and current pressures
+- Be specific, grounded, and personal to the chart data provided
+- Do NOT repeat generic zodiac descriptions unless tied to the transit
+- Tone: insightful, grounded, specific, calm, non-dramatic
+- Address the user as "you"
+- Write only valid JSON — no markdown, no code fences, no extra text
+"""
+
+TRANSITS_USER = """You are interpreting an astrology Transit reading.
+
+The backend has computed the following transit data for this user:
+
+{input_json}
+
+Return exactly one JSON object with these keys only:
+
+- "title": string — a short, evocative result title (e.g. "A Season of Discipline and Inner Tension")
+- "currentClimate": string — 2 short paragraphs (separated by \\n\\n) describing the overall transit energy. What kind of period is this? What is the general tone?
+- "whatIsBeingActivated": array of exactly 3 strings — the main areas being triggered by these transits (specific, tied to the aspects and themes)
+- "supportiveOpenings": array of exactly 3 strings — genuine opportunities or strengths present in this period (grounded, not generic)
+- "tensionsToWatch": array of exactly 3 strings — likely friction or pressure points active right now (honest but not alarming)
+- "timingInsight": string — 1 paragraph about whether this is a period for action, patience, reflection, or reorganization (specific to the transits provided)
+- "tryThis": array of exactly 3 strings — practical suggestions for how to move with this transit energy
+- "avoidThis": array of 2 to 3 strings — behaviors likely to create unnecessary difficulty during this period
+
+Output only the JSON object, nothing else."""
+
+TRANSITS_JSON_KEYS = frozenset({
+    "title", "currentClimate", "whatIsBeingActivated", "supportiveOpenings",
+    "tensionsToWatch", "timingInsight", "tryThis", "avoidThis",
 })
