@@ -36,6 +36,7 @@ from app.services.result_calculation.somatic_connection import calculate_somatic
 from app.services.result_calculation.stress_balance import calculate_stress_balance
 from app.services.result_calculation.soul_compass import compute_soul_compass
 from app.services.result_calculation.transits import compute_transits
+from app.services.result_calculation.zodiac_element_modality import calculate_zodiac_element_modality
 from app.services.llm import (
     call_llm_for_astrology_blueprint,
     call_llm_for_astrology_chart_narrative,
@@ -58,6 +59,7 @@ from app.services.llm import (
     call_llm_for_stress_balance,
     call_llm_for_soul_compass,
     call_llm_for_transits,
+    call_llm_for_zodiac_element_modality,
 )
 
 from .helpers import (
@@ -989,6 +991,10 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             row.insights = llm_result.get("whatIsBeingActivated") or llm_result.get("tryThis") or []
             row.recommendations = llm_result.get("tryThis") or []
             row.narrative = llm_result.get("currentClimate") or ""
+            
+            # Ensure insights and recommendations are lists (fixing potential string issues)
+            if isinstance(row.insights, str): row.insights = [row.insights]
+            if isinstance(row.recommendations, str): row.recommendations = [row.recommendations]
 
             out = {
                 "score": row.score,
@@ -1005,6 +1011,79 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             async with AsyncSessionLocal() as syn_session:
                 await generate_synthesis_for_user(syn_session, user_id)
             logger.info("Refined result_id=%s (Transits)", result_id)
+            return
+
+        # Zodiac Element & Modality (6)
+        if test_id == 6:
+            logger.info("DEBUG: Entering Zodiac branch for result_id=%s", result_id)
+            extracted = row.extracted_json or {}
+            if not extracted:
+                try:
+                    user_res = await session.execute(
+                        select(UserModel).where(UserModel.id == user_id)
+                    )
+                    user = user_res.scalar_one_or_none()
+                    if user:
+                        birth_data = {
+                            "birth_year": user.birth_year,
+                            "birth_month": user.birth_month,
+                            "birth_day": user.birth_day,
+                            "birth_time": user.birth_time,
+                            "birth_place_lat": user.birth_place_lat,
+                            "birth_place_lng": user.birth_place_lng,
+                            "birth_place_timezone": user.birth_place_timezone,
+                        }
+                        computed = calculate_zodiac_element_modality(birth_data)
+                        if computed:
+                            extracted = computed
+                except Exception as e:
+                    logger.warning("Zodiac Element & Modality compute failed for user_id=%s: %s", user_id, e)
+
+            row.extracted_json = extracted
+            row.score = 8.0
+            
+            element = extracted.get("dominant_element") or "Unknown"
+            modality = extracted.get("modality") or "Unknown"            # Build astrology context for more personal reading
+            sun = extracted.get("sun_sign", "")
+            moon = extracted.get("moon_sign", "")
+            rising = extracted.get("rising_sign", "")
+            astrology_context = f"Sun in {sun}, Moon in {moon}, Rising in {rising}" if sun else ""
+
+            llm_result = await call_llm_for_zodiac_element_modality(
+                element=element,
+                modality=modality,
+                astrology_context=astrology_context
+            )
+            
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or row.test_title
+            row.insights = llm_result.get("coreTraits") or []
+            row.recommendations = llm_result.get("dailyEvolution") or llm_result.get("strengths") or []
+            row.narrative = llm_result.get("energyProfile") or ""
+            
+            # Save LLM result and extracted data
+            row.llm_result_json = llm_result
+            row.extracted_json = extracted
+
+            # Ensure insights and recommendations are lists
+            if isinstance(row.insights, str): row.insights = [row.insights]
+            if isinstance(row.recommendations, str): row.recommendations = [row.recommendations]
+
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Zodiac Element & Modality)", result_id)
             return
 
         # Astrology Chart Narrative (1)

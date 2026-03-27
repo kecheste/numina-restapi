@@ -61,6 +61,9 @@ from app.core.prompts import (
     MBTI_SYSTEM,
     MBTI_USER,
     MBTI_JSON_KEYS,
+    ZODIAC_ELEMENT_MODALITY_SYSTEM,
+    ZODIAC_ELEMENT_MODALITY_USER,
+    ZODIAC_ELEMENT_MODALITY_JSON_KEYS,
 )
 
 logger = logging.getLogger(__name__)
@@ -113,6 +116,7 @@ def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> d
         "insights", "recommendations", "sureThings", "growthAreas", "themes",
         "strengths", "challenges", "shadowPatterns", "coreTraits", "tryThis", "avoidThis",
         "yourBlueprint", "personalityConscious", "designUnconscious",
+        "whatIsBeingActivated", "currentPatterns", "dailyEvolution",
     )
     out = {}
     for k in allowed_keys:
@@ -1792,4 +1796,61 @@ def _fallback_transits_json(extracted: dict[str, Any]) -> dict[str, Any]:
         ],
         "spiritualInsight": "Working with the current energy rather than against it will produce the best results.",
         "extracted_json": extracted,
+    }
+
+def _validate_zodiac_element_modality_result(obj: dict[str, Any]) -> dict[str, Any]:
+    """Validate and normalize Zodiac Element & Modality result."""
+    return _validate_and_filter(obj, ZODIAC_ELEMENT_MODALITY_JSON_KEYS)
+
+
+async def call_llm_for_zodiac_element_modality(element: str, modality: str, astrology_context: str = "") -> dict[str, Any]:
+    """Dedicated LLM call for Zodiac Element & Modality interpretation."""
+    if not settings.openai_api_key:
+        return _fallback_zodiac_element_modality_json(element, modality, astrology_context)
+
+    user_content = ZODIAC_ELEMENT_MODALITY_USER.format(
+        element=element,
+        modality=modality,
+        astrology_context=astrology_context or "No additional context available"
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": ZODIAC_ELEMENT_MODALITY_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            max_tokens=OUTPUT_MAX_TOKENS,
+            temperature=0.6,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        data = _extract_json_from_response(raw)
+        if data:
+            return _validate_zodiac_element_modality_result(data)
+    except Exception as e:
+        logger.warning("LLM zodiac element modality call failed: %s", e)
+    return _fallback_zodiac_element_modality_json(element, modality)
+
+
+def _fallback_zodiac_element_modality_json(element: str, modality: str, astrology_context: str = "") -> dict[str, Any]:
+    return {
+        "title": f"The {modality} {element} Soul",
+        "energyProfile": f"Your internal code is written in the language of {element} and executed with the drive of {modality} action. This creates a psychological foundation rooted in how you process energy and manifest intention.\n\nWith {element} as your primary resource, your energy flows with specific characteristics that are catalyzed by {modality} action. This interaction defines your unique operational style.",
+        "coreTraits": [
+            f"Strong {element} resonance",
+            f"{modality} approach to action",
+            "Balanced energetic signature",
+            "Consistent behavioral output",
+            "Adaptation to environmental flux"
+        ],
+        "strengths": ["Energetic clarity", "Type-specific focus", "Operational efficiency"],
+        "challenges": ["Maintaining balance", "Processing intensity", "Contextual adaptation"],
+        "shadowPattern": f"When misaligned, the {modality} drive can overwhelm the {element} resource, leading to a specific type of burnout or tactical inefficiency.",
+        "dailyEvolution": [
+            f"Notice when your {modality} drive is disconnected from your {element} state.",
+            f"Practice grounding your {element} energy before taking {modality} action."
+        ]
     }

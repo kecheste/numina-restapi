@@ -43,6 +43,7 @@ from app.services.result_calculation.energy_synthesis import compute_energy_synt
 from app.services.result_calculation.life_path_number import compute_life_path_number
 from app.services.result_calculation.numerology import compute_numerology
 from app.services.result_calculation.soul_urge import compute_soul_urge
+from app.services.result_calculation.transits import compute_transits
 
 router = APIRouter()
 
@@ -579,6 +580,27 @@ async def submit_test(
             transit_result = compute_transits(transit_input)
             if transit_result:
                 extracted_json_data = transit_result
+                answers_data = extracted_json_data
+
+    if body.test_id == 6:
+        if (
+            user.birth_year is not None
+            and user.birth_month is not None
+            and user.birth_day is not None
+        ):
+            from app.services.result_calculation.zodiac_element_modality import calculate_zodiac_element_modality
+            birth_data = {
+                "birth_year": user.birth_year,
+                "birth_month": user.birth_month,
+                "birth_day": user.birth_day,
+                "birth_time": user.birth_time,
+                "birth_place_lat": user.birth_place_lat,
+                "birth_place_lng": user.birth_place_lng,
+                "birth_place_timezone": user.birth_place_timezone,
+            }
+            computed = calculate_zodiac_element_modality(birth_data)
+            if computed:
+                extracted_json_data = computed
                 answers_data = extracted_json_data
 
     row = TestResult(

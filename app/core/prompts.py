@@ -37,8 +37,31 @@ Every interpretation should include:
 6. EACH SECTION MUST ADD NEW INFORMATION
 Do not repeat the same idea in different words.
 
-7. SLIGHTLY CONFRONTING IS GOOD
-Avoid overly positive tone. Insights should feel real.
+8. UNIQUE DIMENSIONS
+Each module must focus on a unique dimension of the user.
+Do not repeat the same type of insight across modules.
+
+- Astrology → emotional and relational patterns
+- MBTI → thinking and decision-making style
+- Numerology → life direction and internal drives
+- Starseed → identity narrative and self-perception
+- Transits → current phase and temporary energy
+- Element & Modality → energy expression style
+
+- Chakra → energy flow and imbalances
+- Cognitive Style → information processing
+- Shadow Work → hidden fears and unconscious patterns
+
+ANTI-GENERIC RULES:
+- Avoid common self-help advice (e.g. “practice mindfulness”, “set realistic goals”, “communicate openly”)
+- Avoid repeated emotional words across modules (e.g. overwhelmed, balance, pressure, clarity)
+- Replace them with more specific, situational descriptions
+
+BAD: “feeling overwhelmed”
+GOOD: “taking on too much at once and struggling to slow down”
+
+BAD: “practice mindfulness”
+GOOD: “pause before reacting and give yourself a moment to think instead of responding immediately”
 
 STYLE
 - concise
@@ -883,6 +906,15 @@ Paragraph 2: The mandatory internal tension or friction point identified in this
 
 - "spiritualInsight": string, 1-2 lines. Sharp, specific, and slightly confronting.
 
+- This is identity narrative, not psychology explanation
+- Avoid overly clean or academic wording
+
+BAD: “enhancing your ability to understand complex systems”
+GOOD: “you tend to look for patterns others don’t notice”
+
+- Keep it slightly raw, intuitive, and human
+- Avoid repeating emotional struggles already described in other modules
+
 FINAL CHECK BEFORE ANSWERING:
 - is this specific to THIS % combination?
 - is there a clear tension?
@@ -1333,6 +1365,18 @@ Paragraph 2: How this feels internally and the shift in momentum (what's speedin
 
 - "spiritualInsight": string, 1 line. A clear, grounded truth that hits hard.
 
+- This must feel like a CURRENT phase, not personality
+- Describe what is changing right now, not who the person is
+- Avoid generic emotional advice
+
+- Focus on:
+• shifting priorities
+• temporary tension
+• decision pressure
+• internal push vs hesitation
+
+- Every “Try This” must be tied to THIS phase only, not general life advice
+
 FINAL CHECK:
 - does this feel time-based (not personality)?
 - is the momentum shift clear?
@@ -1420,3 +1464,51 @@ MBTI_JSON_KEYS = frozenset({
     "cognitiveStyle", "tryThis", "avoidThis"
 })
 
+
+ZODIAC_ELEMENT_MODALITY_SYSTEM = MASTER_PROMPT + """You are generating a Zodiac Element & Modality interpretation for a premium self-discovery app.
+
+This module should feel meaningful, personal, and psychologically believable.
+It should not feel like a short horoscope or a generic personality summary.
+
+GOAL:
+Explain how this person’s energy naturally moves, reacts, initiates, sustains, or adapts.
+
+CORE RULES:
+1. DO NOT BE GENERIC: Avoid obvious labels. Every statement must feel specific and behavior-based.
+2. ELEMENT = HOW ENERGY FLOWS: 
+   - Fire (activation, urgency)
+   - Earth (stability, endurance)
+   - Air (thought, movement through ideas)
+   - Water (sensitivity, absorption)
+3. MODALITY = HOW ENERGY ACTS:
+   - Cardinal (initiates, starts)
+   - Fixed (sustains, stabilizes)
+   - Mutable (adapts, shifts)
+4. SHOW INTERACTION, NOT JUST DEFINITIONS: Do not explain element and modality separately. Show how they work together (e.g., how the drive catalyses the resource).
+5. INCLUDE TENSION: At least one realistic friction point (e.g., speed vs depth).
+6. USE REAL-LIFE BEHAVIOR: Describe patterns in decision-making, relationships, and pressure.
+7. AVOID CORPORATE/FLUFF: No "leadership skills" or "embrace your journey". Use natural human phrasing.
+8. FOCUS: Keep it clear, grounded, and sharp. No mystical filler.
+
+STYLE: Grounded, psychologically sharp, elegant, premium.
+"""
+
+ZODIAC_ELEMENT_MODALITY_USER = """INPUT:
+- dominant element: {element}
+- modality: {modality}
+- supporting astrology context: {astrology_context}
+
+Return exactly one JSON object with these keys only:
+- "title": string, short and specific
+- "energyProfile": string, 2 short paragraphs explaining the interaction and real-life manifestation/tension
+- "coreTraits": array of exactly 3 short recognition patterns
+- "strengths": array of exactly 3 short real-life advantages
+- "challenges": array of exactly 3 short honest behavioral friction points
+- "shadowPattern": string, 1 short paragraph on stress-response
+- "dailyEvolution": array of exactly 2 short grounded adjustments
+
+Output only the JSON object, nothing else."""
+
+ZODIAC_ELEMENT_MODALITY_JSON_KEYS = frozenset({
+    "title", "energyProfile", "coreTraits", "strengths", "challenges", "shadowPattern", "dailyEvolution"
+})
