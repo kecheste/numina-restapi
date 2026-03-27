@@ -494,35 +494,63 @@ def _validate_big_five_result(data: dict[str, Any], extracted: dict[str, Any] | 
     return res
 
 
+def _fallback_starseed_result(calculated_data: dict) -> dict[str, Any]:
+    primary = calculated_data.get("primary_origin", "Unknown")
+    secondary = calculated_data.get("secondary_origin", "None")
+    return {
+        "title": "Your Starseed Origin",
+        "originSummary": f"Your dominant resonance is with {primary} archetypal energy, modified by {secondary} influences.",
+        "cosmicProfile": (
+            f"Your cosmic signature suggests a primary alignment with {primary} themes, which define your core approach to reality. "
+            f"The presence of {secondary} traits creates a unique modification of this path.\n\n"
+            "A natural tension exists between your desire for cosmic expansion and the necessary grounding required for human existence, "
+            "driving a recurring need to balance visionary goals with practical reality."
+        ),
+        "coreTraits": [
+            "Resonant with higher-order patterns",
+            "Synthesized understanding of diverse perspectives",
+            "Adaptive response to complex environments",
+        ],
+        "strengths": ["Visionary Insight", "Pattern Recognition", "Intuitive Alignment"],
+        "challenges": ["Cosmic Disconnection", "Grounding Friction", "Over-Sensitivity"],
+        "spiritualInsight": "Your journey is about bridging the gap between vast potential and grounded manifestation.",
+        "tryThis": ["Practice sensory grounding", "Document intuitive flashes", "Connect with nature regularly"],
+        "avoidThis": ["Ignoring physical needs", "Escapism into abstraction"],
+        "extracted_json": calculated_data
+    }
+
+
 async def call_llm_for_starseed(calculated_data: dict) -> dict:
-    """Interpret Starseed Origins results into a structured result."""
+    """Interpret Starseed Origins results into a structured result with grounded behavior."""
+    if not settings.openai_api_key:
+        return _fallback_starseed_result(calculated_data)
+
+    resonance_scores = json.dumps(calculated_data.get("scores", {}), indent=2)
+    user_content = STARSEED_USER.format(
+        resonance_scores=resonance_scores,
+        dominant_origin=calculated_data.get("primary_origin", "unknown"),
+        secondary_influences=calculated_data.get("secondary_origin", "unknown"),
+    )
+
     try:
         from openai import AsyncOpenAI
         client = AsyncOpenAI(api_key=settings.openai_api_key)
-        input_json = json.dumps(calculated_data.get("scores", {}), indent=2)
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": STARSEED_SYSTEM},
-                {"role": "user", "content": STARSEED_USER.format(
-                    primary_origin=calculated_data.get("primary_origin", "unknown"),
-                    secondary_origin=calculated_data.get("secondary_origin", "unknown"),
-                    input_json=input_json
-                )},
+                {"role": "user", "content": user_content},
             ],
             max_tokens=OUTPUT_MAX_TOKENS,
-            temperature=0.7,
+            temperature=0.4,
         )
         raw = (response.choices[0].message.content or "").strip()
         data = _extract_json_from_response(raw)
-        return _validate_starseed_result(data or {}, extracted=calculated_data)
+        if data:
+            return _validate_starseed_result(data, extracted=calculated_data)
     except Exception as e:
         logger.warning("LLM Starseed call failed: %s", e)
-        return {
-            "title": calculated_data.get("title", "Starseed Origins"),
-            "summary": "Your cosmic resonance reveals a unique archetypal pattern. Explore your origins to understand your purpose.",
-            "extracted_json": calculated_data,
-        }
+    return _fallback_starseed_result(calculated_data)
 
 
 def _validate_starseed_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -986,9 +1014,9 @@ def _fallback_astrology_chart_narrative() -> dict[str, Any]:
         "moonSign": "Your moon sign reveals your deepest emotional needs and how you process feelings in private.",
         "risingSign": "Your rising sign dictates your initial approach to new situations and how others first perceive you.",
         "astrologicalPattern": "Your chart blends your sun, moon, and rising signs into a unique energy signature.\n\nYou may feel tension between your desire for stability and your need for emotional depth.\n\nIn daily life, this plays out as a cautious approach to new relationships until you establish trust.",
-        "strengths": ["Self-awareness", "Emotional depth"],
-        "challenges": ["Integration", "Balance"],
-        "tryThis": ["Journal by the moon", "Spend time in nature"],
+        "strengths": ["Self-awareness", "Emotional depth", "Mentally adaptable"],
+        "challenges": ["Integration", "Balance", "Emotional avoidance"],
+        "tryThis": ["Journal by the moon", "Spend time in nature", "Practice grounding"],
         "avoidThis": ["Ignoring your body's needs", "Overthinking"],
         "spiritualInsight": "Your birth chart is a map of your soul's journey—use it as a guide, not a limit.",
     }
@@ -1179,6 +1207,31 @@ async def call_llm_for_numerology_blueprint(
     )
 
 
+def _fallback_numerology_narrative(lp: int, su: int, bd: int, ex: int) -> dict[str, Any]:
+    return {
+        "title": "Your Numerology Profile",
+        "corePattern": (
+            f"Your numbers (Life Path {lp}, Soul Urge {su}, Birthday {bd}, Expression {ex}) create a unique energetic signature. "
+            "The combination of your external direction and internal desires defines your natural approach to reality.\n\n"
+            "A core tension exists between your need for structure and your drive for expansion, requiring a balanced perspective to navigate daily life."
+        ),
+        "lifePath": f"Life Path {lp} — Shapes your overall life direction and external journey.",
+        "soulUrge": f"Soul Urge {su} — Reflects your internal desires and hidden motivations.",
+        "expression": f"Expression {ex} — Highlights your natural abilities and behavioral gifts.",
+        "birthday": f"Birthday {bd} — Dictates your daily personality tone and core strengths.",
+        "coreTraits": [
+            "Balanced approach to personal goals",
+            "Synthesized understanding of situations",
+            "Resilient response to change",
+        ],
+        "strengths": ["Integration", "Direction", "Alignment"],
+        "challenges": ["Hesitation", "Pressure", "Conflict"],
+        "spiritualInsight": "Your soul's journey involves mastering balance.",
+        "tryThis": ["Identify conflicts", "Practice mindfulness", "Schedule spontaneity"],
+        "avoidThis": ["Ignoring friction", "Over-committing"]
+    }
+
+
 async def call_llm_for_numerology_narrative(
     life_path: int,
     soul_urge: int,
@@ -1186,24 +1239,15 @@ async def call_llm_for_numerology_narrative(
     expression_number: int,
     user_context: str | None = None,
 ) -> dict[str, Any]:
-    """Generate full AI narrative for the actual Numerology test result."""
+    """Generate full AI narrative for the actual Numerology test result with synthesized pattern."""
     if not settings.openai_api_key:
-        return {
-            "title": f"Numerology: Life Path {life_path}",
-            "summary": "Your numbers reveal a path of discovery and growth.",
-        }
-
-    input_json = json.dumps({
-        "life_path": life_path,
-        "soul_urge": soul_urge,
-        "expression": expression_number,
-        "birthday": birth_day
-    }, indent=2)
+        return _fallback_numerology_narrative(life_path, soul_urge, birth_day, expression_number)
 
     user_content = NUMEROLOGY_NARRATIVE_USER.format(
-        test_title="Numerology Profile",
-        category="Numerology",
-        input_json=input_json
+        life_path=life_path,
+        expression_number=expression_number,
+        soul_urge=soul_urge,
+        birth_day=birth_day,
     )
 
     try:
@@ -1215,8 +1259,8 @@ async def call_llm_for_numerology_narrative(
                 {"role": "system", "content": NUMEROLOGY_NARRATIVE_SYSTEM},
                 {"role": "user", "content": user_content},
             ],
-            max_tokens=1000,
-            temperature=0.6,
+            max_tokens=2000,
+            temperature=0.4,
         )
         raw = (response.choices[0].message.content or "").strip()
         data = _extract_json_from_response(raw)
@@ -1224,7 +1268,7 @@ async def call_llm_for_numerology_narrative(
             return _validate_and_filter(data, NUMEROLOGY_NARRATIVE_JSON_KEYS)
     except Exception as e:
         logger.warning("LLM numerology narrative call failed: %s", e)
-    return {}
+    return _fallback_numerology_narrative(life_path, soul_urge, birth_day, expression_number)
 
 
 _MBTI_TYPE_NAMES: dict[str, str] = {
@@ -1235,14 +1279,12 @@ _MBTI_TYPE_NAMES: dict[str, str] = {
 }
 
 def _fallback_mbti_narrative(mbti_type: str) -> dict[str, Any]:
-    name = _MBTI_TYPE_NAMES.get(mbti_type.upper(), "Your Personality Type")
     return {
-        "title": name,
+        "title": "Your Personality Type",
         "overview": (
-            f"As an {mbti_type}, you bring a unique blend of inner depth and outward expression. "
-            "Your personality type is shaped by how you gather information and make decisions. "
-            "You thrive in environments that respect your natural way of engaging with the world.\n\n"
-            "Your dimension scores reflect a balance between strong convictions and practical adaptability."
+            f"As an {mbti_type}, you process reality through a specific cognitive lens. "
+            "Your natural way of gathering information and making decisions creates a consistent life pattern.\n\n"
+            "Your dimension scores intensity often dictates whether your natural tendencies are fluid or more structured."
         ),
         "coreTraits": [
             "You process information internally but care about outcomes",
@@ -1259,10 +1301,10 @@ def _fallback_mbti_narrative(mbti_type: str) -> dict[str, Any]:
             "May overthink simple decisions",
             "Hesitant in unstructured environments",
         ],
-        "cognitiveStyle": "You rely on proven frameworks but are also learning to trust your intuition.",
+        "cognitiveStyle": "You rely on proven frameworks while navigating external demands. Paragraph 1: How you process info. Paragraph 2: How you make decisions.",
         "tryThis": [
             "Pause before reacting to sudden changes",
-            "Acknowledge the emotional context, not just the logical one",
+            "Acknowledge the emotional context",
             "Experiment with breaking small routines"
         ],
         "avoidThis": [
@@ -1722,34 +1764,23 @@ def _validate_transits_result(data: dict[str, Any], extracted: dict[str, Any] | 
 
 def _fallback_transits_json(extracted: dict[str, Any]) -> dict[str, Any]:
     return {
-        "title": "A Period of Active Transit Energy",
-        "currentClimate": (
+        "title": "Your Current Phase",
+        "phaseDescription": (
             "The planetary movements are creating a notable backdrop to your life right now. "
             "Several transits are in contact with your natal chart, activating specific areas of experience.\n\n"
             "This is a period that calls for both awareness and intentional action. "
             "The themes being triggered are worth working with consciously rather than reacting to automatically."
         ),
-        "whatIsBeingActivated": [
-            "Your core identity and long-term sense of direction",
-            "Emotional responses and inner relational patterns",
-            "The balance between effort and flow in daily life",
+        "currentPatterns": [
+            "Shifts in your core identity and long-term sense of direction",
+            "Heightened emotional responses and inner relational patterns",
+            "Adjustments in the balance between effort and flow in daily life",
         ],
-        "supportiveOpenings": [
-            "Clarity about what genuinely matters to you",
-            "Capacity for focused, sustained effort when needed",
-            "Opportunities for honest self-reflection",
+        "challenges": [
+            "Impatience with the natural pace of change",
+            "Tendency toward emotional reactivity in close relationships",
+            "Internal pressure to resolve things before they are fully ready",
         ],
-        "tensionsToWatch": [
-            "Impatience with the pace of change",
-            "Emotional reactivity in close relationships",
-            "Pressure to resolve things before they are ready",
-        ],
-        "timingInsight": (
-            "This is not primarily a time for dramatic action. "
-            "It is a period that rewards steady, deliberate movement and honest self-observation. "
-            "Rushing decisions or forcing outcomes is likely to create friction. "
-            "Working with the current energy rather than against it will produce the best results."
-        ),
         "tryThis": [
             "Identify one area of your life where you can apply consistent effort this month",
             "Notice emotional reactions before responding — give yourself a beat",
@@ -1759,5 +1790,6 @@ def _fallback_transits_json(extracted: dict[str, Any]) -> dict[str, Any]:
             "Impulsive decisions driven by frustration or impatience",
             "Ignoring emotional signals in favor of pushing through",
         ],
+        "spiritualInsight": "Working with the current energy rather than against it will produce the best results.",
         "extracted_json": extracted,
     }

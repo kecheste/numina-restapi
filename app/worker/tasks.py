@@ -1,7 +1,11 @@
 """Arq tasks: AI refinement and other async jobs."""
 
+import json
 import logging
+from datetime import datetime, timezone
 from typing import Any
+
+import pytz
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -945,16 +949,37 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
 
         computed_type: str | None = None
 
-        # Transits (5)
+        # Transits (5). Auto-generated from birth data using Swiss Ephemeris.
         if test_id == 5:
             logger.info("DEBUG: Entering Transits branch for result_id=%s", result_id)
+            extracted = {}
             try:
-                # answers is the pre-structured transit dict from the frontend
-                transit_input = row.answers if isinstance(row.answers, dict) else {}
-                extracted = compute_transits(transit_input)
+                # Fetch user for birth data hydration (we need lat, lng and a true UTC datetime)
+                user_res = await session.execute(
+                    select(UserModel).where(UserModel.id == user_id)
+                )
+                user = user_res.scalar_one_or_none()
+                
+                if user and user.birth_year and user.birth_month and user.birth_day:
+                    time_str = user.birth_time or "12:00"
+                    h, m = map(int, time_str.split(":")) if ":" in time_str else (12, 0)
+                    
+                    # 1. Localize to birth timezone
+                    tz = pytz.timezone(user.birth_place_timezone or "UTC")
+                    local_dt = tz.localize(
+                        datetime(user.birth_year, user.birth_month, user.birth_day, h, m)
+                    )
+                    # 2. Convert to UTC ISO string
+                    utc_birth_iso = local_dt.astimezone(timezone.utc).isoformat()
+                    
+                    transit_input = {
+                        "birth_datetime": utc_birth_iso,
+                        "latitude": user.birth_place_lat or 0.0,
+                        "longitude": user.birth_place_lng or 0.0
+                    }
+                    extracted = compute_transits(transit_input)
             except Exception as e:
                 logger.exception("compute_transits failed for result_id=%s: %s", result_id, e)
-                extracted = {}
 
             row.extracted_json = extracted
             row.score = 8.0

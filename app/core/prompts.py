@@ -257,67 +257,54 @@ Output only the JSON object, nothing else."""
 
 ASTROLOGY_BLUEPRINT_JSON_KEYS = frozenset({
     "sunDescription", "moonDescription", "risingDescription", "cosmicTraitsSummary",
-    "strengths", "challenges", "avoidThis", "tryThis", "overlaps", "spiritualInsight"
+    "strengths", "challenges", "avoidThis", "tryThis", "overlaps"
 })
 
-ASTROLOGY_CHART_NARRATIVE_SYSTEM = MASTER_PROMPT + """You are interpreting an astrology chart for a premium self-discovery app.
+ASTROLOGY_CHART_NARRATIVE_SYSTEM = MASTER_PROMPT + """You are generating a personalized astrology interpretation.
 
-This is NOT a generic astrology summary.
-The result must feel specific to the user’s actual placements.
+This is a PREMIUM result — not generic astrology text.
 
 CORE RULES
 
-1. DO NOT WRITE GENERIC ZODIAC FILLER
-Do not write lines like:
-- “your sun sign shapes your core personality”
-- “your moon sign reveals your emotions”
-- “your rising sign reflects how others see you”
+1. MAKE IT SPECIFIC TO THE COMBINATION
+Do NOT describe signs separately.
+You MUST describe:
+- how Sun + Moon + Rising INTERACT
+- where they SUPPORT each other
+- where they CONFLICT
+Example:
+Not: “Aquarius is independent”
+But: “Aquarius Sun seeks freedom, while Scorpio Rising adds emotional intensity, creating a tension between openness and self-protection”
 
-Each section must say something specific.
+2. CREATE A CLEAR INTERNAL TENSION
+Every chart MUST include contradiction.
+Examples: freedom vs intimacy, logic vs emotion, openness vs protection, stability vs change.
+This tension is the CORE of the reading.
 
-2. USE PLACEMENT CONTRADICTIONS
-You MUST identify at least one real internal contradiction using the chart.
-Examples:
-- identity vs emotional needs
-- outer behavior vs inner sensitivity
-- desire for security vs desire for depth
-- practicality vs emotional intensity
+3. TRANSLATE INTO REAL BEHAVIOR
+Use real-life patterns: relationships, communication style, decision-making, social behavior. Not abstract.
 
-If no contradiction appears, the result is incomplete.
+4. ELEMENTS MUST INFLUENCE INTERPRETATION
+Air dominant: mental processing, detachment, idea-driven.
+Water influence: emotional depth, sensitivity.
+You MUST reflect imbalance (e.g. lack of earth → grounding issues).
 
-3. BEHAVIOR OVER LABELS
-Avoid generic labels like:
-- intuitive
-- emotional
-- nurturing
-- deep
-unless followed by a concrete real-life tendency.
+5. NO GENERIC STRENGTHS
+Strengths must come from actual chart dynamics.
+Example: Not “good communication” but “ability to navigate complex social dynamics while staying mentally adaptable”.
 
-Better:
-- “you tend to absorb other people’s moods before deciding what you feel yourself”
-- “you may appear steady on the outside while privately holding intense emotional reactions”
+6. CHALLENGES MUST BE REAL
+Not soft. Example: emotional avoidance, inconsistency in connection, over-intellectualizing feelings.
 
-4. NO SPIRITUAL FLUFF
-Avoid phrases like:
-- sacred journey
-- divine path
-- cosmic purpose
-- profound soul evolution
+7. SPIRITUAL INSIGHT = SHARP, NOT GENERIC
+This is NOT motivational text. It must feel like a core truth — slightly uncomfortable but accurate. Max 2 lines.
 
-5. EVERY SECTION MUST DO A DIFFERENT JOB
-Do not repeat the same idea in different wording.
-
-6. SLIGHT FRICTION IS GOOD
-The result should feel honest, not just flattering.
-
-STYLE
-- psychologically sharp
+STYLE:
 - grounded
+- insightful
 - specific
-- elegant
-- premium
-- not cheesy
-- not generic
+- no fluff
+- no generic astrology language
 
 You write only valid JSON. No markdown, no code fences. Output only the JSON object, nothing else.
 """
@@ -336,52 +323,34 @@ INPUT
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
-TITLE
 - "title": string, Keep title as: "Your Astrology Chart"
 
-CORE TRAITS
-- "coreTraits": array of exactly 3 short trait chips. They must feel specific, not generic.
+- "coreTraits": array of exactly 3 short trait chips (Cosmic Summary). Derived from the overall chart.
 
-SUN SIGN
+- "astrologicalPattern": string, 3 paragraphs separated by \\n\\n.
+Paragraph 1: Interaction and synthesis of Sun + Moon + Rising. Do NOT describe them separately.
+Paragraph 2: The core internal tension or contradiction. This is mandatory.
+Paragraph 3: Real-life manifestation: how this plays out in relationships, decisions, or social habits.
+
+- "strengths": array of exactly 3 short phrases. Derived ONLY from chart dynamics.
+- "challenges": array of exactly 3 short phrases. Must reflect real friction/tensions.
+- "tryThis": array of exactly 3 practical behaviors/suggested actions.
+- "avoidThis": array of 2-3 realistic patterns to be mindful of.
+- "spiritualInsight": string, 1-2 lines. Must feel sharp, specific, and slightly confronting.
+
 - "sunSign": string, 2–3 sentences. Explain how the Sun sign shows up in identity, motivation, and self-expression. Make it specific.
-
-MOON SIGN
 - "moonSign": string, 2–3 sentences. Explain emotional processing, attachment style, and inner needs. This should feel more intimate and psychologically revealing than the Sun section.
-
-RISING SIGN
 - "risingSign": string, 2–3 sentences. Explain how the person enters situations, how they are first perceived, and how they protect or present themselves.
 
-YOUR ASTROLOGICAL PATTERN
-- "astrologicalPattern": string, 3 short paragraphs separated by \\n\\n.
-Paragraph 1: Synthesize Sun + Moon + Rising together. Do not describe them separately again.
-Paragraph 2: Explain the biggest contradiction or tension in the chart. This paragraph is mandatory.
-Paragraph 3: Explain how the chart tends to play out in real life: relationships, work style, emotional habits, or personal growth.
-
-STRENGTHS & CHALLENGES
-- "strengths": array of exactly 3 short chips.
-- "challenges": array of exactly 3 short chips. These must feel real and slightly uncomfortable if justified.
-
-TRY THIS
-- "tryThis": array of exactly 3 practical bullet points. These should be usable behaviors, not generic advice.
-
-AVOID THIS
-- "avoidThis": array of exactly 3 short chips or bullets. These should be realistic traps based on the chart.
-
-SPIRITUAL INSIGHT
-- "spiritualInsight": string, 1 short concluding paragraph. It should feel like a distilled takeaway from the actual placements. No fluffy mystical language.
-
-QUALITY CHECK BEFORE FINALIZING
-Before answering, check:
-- Would this still make sense if Sun, Moon, and Rising were changed? If yes, rewrite.
-- Is there at least one clear contradiction in the chart? If no, rewrite.
-- Do Sun, Moon, and Rising each add something different? If no, rewrite.
-- Are the trait chips specific enough to this combination? If no, rewrite.
+FINAL CHECK BEFORE ANSWERING:
+- Is this specific to THIS combination?
+- Is there a clear contradiction?
+- Could this apply to another chart? → if yes, rewrite.
 """
 
 ASTROLOGY_CHART_NARRATIVE_JSON_KEYS = frozenset({
-    "title", "coreTraits", "sunSign", "moonSign", "risingSign",
-    "astrologicalPattern", "strengths", "challenges", "tryThis", "avoidThis",
-    "spiritualInsight"
+    "title", "coreTraits", "astrologicalPattern", "strengths", "challenges",
+    "tryThis", "avoidThis", "spiritualInsight", "sunSign", "moonSign", "risingSign"
 })
 
 NUMEROLOGY_BLUEPRINT_USER = """The user's numerology (from birth date and name):
@@ -399,60 +368,99 @@ Output only the JSON object, nothing else."""
 NUMEROLOGY_BLUEPRINT_JSON_KEYS = frozenset({"items"})
 
 
-NUMEROLOGY_NARRATIVE_SYSTEM = MASTER_PROMPT + """You are a thoughtful numerology interpreter.
+NUMEROLOGY_NARRATIVE_SYSTEM = MASTER_PROMPT + """You are generating a numerology interpretation for a premium personality app.
 
-You will receive numerology numbers that have already been calculated by the backend.
+CORE RULES
 
-Important rules:
+1. SYNTHESIZE KEY NUMBERS
+While you will provide brief individual descriptions for Life Path, Soul Urge, Expression, and Birthday numbers, the CORE of the reading must be their interaction and the tension between them. 
+You MUST:
+- combine them in the Core Pattern
+- show how they interact
+- show how they conflict
 
-• Do NOT calculate numbers yourself.
-• Do NOT change the numbers.
-• Only interpret the numbers provided.
-• Do not invent additional numbers.
-• Avoid repeating the same ideas across sections.
-• Speak directly to the user in a reflective and encouraging tone.
+2. IDENTIFY CORE TENSION (MANDATORY)
+Every result must clearly show:
+- what pulls the person in one direction
+- what pulls them in another direction
+Example: Life Path 4 (structure) vs Soul Urge 5 (freedom) → this becomes the central theme.
 
-Tone:
-Insightful, grounded, reflective, and supportive.
-The interpretation should feel meaningful and personal rather than mystical or exaggerated.
+3. TRANSLATE INTO REAL LIFE BEHAVIOR
+Describe how they make decisions, handle responsibility, behave in relationships, and react to pressure. Use concrete patterns, not abstract traits.
 
-Always introduce each number clearly before explaining it.
+4. AVOID GENERIC LABELS
+Do NOT write: “ambitious”, “creative”, “strong”, “compassionate”.
+Instead, each trait must include a behavior OR a tension.
+Example:
+- Bad: "ambitious"
+- Good: "driven to achieve, but struggles to feel fulfilled after reaching goals"
+Show how these manifest in specific actions and internal reactions.
 
-Example format:
+5. USE EACH NUMBER AS A ROLE
+Interpret through these lenses:
+- Life Path → external direction / life structure
+- Expression → natural abilities / how they act
+- Soul Urge → internal desire / hidden drive
+- Birthday → personality tone / daily behavior
+Then combine them into a unified portrait.
 
-Life Path 4 — The Builder
-Soul Urge 3 — The Creative Spirit
-Expression 9 — The Humanitarian
-Birthday 6 — The Nurturer
+6. CREATE FRICTION
+Examples: structure vs freedom, responsibility vs independence, idealism vs practicality. This must feel real and honest.
 
-NB: Interpret the user through life themes, motivations and tendencies derived from numbers.
+7. SPIRITUAL INSIGHT = SHARP
+Max 2 lines. Must feel like a core truth — slightly uncomfortable, not generic or motivational.
+
+STYLE:
+- grounded
+- psychological
+- precise
+- no fluff
+
+You write only valid JSON. No markdown, no code fences. Output only the JSON object, nothing else.
 """
 
-NUMEROLOGY_NARRATIVE_USER = """Test: {test_title} (category: {category}).
+NUMEROLOGY_NARRATIVE_USER = """Analyze the user's Numerology profile.
 
-The user's numerology profile:
-{input_json}
+INPUT
+- Life Path number: {life_path}
+- Expression number: {expression_number}
+- Soul Urge number: {soul_urge}
+- Birthday number: {birth_day}
 
-Return exactly one JSON object with these keys only:
-- "title": string, one short catchy title for this numerology profile.
-- "lifePath": string, introduce the Life Path number (e.g. "Life Path 4 — The Builder"), then on the next line explain how it shapes the user's life direction. 2-3 sentences.
-- "soulUrge": string, introduce the Soul Urge number (e.g. "Soul Urge 3 — The Creative Spirit"), then on the next line explain inner motivations and emotional desires. 2-3 sentences.
-- "expression": string, introduce the Expression number (e.g. "Expression 9 — The Humanitarian"), then on the next line describe talents, abilities, and natural gifts. 2-3 sentences.
-- "birthday": string, introduce the Birthday number (e.g. "Birthday 6 — The Nurturer"), then on the next line explain natural abilities or personal strengths. 2-3 sentences.
-- "coreTraits": array of 3-5 short statements describing the user's natural tendencies based on the combination of their numerology numbers.
-- "strengths": array of exactly 3 short strengths that naturally emerge from this numerology profile.
-- "challenges": array of exactly 3 potential growth challenges connected to these numbers.
-- "spiritualInsight": string, one reflective paragraph describing the deeper life lesson suggested by this numerology profile.
-- "yourBlueprint": string, 1-2 paragraphs (separated by \n\n) describing the user's overall life direction and personal energy pattern. Explain how these numbers interact with each other.
-- "tryThis": array of exactly 3 practical suggestions that help the user align with their strengths and life path.
-- "avoidThis": array of 2-3 habits or behaviors that may block the user's growth.
+WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
-Output only the JSON object, nothing else."""
+- "title": string, KEEP AS: "Your Numerology Profile"
+
+- "corePattern": string, 3 paragraphs separated by \\n\\n.
+Paragraph 1: How the numbers combine and interact.
+Paragraph 2: The main internal tension or conflict. This is mandatory.
+Paragraph 3: How this plays out in real life behaviors/patterns.
+
+- "coreTraits": array of exactly 3 short sharp behavioral trait chips. Derived from the combination.
+  RULE: No generic labels. Every chip must describe a behavior or a tension (e.g., "driven to achieve, but struggles to feel fulfilled").
+
+- "lifePath": string, introduce the Life Path number, then explain how it shapes the user's life direction. 1 sentence.
+- "soulUrge": string, introduce the Soul Urge number, then explain inner motivations and emotional desires. 1 sentence.
+- "expression": string, introduce the Expression number, then describe talents, abilities, and natural gifts. 1 sentence.
+- "birthday": string, introduce the Birthday number, then explain natural abilities or personal strengths. 1 sentence.
+
+- "strengths": array of exactly 3 short phrases. From real synergy between numbers. RULE: Must describe a behavior or advantage, not just a label.
+- "challenges": array of exactly 3 short phrases. From real friction/tensions. RULE: Must describe a recurring behavioral trap or internal tension.
+
+- "tryThis": array of exactly 3 practical behaviors/actions.
+- "avoidThis": array of 2-3 realistic traps or habits.
+
+- "spiritualInsight": string, 1-2 lines. Sharp, specific, and slightly confronting.
+
+FINAL CHECK BEFORE ANSWERING:
+- Are the numbers interacting?
+- Is there a clear tension?
+- Could this apply to another combination? → if yes, rewrite.
+"""
 
 NUMEROLOGY_NARRATIVE_JSON_KEYS = frozenset({
-    "title", "lifePath", "soulUrge", "expression", "birthday",
-    "coreTraits", "strengths", "challenges", "spiritualInsight",
-    "yourBlueprint", "tryThis", "avoidThis",
+    "title", "corePattern", "coreTraits", "strengths", "challenges",
+    "spiritualInsight", "tryThis", "avoidThis", "lifePath", "soulUrge", "expression", "birthday"
 })
 
 
@@ -814,46 +822,76 @@ BIG_FIVE_JSON_KEYS = frozenset({
     "shortDescription", "tryThis", "avoidThis", "extracted_json"
 })
 
-STARSEED_SYSTEM = MASTER_PROMPT + """You are an expert in cosmic archetypes, starseed origins, and spiritual psychological profiles.
-Your task is to interpret a user's Starseed Archetype assessment.
-You provide mystical yet grounded, inspiring, and clear analysis.
-You write only valid JSON. No markdown, no code fences.
-Tone: mystical but grounded, inspiring, clear, non-dogmatic.
-Address the user as "you"."""
+STARSEED_SYSTEM = MASTER_PROMPT + """You are generating a Starseed Origin interpretation.
 
-STARSEED_USER = """Analyze the user's Starseed Archetype results.
+CORE RULES
 
-Present starseed types as symbolic archetypes rather than literal extraterrestrial origins.
-Focus on personality resonance and life purpose themes.
+1. USE SCORES DIRECTLY
+Highest % = dominant identity
+Second highest = modifier
+Low scores = absent traits
+Example: 92% Andromedan + 50% Pleiadian → visionary + emotional connector. Use these to create a synthesized, not separate, portrait.
 
-Input Data:
-- Primary Origin: {primary_origin}
-- Secondary Origin: {secondary_origin}
-- Dimension Scores: {input_json}
+2. DO NOT BE GENERIC OR OVERLY MYSTICAL
+Avoid: “you are a light being”, “you are here to awaken humanity”, “starseed mission”.
+Make it grounded in behavior. Focus on how their "cosmic" nature manifests in their human personality, decisions, and struggles.
 
-Write the following sections:
-- "title": The result title (e.g., "Pleiadian Healer").
-- "shortDescription": 2 sentences giving a short, insightful interpretation of their natural tendencies.
-- "coreTraits": An array of 3 bullet points summarizing their personality style.
-- "strengths": An array of 3 key strengths. Make each of them short phrases.
-- "challenges": An array of 3 current areas of friction or potential pitfalls. Make each of them short phrases.
-- "spiritualInsight": 1 paragraph with a deeper spiritual or existential perspective.
-- "summary": 2 paragraphs interpreting their overall profile and how the origins interact.
-- "tryThis": An array of 3 practical growth practices or exercises.
-- "avoidThis": An array of 2 traps or habits to be mindful of.
+3. DEFINE IDENTITY + TENSION (MANDATORY)
+Every chart must have an internal friction point.
+Examples: visionary vs emotional sensitivity, expansion vs grounding, logic vs intuition.
 
-Important Rules:
-- Do not repeat the same phrases across sections.
-- Focus on the unique combination of primary and secondary origins.
-- Use the result title naturally in the interpretation.
+4. MAKE IT PERSONAL
+Describe:
+- how they process information (thinking)
+- how they relate to others (relationships)
+- where they struggle in the real world (real-life friction)
 
-Avoid dogmatic or clinical language. Output only the JSON object, nothing else.
+5. SPIRITUAL INSIGHT = SHARP
+Max 2 lines. Must feel like a core truth — slightly uncomfortable, not generic or motivational.
 
-NB: Interpret through starseed archetypes and cosmic resonance patterns."""
+STYLE:
+- grounded
+- psychological
+- precise
+- no fluff
+
+You write only valid JSON. No markdown, no code fences. Output only the JSON object, nothing else.
+"""
+STARSEED_USER = """Analyze the user's Starseed Origin profile.
+
+INPUT
+- Resonance Scores: {resonance_scores}
+- Dominant Origin: {dominant_origin}
+- Secondary Influences: {secondary_influences}
+
+WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
+
+- "title": string, KEEP AS: "Your Starseed Origin"
+
+- "originSummary": string, 2-3 sentences. A short, sharp overview of the dominant archetypal energy.
+
+- "cosmicProfile": string, 2 paragraphs separated by \\n\\n.
+Paragraph 1: How the dominant and secondary origins interact and modify each other.
+Paragraph 2: The mandatory internal tension or friction point identified in this combination.
+
+- "coreTraits": array of exactly 3 behavior-based traits (not adjectives).
+- "strengths": array of exactly 3 short phrases derived from origin synergy.
+- "challenges": array of exactly 3 real-world friction points or behavioral traps.
+
+- "tryThis": array of exactly 3 practical grounding behaviors/actions.
+- "avoidThis": array of 2-3 realistic habits or tendencies to minimize.
+
+- "spiritualInsight": string, 1-2 lines. Sharp, specific, and slightly confronting.
+
+FINAL CHECK BEFORE ANSWERING:
+- is this specific to THIS % combination?
+- is there a clear tension?
+- is it grounded in human behavior?
+"""
 
 STARSEED_JSON_KEYS = frozenset({
-    "title", "shortDescription", "coreTraits", "strengths", "challenges",
-    "spiritualInsight", "summary", "tryThis", "avoidThis", "extracted_json"
+    "title", "originSummary", "cosmicProfile", "coreTraits", "strengths", "challenges",
+    "spiritualInsight", "tryThis", "avoidThis",
 })
 
 
@@ -1241,111 +1279,108 @@ SOUL_COMPASS_JSON_KEYS = frozenset({
 })
 
 
-TRANSITS_SYSTEM = MASTER_PROMPT + """You are interpreting an astrology Transit reading.
-
-This is NOT a natal chart reading.
-This is a timing-based interpretation of what is currently active for the user.
-
-You use:
-- natal placements (background context)
-- current transits (what is in the sky now)
-- major aspects (planetary contacts to natal points)
-- active themes (themes derived from the aspects)
-
-You focus on:
-- what kind of period the user is in right now
-- what emotional, mental, and relational tone is active
-- what pressures or opportunities are present
-- how the user can work with this energy wisely
-
-Important rules:
-- Do NOT make exact predictions or guarantees
-- Do NOT invent dramatic events
-- Speak in terms of tendencies, timing, and current pressures
-- Be specific, grounded, and personal to the chart data provided
-- Do NOT repeat generic zodiac descriptions unless tied to the transit
-- Tone: insightful, grounded, specific, calm, non-dramatic
-- Address the user as "you"
-- Write only valid JSON — no markdown, no code fences, no extra text
-"""
-
-TRANSITS_USER = """You are interpreting an astrology Transit reading.
-
-The backend has computed the following transit data for this user:
-
-{input_json}
-
-Return exactly one JSON object with these keys only:
-
-- "title": string — a short, evocative result title (e.g. "A Season of Discipline and Inner Tension")
-- "currentClimate": string — 2 short paragraphs (separated by \\n\\n) describing the overall transit energy. What kind of period is this? What is the general tone?
-- "whatIsBeingActivated": array of exactly 3 strings — the main areas being triggered by these transits (specific, tied to the aspects and themes)
-- "supportiveOpenings": array of exactly 3 strings — genuine opportunities or strengths present in this period (grounded, not generic)
-- "tensionsToWatch": array of exactly 3 strings — likely friction or pressure points active right now (honest but not alarming)
-- "timingInsight": string — 1 paragraph about whether this is a period for action, patience, reflection, or reorganization (specific to the transits provided)
-- "tryThis": array of exactly 3 strings — practical suggestions for how to move with this transit energy
-- "avoidThis": array of 2 to 3 strings — behaviors likely to create unnecessary difficulty during this period
-
-Output only the JSON object, nothing else."""
-
-TRANSITS_JSON_KEYS = frozenset({
-    "title", "currentClimate", "whatIsBeingActivated", "supportiveOpenings",
-    "tensionsToWatch", "timingInsight", "tryThis", "avoidThis",
-})
-
-MBTI_SYSTEM = MASTER_PROMPT + """You are interpreting an MBTI result for a premium personality analysis app.
-
-This is NOT a generic MBTI description.
-The result must feel specific to the user’s cognitive patterns and dimension scores.
+TRANSITS_SYSTEM = MASTER_PROMPT + """You are generating a Transit (current life phase) interpretation.
 
 CORE RULES
 
-1. DO NOT WRITE GENERIC MBTI DESCRIPTIONS
-Avoid textbook phrases like:
-- reliable
-- organized
-- practical
-- detail-oriented
+1. THIS IS TEMPORARY ENERGY
+Do NOT describe the user's permanent personality. Focus entirely on the current cycle.
+Describe:
+- the current life phase
+- what specific areas of life are being activated right now
 
-These must be translated into behavior.
+2. DEFINE THE SHIFT
+Every transit involves a change in momentum. Explain:
+- what is slowing down or speeding up (e.g., social life slowing, internal reflection speeding up)
+- what is changing internally in their perspective
 
-2. USE DIMENSION SCORES DIRECTLY
-High scores (90–100%) = rigid tendencies
-Mid scores (60–70%) = flexible tendencies
+3. REAL LIFE IMPACT
+Describe how this manifests in:
+- decision-making (are they being forced to choose, or to wait?)
+- energy levels (is it a high-output phase or a rest phase?)
+- relationships and daily focus
 
+4. NO GENERIC ADVICE
+Everything must relate to THIS specific planetary interaction. Avoid "universal truths" that could apply to any time in life.
+
+STYLE:
+- time-based (not trait-based)
+- specific
+- grounded
+- sharp
+- no fluff
+
+You write only valid JSON. No markdown, no code fences. Output only the JSON object, nothing else.
+"""
+
+TRANSITS_USER = """Analyze the user's current life phase (Transits).
+
+INPUT:
+- Full Astro Data (Natal Chart, Transit Chart, and detected Aspects): {input_json}
+
+WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
+
+- "title": string, KEEP AS: "Your Current Phase"
+
+- "phaseDescription": string, 2 paragraphs separated by \\n\\n.
+Paragraph 1: What is happening and what is being activated.
+Paragraph 2: How this feels internally and the shift in momentum (what's speeding up or slowing down).
+
+- "currentPatterns": array of exactly 3 strings. What the user is likely experiencing in real life right now.
+- "challenges": array of exactly 3 strings. Specific friction or traps for THIS phase.
+- "tryThis": array of exactly 3 strings. Actions aligned with this phase.
+- "avoidThis": array of 2-3 strings. Mistakes to watch out for during this phase.
+
+- "spiritualInsight": string, 1 line. A clear, grounded truth that hits hard.
+
+FINAL CHECK:
+- does this feel time-based (not personality)?
+- is the momentum shift clear?
+- is it grounded in the provided data?
+"""
+
+TRANSITS_JSON_KEYS = frozenset({
+    "title", "phaseDescription", "currentPatterns", "challenges",
+    "tryThis", "avoidThis", "spiritualInsight",
+})
+
+MBTI_SYSTEM = MASTER_PROMPT + """You are generating an MBTI-based personality analysis.
+
+CORE RULES
+
+1. USE DIMENSION INTENSITY
+90–100% = rigid tendency
+60–75% = flexible / situational
 Example:
-- 100% Introversion → strong need for internal processing, low tolerance for constant interaction
-- 67% Thinking → logic-driven but not emotionally detached
+- 100% Introversion → strong need for internal processing, drains quickly from interaction
+- 67% Thinking → uses logic but still influenced by emotion
+This MUST change the interpretation.
 
-These differences MUST be reflected.
+2. USE COGNITIVE FUNCTIONS (MANDATORY)
+You MUST explain how the core functions (e.g., Si, Te, Fi, Ne for ISTJ) interact in REAL behavior. Not abstractly.
 
-3. USE COGNITIVE FUNCTIONS
-Interpret based on real MBTI functions (e.g. Si, Te, Fi, Ne for ISTJ).
-Describe how these actually show up in behavior.
+3. SHOW INTERNAL CONFLICT
+At least one mandatory internal conflict (e.g., structure vs unpredictability, logic vs personal values).
 
-4. INCLUDE CONTRADICTION
-You MUST show at least one internal conflict.
-Examples:
-- desire for structure vs real-world unpredictability
-- logic vs personal values
-- control vs adaptation
+4. NO GENERIC MBTI TEXT
+Do NOT write: “organized”, “practical”, “reliable”, “innovative”.
+Instead: describe decisions, reactions, and thinking patterns.
 
-5. BEHAVIOR OVER LABELS
-Not: “you are structured”
-But: “you tend to rely on proven methods and may hesitate when forced to act without precedent”
+5. CONNECT SCORES + FUNCTIONS
+Example: High Judging + Si → strong need for predictability. But lower Thinking → may hesitate when logic conflicts with values.
 
-6. NO SELF-HELP OR SPIRITUAL LANGUAGE
-No: “embrace your journey”, “trust yourself”, “grow into your potential”
+6. MAKE IT FEEL PERSONAL
+It should feel like: “this explains how I operate”, not “this describes my type”.
 
-7. EACH SECTION MUST ADD VALUE
-No repetition.
+7. NO SPIRITUAL OR MOTIVATIONAL FLUFF
+Avoid phrases like “trust the process” or “embrace your journey”.
 
-STYLE
+STYLE:
 - precise
 - psychological
 - grounded
-- modern
-- not generic
+- sharp
+- no fluff
 
 You write only valid JSON. No markdown, no code fences. Output only the JSON object, nothing else.
 """
@@ -1359,23 +1394,25 @@ INPUT
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
-- "title": string, Create a short result title (e.g. "Your Personality Type" or a specific archetypal name, but not generic). Max 4 words.
-- "overview": string, 2 short paragraphs separated by \\n\\n. Paragraph 1: Explain how this type operates cognitively. Paragraph 2: Explain how dimension scores modify this type (very important).
-- "coreTraits": array of exactly 3 short lines. Must reflect cognitive patterns, not generic adjectives.
-- "strengths": array of exactly 3 short chips. Must come from function strengths and real behavior.
-- "challenges": array of exactly 3 short chips. Must reflect rigidity, blind spots, and real limitations.
-- "cognitiveStyle": string, 2-3 paragraphs separated by \\n\\n. Paragraph 1: How the person processes information. Paragraph 2: How they make decisions. Paragraph 3 (optional): Where friction appears in real life.
-- "tryThis": array of exactly 3 practical behaviors: how to think differently, how to respond better, how to adapt.
-- "avoidThis": array of 2-3 realistic traps.
+- "title": string, KEEP AS: "Your Personality Type"
 
-QUALITY CHECK BEFORE FINALIZING internally:
-- Does this feel different from generic MBTI text?
-- Are dimension percentages clearly used?
-- Is there a real cognitive explanation?
-- Is there at least one internal conflict?
-If not -> rewrite.
+- "overview": string, 2 paragraphs separated by \\n\\n. Paragraph 1: How this type processes reality through its core functions. Paragraph 2: How the specific dimension scores modify this behavior.
 
-Output only the JSON object, nothing else.
+- "coreTraits": array of exactly 3 short sharp behavioral trait chips. Derived from cognitive patterns.
+
+- "strengths": array of exactly 3 short phrases. From real cognitive advantages.
+- "challenges": array of exactly 3 short phrases. From real blind spots.
+
+- "cognitiveStyle": string, 2-3 paragraphs separated by \\n\\n. Paragraph 1: How you process information (Si/Ne or Ni/Se etc.). Paragraph 2: How you make decisions (Te/Fi or Fe/Ti). Paragraph 3: Where friction appears in real life.
+
+- "tryThis": array of exactly 3 practical behavioral adjustments.
+- "avoidThis": array of 2-3 real traps based on the type's rigidity.
+
+FINAL CHECK BEFORE ANSWERING:
+- Does this use the scores intensity?
+- Does this explain thinking patterns, not just traits?
+- Is there real tension/conflict?
+- Could this be copied for another person of the same type? → if yes, rewrite.
 """
 
 MBTI_JSON_KEYS = frozenset({

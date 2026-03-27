@@ -25,7 +25,7 @@ TESTS: list[TestItem] = [
     {"id": 2, "slug": "numerology", "title": "Numerology", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": True, "auto_generated": False},
     {"id": 3, "slug": "starseed-origins", "title": "Starseed origins", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 12, "premium": True, "auto_generated": False},
     {"id": 4, "slug": "human-design", "title": "Human Design", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": True, "auto_generated": True},
-    {"id": 5, "slug": "transits", "title": "Transits", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": True, "auto_generated": False},
+    {"id": 5, "slug": "transits", "title": "Transits", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": True, "auto_generated": True},
     {"id": 6, "slug": "zodiac-element-modality", "title": "Zodiac Element & Modality", "category": "Cosmic Identity", "category_id": "cosmic", "questions": 0, "premium": True, "auto_generated": False},
     {"id": 8, "slug": "shadow-work-lens", "title": "Shadow Work Lens", "category": "Psychological Profile", "category_id": "psychological", "questions": 10, "premium": True, "auto_generated": False},
     {"id": 9, "slug": "big-five", "title": "Big Five", "category": "Psychological Profile", "category_id": "psychological", "questions": 20, "premium": True, "auto_generated": False},

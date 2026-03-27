@@ -560,6 +560,27 @@ async def submit_test(
                 }
                 answers_data = extracted_json_data
 
+    if body.test_id == 5:
+        if (
+            user.birth_year is not None
+            and user.birth_month is not None
+            and user.birth_day is not None
+        ):
+            birth_data = {
+                "year": user.birth_year,
+                "month": user.birth_month,
+                "day": user.birth_day,
+                "time": user.birth_time or "12:00",
+                "lat": user.birth_place_lat or 0.0,
+                "lng": user.birth_place_lng or 0.0,
+                "timezone": user.birth_place_timezone or "UTC",
+            }
+            transit_input = {"birth_data": birth_data}
+            transit_result = compute_transits(transit_input)
+            if transit_result:
+                extracted_json_data = transit_result
+                answers_data = extracted_json_data
+
     row = TestResult(
         user_id=user.id,
         test_id=body.test_id,
