@@ -24,7 +24,6 @@ from app.schemas.test_result import (
     AstrologyChartNarrativeOverlap,
     AstrologyChartNarrativeResponse,
     AstrologyChartResponse,
-    EnergySynthesisResponse,
     LifePathNumberResponse,
     NumerologyBlueprintItem,
     NumerologyBlueprintResponse,
@@ -39,7 +38,6 @@ from app.schemas.test_result import (
     TestResultResponse,
 )
 from app.services.result_calculation.astrology import compute_astrology
-from app.services.result_calculation.energy_synthesis import compute_energy_synthesis
 from app.services.result_calculation.life_path_number import compute_life_path_number
 from app.services.result_calculation.numerology import compute_numerology
 from app.services.result_calculation.soul_urge import compute_soul_urge
@@ -491,23 +489,6 @@ async def get_soul_urge(
     )
 
 
-@router.get("/tests/energy-synthesis", response_model=EnergySynthesisResponse)
-async def get_energy_synthesis(
-    primary_axis: str = Query(..., description="Primary axis, e.g. 'mind' for mindVal=100"),
-    heart_status: str = Query(..., description="Heart chakra status, e.g. 'Balanced' for heartVal=100"),
-):
-    """
-    Return Energy Synthesis (fusion type and average) from primary axis and heart status.
-    Call with values from Cognitive Style and Chakra Assessment (or other sources).
-    """
-    result = compute_energy_synthesis(
-        primary_axis=primary_axis,
-        heart_status=heart_status,
-    )
-    return EnergySynthesisResponse(
-        fusion=result["fusion"],
-        avg=result["avg"],
-    )
 
 
 @router.post("/tests/submit", response_model=SubmitTestResponse)

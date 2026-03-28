@@ -4,6 +4,8 @@ import re
 from collections import Counter
 from typing import Any
 
+logger = logging.getLogger(__name__)
+
 from app.core.config import settings
 from app.core.prompts import (
     ASTROLOGY_BLUEPRINT_JSON_KEYS,
@@ -61,9 +63,18 @@ from app.core.prompts import (
     MBTI_SYSTEM,
     MBTI_USER,
     MBTI_JSON_KEYS,
-    ZODIAC_ELEMENT_MODALITY_SYSTEM,
     ZODIAC_ELEMENT_MODALITY_USER,
+    ZODIAC_ELEMENT_MODALITY_SYSTEM,
     ZODIAC_ELEMENT_MODALITY_JSON_KEYS,
+    COGNITIVE_STYLE_SYSTEM,
+    COGNITIVE_STYLE_USER,
+    COGNITIVE_STYLE_JSON_KEYS,
+    ENERGY_SYNTHESIS_SYSTEM,
+    ENERGY_SYNTHESIS_USER,
+    ENERGY_SYNTHESIS_JSON_KEYS,
+    SOUL_URGE_SYSTEM,
+    SOUL_URGE_USER,
+    SOUL_URGE_JSON_KEYS,
 )
 
 logger = logging.getLogger(__name__)
@@ -76,19 +87,22 @@ OUTPUT_MAX_TOKENS = getattr(settings, "ai_result_output_max_tokens", 1000)
 
 
 def _cap_input(text: str, max_chars: int | None = None) -> str:
-    max_chars = max_chars or INPUT_MAX_CHARS
-    if len(text) <= max_chars:
+    actual_max = int(max_chars or INPUT_MAX_CHARS)
+    if len(text) <= actual_max:
         return text
-    return text[: max_chars - 20] + "\n\n[...truncated]"
+    return text[: actual_max - 20] + "\n\n[...truncated]"
 
 
 def _extract_json_from_response(raw: str) -> dict[str, Any] | None:
     raw = raw.strip()
-    for prefix in ("```json", "```"):
-        if raw.startswith(prefix):
-            raw = raw[len(prefix):].strip()
+    if raw.startswith("```json"):
+        raw = raw.removeprefix("```json").strip()
+    elif raw.startswith("```"):
+        raw = raw.removeprefix("```").strip()
+    
     if raw.endswith("```"):
-        raw = raw[:-3].strip()
+        raw = raw.removesuffix("```").strip()
+    
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
@@ -116,7 +130,9 @@ def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> d
         "insights", "recommendations", "sureThings", "growthAreas", "themes",
         "strengths", "challenges", "shadowPatterns", "coreTraits", "tryThis", "avoidThis",
         "yourBlueprint", "personalityConscious", "designUnconscious",
-        "whatIsBeingActivated", "currentPatterns", "dailyEvolution",
+        "whatIsBeingActivated", "currentPatterns", "dailyEvolution", "summary",
+        "innerMotivations", "shadowExpression",
+        "archetypeEchoes", "ancientGifts", "karmicShadows",
     )
     out = {}
     for k in allowed_keys:
@@ -600,6 +616,57 @@ def _validate_core_values_result(data: dict[str, Any], extracted: dict[str, Any]
     if extracted:
         res["extracted_json"] = extracted
     return res
+
+
+def _validate_cognitive_style_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
+    res = _validate_and_filter(data, COGNITIVE_STYLE_JSON_KEYS)
+    if extracted:
+        res["extracted_json"] = extracted
+    return res
+
+
+async def call_llm_for_cognitive_style(calculated_data: dict) -> dict:
+    """Interpret Cognitive Style results using the new sharpened tone prompt."""
+    if not settings.openai_api_key:
+        return {
+            "title": "Natural Origin",
+            "overview": "Your Cognitive Style reveals a unique way of processing information.",
+            "extracted_json": calculated_data,
+        }
+
+    user_content = COGNITIVE_STYLE_USER.format(
+        primary_style=calculated_data.get("primary_style", "unknown"),
+        secondary_style=calculated_data.get("secondary_style", "unknown"),
+        scores=json.dumps(calculated_data.get("scores", {}), indent=2)
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": COGNITIVE_STYLE_SYSTEM.format(
+                    primary_style=calculated_data.get("primary_style", "unknown"),
+                    secondary_style=calculated_data.get("secondary_style", "unknown"),
+                    scores=json.dumps(calculated_data.get("scores", {}), indent=2)
+                )},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=2000,
+            temperature=0.6,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = _extract_json_from_response(content) or {}
+        return _validate_cognitive_style_result(data, extracted=calculated_data)
+    except Exception as e:
+        logger.exception("LLM cognitive style call failed: %s", e)
+        return {
+            "title": "Your Thinking Style",
+            "overview": "Your Cognitive Style result is being processed. It reveals how you naturally filter logic and intuition.",
+            "extracted_json": calculated_data,
+        }
 
 
 def _fallback_energy_archetype_json() -> dict[str, Any]:
@@ -1521,16 +1588,15 @@ async def call_llm_for_past_life_vibes(computed_input: dict[str, Any]) -> dict[s
     if not settings.openai_api_key:
         return {
             "title": computed_input.get("title", "Ancient Archetype"),
-            "overview": "Your Past Life Vibes result reveals your archetypal resonance with ancient wisdom.",
-            "energyBlueprint": "Explore your primary and secondary types to understand your soul's echoes.",
+            "soulNarrative": "Your Past Life Vibes result reveals your archetypal resonance.",
             "extracted_json": computed_input,
         }
 
-    from app.core.prompts import PAST_LIFE_SYSTEM, PAST_LIFE_USER, PAST_LIFE_JSON_KEYS
+    from app.core.prompts import PAST_LIFE_VIBES_SYSTEM, PAST_LIFE_VIBES_USER, PAST_LIFE_VIBES_JSON_KEYS
 
     answers = computed_input.get("answers", {})
 
-    user_content = PAST_LIFE_USER.format(
+    user_content = PAST_LIFE_VIBES_USER.format(
         primary_type=computed_input.get("primary_type"),
         secondary_type=computed_input.get("secondary_type"),
         resonance_score=computed_input.get("resonance_score"),
@@ -1545,7 +1611,7 @@ async def call_llm_for_past_life_vibes(computed_input: dict[str, Any]) -> dict[s
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": PAST_LIFE_SYSTEM},
+                {"role": "system", "content": PAST_LIFE_VIBES_SYSTEM},
                 {"role": "user", "content": user_content},
             ],
             response_format={"type": "json_object"},
@@ -1554,14 +1620,13 @@ async def call_llm_for_past_life_vibes(computed_input: dict[str, Any]) -> dict[s
         )
         content = response.choices[0].message.content or "{}"
         data = _extract_json_from_response(content) or {}
-        res = _validate_and_filter(data, PAST_LIFE_JSON_KEYS)
+        res = _validate_and_filter(data, PAST_LIFE_VIBES_JSON_KEYS)
         res["extracted_json"] = computed_input
         return res
     except Exception as e:
-        logger.exception("LLM past life vibes call failed: %s", e)
         return {
             "title": computed_input.get("title", "Past Life Vibes"),
-            "overview": "Your result reveals a unique archetypal blueprint. Explore your traits to understand your soul's journey.",
+            "soulNarrative": "Your result reveals a unique archetypal blueprint.",
             "extracted_json": computed_input,
         }
 
@@ -1704,6 +1769,15 @@ async def call_llm_for_soul_compass(computed_input: dict[str, Any]) -> dict[str,
 
 def _validate_soul_compass_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
     res = _validate_and_filter(data, SOUL_COMPASS_JSON_KEYS)
+    raw_aa = get_case_insensitive_val(data, "alignmentAnalysis")
+    if isinstance(raw_aa, dict):
+        res["alignmentAnalysis"] = {
+            k: str(raw_aa.get(k, "")) for k in ("mind", "heart", "body", "soul")
+        }
+    elif isinstance(raw_aa, str):
+        res["alignmentAnalysis"] = {k: raw_aa for k in ("mind", "heart", "body", "soul")}
+    else:
+        res["alignmentAnalysis"] = {k: "" for k in ("mind", "heart", "body", "soul")}
     if extracted:
         res["extracted_json"] = extracted
     return res
@@ -1854,3 +1928,95 @@ def _fallback_zodiac_element_modality_json(element: str, modality: str, astrolog
             f"Practice grounding your {element} energy before taking {modality} action."
         ]
     }
+
+def _validate_energy_synthesis_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
+    res = _validate_and_filter(data, ENERGY_SYNTHESIS_JSON_KEYS)
+    if extracted:
+        res["extracted_json"] = extracted
+    return res
+
+async def call_llm_for_energy_synthesis(calculated_data: dict) -> dict:
+    """Interpret Energy Synthesis results using grounded tone."""
+    if not settings.openai_api_key:
+        return {
+            "title": calculated_data.get("title", "Energy Synthesis"),
+            "overview": "Your Energy Synthesis result is being processed. It reveals how you naturally integrate logic and emotion in your behavior.",
+            "extracted_json": calculated_data,
+        }
+
+    user_content = ENERGY_SYNTHESIS_USER.format(
+        primary_type=calculated_data.get("primary_type", "unknown"),
+        secondary_type=calculated_data.get("secondary_type", "unknown"),
+        integration_score=calculated_data.get("integration_score", 0),
+        scores=json.dumps(calculated_data.get("scores", {}), indent=2)
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": ENERGY_SYNTHESIS_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=2000,
+            temperature=0.6,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = _extract_json_from_response(content) or {}
+        return _validate_energy_synthesis_result(data, extracted=calculated_data)
+    except Exception as e:
+        logger.exception("LLM energy synthesis call failed: %s", e)
+        return {
+            "title": calculated_data.get("title", "Your Energy Synthesis"),
+            "overview": "Your Energy Synthesis result could not be fully analyzed. It explores how you naturally integrate emotion and logic.",
+            "extracted_json": calculated_data,
+        }
+
+def _validate_soul_urge_result(data: dict[str, Any], extracted: dict[str, Any] | None = None) -> dict[str, Any]:
+    res = _validate_and_filter(data, SOUL_URGE_JSON_KEYS)
+    if extracted:
+        res["extracted_json"] = extracted
+    return res
+
+async def call_llm_for_soul_urge(soul_urge_number: int, is_master: bool, source: str) -> dict:
+    """Interpret Soul Urge (Heart's Desire) number."""
+    calculated_data = {"soul_urge_number": soul_urge_number, "is_master": is_master, "source": source}
+    if not settings.openai_api_key:
+        return {
+            "title": f"Soul Urge {soul_urge_number}",
+            "coreDesire": "Your core desire interpretation is being processed.",
+            "extracted_json": calculated_data,
+        }
+
+    user_content = SOUL_URGE_USER.format(
+        soul_urge_number=soul_urge_number,
+        is_master=is_master,
+        source=source
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": SOUL_URGE_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=2000,
+            temperature=0.7,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = _extract_json_from_response(content) or {}
+        return _validate_soul_urge_result(data, extracted=calculated_data)
+    except Exception as e:
+        logger.exception("LLM soul urge call failed: %s", e)
+        return {
+            "title": f"Soul Urge {soul_urge_number}",
+            "coreDesire": "Your core desire interpretation could not be fully analyzed.",
+            "extracted_json": calculated_data,
+        }

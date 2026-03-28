@@ -37,6 +37,7 @@ from app.services.result_calculation.stress_balance import calculate_stress_bala
 from app.services.result_calculation.soul_compass import compute_soul_compass
 from app.services.result_calculation.transits import compute_transits
 from app.services.result_calculation.zodiac_element_modality import calculate_zodiac_element_modality
+from app.services.result_calculation.cognitive_style import compute_cognitive_style
 from app.services.llm import (
     call_llm_for_astrology_blueprint,
     call_llm_for_astrology_chart_narrative,
@@ -58,8 +59,11 @@ from app.services.llm import (
     call_llm_for_somatic_connection,
     call_llm_for_stress_balance,
     call_llm_for_soul_compass,
+    call_llm_for_cognitive_style,
     call_llm_for_transits,
     call_llm_for_zodiac_element_modality,
+    call_llm_for_energy_synthesis,
+    call_llm_for_soul_urge,
 )
 
 from .helpers import (
@@ -199,55 +203,24 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
 
         # Energy Synthesis (18)
         if test_id == 18:
-            extracted = {}
+            logger.info("DEBUG: Entering Energy Synthesis branch for result_id=%s", result_id)
             try:
-                user_result = await session.execute(
-                    select(UserModel).where(UserModel.id == user_id)
-                )
-                user = user_result.scalar_one_or_none()
-                if user:
-                    lp = None
-                    if (
-                        user.birth_year is not None
-                        and user.birth_month is not None
-                        and user.birth_day is not None
-                    ):
-                        try:
-                            lp = compute_life_path_number(
-                                user.birth_year,
-                                user.birth_month,
-                                user.birth_day,
-                            )
-                        except Exception:
-                            pass
-                    if lp:
-                        extracted["lifePath"] = lp.get("lifePath")
-                    extracted["zodiac"] = (
-                        zodiac_from_date(user.birth_month, user.birth_day)
-                        if user.birth_month is not None and user.birth_day is not None
-                        else None
-                    )
+                extracted = TEXT_TEST_COMPUTE_STUBS[18](row.answers)
             except Exception as e:
-                logger.warning(
-                    "Auto-generated compute failed for test_id=%s user_id=%s: %s",
-                    test_id,
-                    user_id,
-                    e,
-                )
-            user_ctx = await get_user_context(session, user_id)
+                logger.warning("Compute stub failed for test_id=18: %s", e)
+                extracted = {}
+
             row.extracted_json = extracted
             row.score = 8.0
-            llm_result = await call_llm_for_test_result(
-                extracted or {},
-                row.test_title,
-                row.category,
-                user_context=user_ctx,
-            )
+
+            llm_result = await call_llm_for_energy_synthesis(extracted)
+
             row.llm_result_json = llm_result
-            row.personality_type = llm_result.get("title") or row.test_title
-            row.insights = llm_result.get("coreTraits") or llm_result.get("tryThis") or []
-            row.recommendations = llm_result.get("tryThis") or llm_result.get("avoidThis") or []
-            row.narrative = llm_result.get("summary") or ""
+            row.personality_type = llm_result.get("title") or "Energy Synthesis"
+            row.insights = llm_result.get("coreTraits") or []
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("overview") or ""
+
             out = {
                 "score": row.score,
                 "personality_type": row.personality_type,
@@ -262,11 +235,61 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             await session.commit()
             async with AsyncSessionLocal() as syn_session:
                 await generate_synthesis_for_user(syn_session, user_id)
-            logger.info("Refined result_id=%s (auto-generated %s)", result_id, row.test_title)
+            logger.info("Refined result_id=%s (Energy Synthesis)", result_id)
             return
 
-        # Life Path (19) and Soul Urge (20)
-        if test_id in (19, 20):
+        # Soul Urge / Heart's Desire (20)
+        if test_id == 20:
+            extracted: dict[str, Any] = {}
+            try:
+                user_result = await session.execute(
+                    select(UserModel).where(UserModel.id == user_id)
+                )
+                user = user_result.scalar_one_or_none()
+                if user:
+                    full_name = (user.full_name or user.name or "").strip()
+                    if full_name:
+                        from app.services.result_calculation.soul_urge import compute_soul_urge as _compute_soul_urge
+                        computed = _compute_soul_urge(full_name=full_name)
+                        if computed:
+                            extracted = computed
+            except Exception as e:
+                logger.warning("Soul urge compute failed for user_id=%s: %s", user_id, e)
+
+            soul_urge_number = extracted.get("soulUrge") or extracted.get("soul_urge") or 1
+            is_master = soul_urge_number in (11, 22, 33)
+            source = extracted.get("source") or "name"
+            llm_result = await call_llm_for_soul_urge(
+                soul_urge_number=int(soul_urge_number),
+                is_master=is_master,
+                source=source,
+            )
+            row.extracted_json = extracted
+            row.llm_result_json = llm_result
+            row.score = 8.0
+            row.personality_type = llm_result.get("title") or "Soul Urge"
+            row.insights = llm_result.get("innerMotivations") or llm_result.get("strengths") or []
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("coreDesire") or ""
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Soul Urge LLM)", result_id)
+            return
+
+        # Life Path (19)
+        if test_id == 19:
             extracted: dict[str, Any] = {}
             try:
                 user_result = await session.execute(
@@ -285,12 +308,6 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
                                 birth_month=user.birth_month,
                                 birth_day=user.birth_day,
                             )
-                            if computed:
-                                extracted = computed
-                    elif test_id == 20:
-                        full_name = (user.full_name or user.name or "").strip()
-                        if full_name:
-                            computed = compute_soul_urge(full_name=full_name)
                             if computed:
                                 extracted = computed
             except Exception as e:
@@ -679,7 +696,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         if test_id == 16:
             logger.info("DEBUG: Entering Stress Balance Index branch for result_id=%s", result_id)
             try:
-                formatted_answers = {}
+                formatted_answers: dict[str, Any] = {}
                 if isinstance(row.answers, list):
                     for item in row.answers:
                         qid = item.get("id") or item.get("question_id")
@@ -724,7 +741,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         if test_id == 17:
             logger.info("DEBUG: Entering Somatic Connection branch for result_id=%s", result_id)
             try:
-                formatted_answers = {}
+                formatted_answers: dict[str, Any] = {}
                 if isinstance(row.answers, list):
                     for item in row.answers:
                         qid = item.get("id") or item.get("question_id")
@@ -769,7 +786,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         if test_id == 22:
             logger.info("DEBUG: Entering Karmic Lessons branch for result_id=%s", result_id)
             try:
-                formatted_answers = {}
+                formatted_answers: dict[str, Any] = {}
                 if isinstance(row.answers, list):
                     for item in row.answers:
                         qid = item.get("id") or item.get("question_id")
@@ -810,51 +827,6 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             logger.info("Refined result_id=%s (Karmic Lessons)", result_id)
             return
 
-        # Past Life Vibes (21)
-        if test_id == 21:
-            logger.info("DEBUG: Entering Past Life Vibes branch for result_id=%s", result_id)
-            try:
-                formatted_answers = {}
-                if isinstance(row.answers, list):
-                    for item in row.answers:
-                        qid = item.get("id") or item.get("question_id")
-                        ans = item.get("answer")
-                        if qid:
-                            formatted_answers[f"q{qid}"] = ans
-                else:
-                    formatted_answers = row.answers or {}
-
-                extracted = calculate_past_life_vibes(formatted_answers)
-            except Exception as e:
-                logger.exception("calculate_past_life_vibes failed for result_id=%s: %s", result_id, e)
-                extracted = {}
-
-            row.extracted_json = extracted
-            row.score = 8.5
-            llm_result = await call_llm_for_past_life_vibes(extracted)
-            row.llm_result_json = llm_result
-            row.personality_type = llm_result.get("title") or extracted.get("title") or "Past Life Vibes"
-            row.insights = llm_result.get("coreTraits") or []
-            row.recommendations = llm_result.get("tryThis") or []
-            row.narrative = llm_result.get("overview") or ""
-            
-            out = {
-                "score": row.score,
-                "personality_type": row.personality_type,
-                "insights": row.insights,
-                "recommendations": row.recommendations,
-                "narrative": row.narrative,
-                "extracted_json": row.extracted_json,
-                "llm_result_json": row.llm_result_json,
-            }
-            row.status = "completed"
-            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
-            await session.commit()
-            async with AsyncSessionLocal() as syn_session:
-                await generate_synthesis_for_user(syn_session, user_id)
-            logger.info("Refined result_id=%s (Past Life Vibes)", result_id)
-            return
-
         # Soul Compass (24)
         if test_id == 24:
             logger.info("DEBUG: Entering Soul Compass branch for result_id=%s", result_id)
@@ -882,7 +854,10 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             llm_result = await call_llm_for_soul_compass(extracted)
             row.llm_result_json = llm_result
             row.personality_type = llm_result.get("title") or "Soul Compass Alignment"
-            row.insights = [llm_result.get("alignmentAnalysis", {}).get(k, "") for k in ["mind", "heart", "body", "soul"]]
+            alignment_analysis = llm_result.get("alignmentAnalysis") or {}
+            if not isinstance(alignment_analysis, dict):
+                alignment_analysis = {k: str(alignment_analysis) for k in ["mind", "heart", "body", "soul"]}
+            row.insights = [alignment_analysis.get(k, "") for k in ["mind", "heart", "body", "soul"]]
             row.recommendations = llm_result.get("suggestedReflection", [])
             row.narrative = llm_result.get("whatThisMeans") or ""
             
@@ -907,7 +882,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         if test_id == 23:
             logger.info("DEBUG: Entering Inner Child Dialogue branch for result_id=%s", result_id)
             try:
-                formatted_answers = {}
+                formatted_answers: dict[str, Any] = {}
                 if isinstance(row.answers, list):
                     for item in row.answers:
                         qid = item.get("id") or item.get("question_id")
@@ -1011,6 +986,41 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             async with AsyncSessionLocal() as syn_session:
                 await generate_synthesis_for_user(syn_session, user_id)
             logger.info("Refined result_id=%s (Transits)", result_id)
+            return
+
+        # Cognitive Style (11)
+        if test_id == 11:
+            logger.info("DEBUG: Entering Cognitive Style branch for result_id=%s", result_id)
+            try:
+                extracted = compute_cognitive_style(row.answers)
+            except Exception as e:
+                logger.exception("compute_cognitive_style failed for result_id=%s: %s", result_id, e)
+                extracted = {}
+
+            row.extracted_json = extracted
+            row.score = 8.5
+            llm_result = await call_llm_for_cognitive_style(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or extracted.get("primary_style") or "Cognitive Style"
+            row.insights = llm_result.get("coreTraits") or []
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("overview") or ""
+            
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Cognitive Style)", result_id)
             return
 
         # Zodiac Element & Modality (6)
@@ -1124,6 +1134,51 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             logger.info("Refined result_id=%s (Astrology Chart Narrative)", result_id)
             return
 
+        # Past Life Vibes (21)
+        if test_id == 21:
+            logger.info("DEBUG: Entering Past Life Vibes branch for result_id=%s", result_id)
+            try:
+                formatted_answers: dict[str, Any] = {}
+                if isinstance(row.answers, list):
+                    for item in row.answers:
+                        qid = item.get("id") or item.get("question_id")
+                        ans = item.get("answer")
+                        if qid:
+                            formatted_answers[f"q{qid}"] = ans
+                else:
+                    formatted_answers = row.answers or {}
+
+                extracted = calculate_past_life_vibes(formatted_answers)
+            except Exception as e:
+                logger.exception("calculate_past_life_vibes failed for result_id=%s: %s", result_id, e)
+                extracted = {}
+
+            row.extracted_json = extracted
+            row.score = 8.5
+            llm_result = await call_llm_for_past_life_vibes(extracted)
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or extracted.get("title") or "Past Life Vibes"
+            row.insights = llm_result.get("archetypeEchoes") or llm_result.get("coreTraits") or []
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("soulNarrative") or llm_result.get("overview") or ""
+            
+            out = {
+                "score": row.score,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json,
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Past Life Vibes)", result_id)
+            return
+        
         out = await call_openai_for_insights(
             row.test_title,
             row.category,

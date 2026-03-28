@@ -43,6 +43,21 @@ def compute_shadow_work(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
     def to_float(val: Any) -> float:
         if val is None:
             return 3.0
+        
+        # Handle Likert scale text mapping
+        mapping = {
+            "strongly disagree": 1.0,
+            "disagree": 2.0,
+            "neutral": 3.0,
+            "agree": 4.0,
+            "strongly agree": 5.0
+        }
+        
+        if isinstance(val, str):
+            mapped = mapping.get(val.strip().lower())
+            if mapped is not None:
+                return mapped
+        
         try:
             return float(val)
         except (ValueError, TypeError):
