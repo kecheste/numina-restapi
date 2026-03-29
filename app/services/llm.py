@@ -15,7 +15,7 @@ from app.core.prompts import (
     ASTROLOGY_CHART_NARRATIVE_USER,
     BLUEPRINT_SYSTEM,
     CHAKRA_ALIGNMENT_APPENDIX,
-    CHAKRA_PREVIEW_JSON_KEYS,
+    CHAKRA_ALIGNMENT_JSON_KEYS,
     CHAKRA_PREVIEW_USER_APPENDIX,
     MIND_MIRROR_JSON_KEYS,
     MIND_MIRROR_SYSTEM,
@@ -68,6 +68,8 @@ from app.core.prompts import (
     ZODIAC_ELEMENT_MODALITY_JSON_KEYS,
     COGNITIVE_STYLE_SYSTEM,
     COGNITIVE_STYLE_USER,
+    CHAKRA_ALIGNMENT_SYSTEM,
+    CHAKRA_ALIGNMENT_USER,
     COGNITIVE_STYLE_JSON_KEYS,
     ENERGY_SYNTHESIS_SYSTEM,
     ENERGY_SYNTHESIS_USER,
@@ -130,9 +132,10 @@ def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> d
         "insights", "recommendations", "sureThings", "growthAreas", "themes",
         "strengths", "challenges", "shadowPatterns", "coreTraits", "tryThis", "avoidThis",
         "yourBlueprint", "personalityConscious", "designUnconscious",
-        "whatIsBeingActivated", "currentPatterns", "dailyEvolution", "summary",
+        "currentPatterns",
         "innerMotivations", "shadowExpression",
         "archetypeEchoes", "ancientGifts", "karmicShadows",
+        "dailyEvolution", "suggestedReflection"
     )
     out = {}
     for k in allowed_keys:
@@ -140,7 +143,20 @@ def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> d
         if v is None:
             continue
         if k in list_keys:
-            out[k] = [str(x) for x in v][:8] if isinstance(v, list) else []
+            if isinstance(v, list):
+                out[k] = [str(x) for x in v][:8]
+            elif isinstance(v, str) and v.strip().startswith("[") and v.strip().endswith("]"):
+                try:
+                    import ast
+                    parsed = ast.literal_eval(v)
+                    if isinstance(parsed, list):
+                        out[k] = [str(x) for x in parsed][:8]
+                    else:
+                        out[k] = []
+                except (ValueError, SyntaxError, NameError):
+                    out[k] = []
+            else:
+                out[k] = []
         elif k == "synchronicities":
             if isinstance(v, list):
                 out[k] = [
@@ -159,11 +175,15 @@ CHAKRA_NAMES = ("Root Chakra", "Sacral Chakra", "Solar Plexus Chakra", "Heart Ch
 
 
 def _validate_chakra_alignment_result(obj: dict[str, Any]) -> dict[str, Any]:
-    """Validate and normalize chakra test result: standard keys + statusSummary + chakras (7 items) + synchronicities with label/description."""
+    """Validate and normalize chakra test result: standard keys + strongestChakra + needsRebalancing + statusSummary + chakras (7 items) + synchronicities."""
     base = _validate_and_filter(obj, TEST_RESULT_JSON_KEYS | frozenset({"strongestChakra", "needsRebalancing", "statusSummary"}))
-    base["statusSummary"] = str(obj.get("statusSummary") or base.get("summary") or "").strip() or "Your chakra balance reflects your current energy flow."
+    
+    if not base.get("statusSummary"): base["statusSummary"] = str(get_case_insensitive_val(obj, "statusSummary") or base.get("summary") or "").strip()
+    if not base["statusSummary"]: base["statusSummary"] = "Your chakra balance reflects your current energy flow."
+    if not base.get("strongestChakra"): base["strongestChakra"] = str(get_case_insensitive_val(obj, "strongestChakra") or "").strip()
+    if not base.get("needsRebalancing"): base["needsRebalancing"] = str(get_case_insensitive_val(obj, "needsRebalancing") or "").strip()
 
-    synch = obj.get("synchronicities")
+    synch = get_case_insensitive_val(obj, "synchronicities")
     if isinstance(synch, list) and synch:
         base["synchronicities"] = [
             {"label": str(s.get("label") or s.get("test") or ""), "description": str(s.get("description") or s.get("connection") or "")}
@@ -175,22 +195,28 @@ def _validate_chakra_alignment_result(obj: dict[str, Any]) -> dict[str, Any]:
             for s in base["synchronicities"][:6]
         ]
 
-    raw_chakras = obj.get("chakras") if isinstance(obj.get("chakras"), list) else []
+    raw_chakras = get_case_insensitive_val(obj, "chakras")
+    if not isinstance(raw_chakras, list): raw_chakras = []
+    
     by_id: dict[str, dict[str, Any]] = {}
     for c in raw_chakras:
         if not isinstance(c, dict):
             continue
-        cid = str(c.get("id") or "").strip()
+        cid = str(get_case_insensitive_val(c, "id") or "").strip().lower()
         if not cid:
             continue
+        # Map IDs like "solar plexus" or "solar-plexus" to "solarPlexus"
+        if "solar" in cid: cid = "solarPlexus"
+        if "third" in cid or "eye" in cid: cid = "thirdEye"
+
         if cid in CHAKRA_IDS:
             by_id[cid] = {
                 "id": cid,
-                "name": str(c.get("name") or "").strip() or CHAKRA_NAMES[CHAKRA_IDS.index(cid)],
-                "status": str(c.get("status") or "Balanced").strip(),
-                "description": str(c.get("description") or "").strip() or "Energy flow for this center.",
-                "tryItems": str(c.get("tryItems")).strip() if c.get("tryItems") else None,
-                "avoidItems": str(c.get("avoidItems")).strip() if c.get("avoidItems") else None,
+                "name": str(get_case_insensitive_val(c, "name") or "").strip() or CHAKRA_NAMES[CHAKRA_IDS.index(cid)],
+                "status": str(get_case_insensitive_val(c, "status") or "Balanced").strip(),
+                "description": str(get_case_insensitive_val(c, "description") or "").strip() or "Energy flow for this center.",
+                "tryItems": str(get_case_insensitive_val(c, "tryItems")).strip() if get_case_insensitive_val(c, "tryItems") else None,
+                "avoidItems": str(get_case_insensitive_val(c, "avoidItems")).strip() if get_case_insensitive_val(c, "avoidItems") else None,
             }
     out_chakras: list[dict[str, Any]] = []
     for i, cid in enumerate(CHAKRA_IDS):
@@ -746,7 +772,7 @@ async def call_llm_for_test_result(
     if len(user_content) > TEST_RESULT_PROMPT_MAX_CHARS:
         user_content = user_content[: TEST_RESULT_PROMPT_MAX_CHARS - 20] + "\n\n[...truncated]"
 
-    allowed_keys = (TEST_RESULT_JSON_KEYS | CHAKRA_PREVIEW_JSON_KEYS) if include_chakra_preview else TEST_RESULT_JSON_KEYS
+    allowed_keys = (TEST_RESULT_JSON_KEYS | CHAKRA_ALIGNMENT_JSON_KEYS) if include_chakra_preview else TEST_RESULT_JSON_KEYS
     try:
         from openai import AsyncOpenAI
         client = AsyncOpenAI(api_key=settings.openai_api_key)
@@ -1729,6 +1755,68 @@ async def call_llm_for_stress_balance(computed_input: dict[str, Any]) -> dict[st
             "extracted_json": computed_input,
         }
 
+
+async def call_llm_for_chakra_alignment(formatted_answers: str, user_context: str) -> dict[str, Any]:
+    """Calculate Chakra Alignment Scan results via dedicated LLM call."""
+    if not settings.openai_api_key:
+        return _fallback_chakra_alignment_json()
+
+    from app.core.prompts import CHAKRA_ALIGNMENT_SYSTEM, CHAKRA_ALIGNMENT_USER
+
+    user_content = CHAKRA_ALIGNMENT_USER.format(
+        input_json=formatted_answers,
+        user_context=user_context
+    )
+
+    try:
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": CHAKRA_ALIGNMENT_SYSTEM},
+                {"role": "user", "content": user_content},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=2000,
+            temperature=0.4,
+        )
+        content = response.choices[0].message.content or "{}"
+        data = _extract_json_from_response(content) or {}
+        return _validate_chakra_alignment_result(data)
+    except Exception as e:
+        logger.exception("LLM chakra alignment call failed: %s", e)
+        return _fallback_chakra_alignment_json()
+
+def _fallback_chakra_alignment_json() -> dict[str, Any]:
+    """Robust fallback for Chakra Alignment Scan."""
+    from app.core.prompts import CHAKRA_IDS, CHAKRA_NAMES
+    out: dict[str, Any] = {
+        "title": "Chakra Balance Profile",
+        "summary": "Your energetic centers show a unique pattern of balance and focus. This result is being refined.",
+        "shortDescription": "Your chakra alignment reflects your current behavioral momentum and emotional state.",
+        "coreTraits": ["Energetic Awareness", "Balanced Focus", "Pattern Recognition", "Grounded Reflection"],
+        "strengths": ["Self-Observation", "Behavioral Awareness", "Adaptive Energy"],
+        "challenges": ["Consistent Alignment", "Deeper Integration", "Maintaining Balance"],
+        "spiritualInsight": "Your journey is about observing how your internal state influences your external world.",
+        "tryThis": ["Practice mindful observation", "Breathe into tension areas", "Observe your reactions"],
+        "avoidThis": ["Ignoring physical signals", "Over-analyzing emotions"],
+        "strongestChakra": "Your Root Chakra is currently your most grounded point.",
+        "needsRebalancing": "Your throat center needs attention to improve clear expression.",
+        "statusSummary": "Your chakra balance reflects your current energy flow.",
+        "chakras": [
+            {
+                "id": cid,
+                "name": CHAKRA_NAMES[i],
+                "status": "Balanced",
+                "description": "This center is operating in its normal state.",
+                "tryItems": "Stay present with your sensations.",
+                "avoidItems": "Ignoring subtle shifts."
+            }
+            for i, cid in enumerate(CHAKRA_IDS)
+        ]
+    }
+    return out
 
 async def call_llm_for_soul_compass(computed_input: dict[str, Any]) -> dict[str, Any]:
     """Dedicated LLM call for Soul Compass interpretation."""

@@ -48,6 +48,7 @@ from app.services.llm import (
     call_llm_for_numerology_blueprint,
     call_llm_for_numerology_narrative,
     call_llm_for_starseed,
+    call_llm_for_chakra_alignment,
     call_llm_for_test_result,
     call_llm_for_shadow_work,
     call_llm_for_mind_mirror,
@@ -72,6 +73,7 @@ from .helpers import (
     call_openai_for_insights,
     check_rate_limit,
     extract_strongest_chakra_label,
+    format_answers_for_ai,
     generate_synthesis_for_user,
     get_user_context,
     zodiac_from_date,
@@ -464,7 +466,9 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
                 extracted = {}
             row.extracted_json = extracted
             row.score = 6.0
+            logger.info("DEBUG: Extracted core values for result_id=%s: %s", result_id, extracted)
             llm_result = await call_llm_for_core_values(extracted)
+            logger.info("DEBUG: LLM result for result_id=%s: %s", result_id, llm_result)
             row.llm_result_json = llm_result
             row.personality_type = llm_result.get("title") or "Core Values Explorer"
             row.insights = llm_result.get("coreTraits") or llm_result.get("tryThis") or []
@@ -1021,6 +1025,41 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             async with AsyncSessionLocal() as syn_session:
                 await generate_synthesis_for_user(syn_session, user_id)
             logger.info("Refined result_id=%s (Cognitive Style)", result_id)
+            return
+        
+        # Chakra Alignment Scan (13)
+        if test_id == 13:
+            logger.info("DEBUG: Entering Chakra Alignment branch for result_id=%s", result_id)
+            user_ctx = await get_user_context(session, user_id)
+            formatted_answers = format_answers_for_ai(row.answers)
+            
+            # Use the dedicated chakra alignment call
+            llm_result = await call_llm_for_chakra_alignment(
+                formatted_answers=formatted_answers,
+                user_context=user_ctx
+            )
+            
+            row.llm_result_json = llm_result
+            row.personality_type = llm_result.get("title") or "Chakra Alignment"
+            row.insights = llm_result.get("coreTraits") or []
+            row.recommendations = llm_result.get("tryThis") or []
+            row.narrative = llm_result.get("statusSummary") or llm_result.get("summary") or ""
+            
+            out = {
+                "score": 8.5,
+                "personality_type": row.personality_type,
+                "insights": row.insights,
+                "recommendations": row.recommendations,
+                "narrative": row.narrative,
+                "extracted_json": row.extracted_json or {},
+                "llm_result_json": row.llm_result_json,
+            }
+            row.status = "completed"
+            await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
+            await session.commit()
+            async with AsyncSessionLocal() as syn_session:
+                await generate_synthesis_for_user(syn_session, user_id)
+            logger.info("Refined result_id=%s (Chakra Alignment)", result_id)
             return
 
         # Zodiac Element & Modality (6)
