@@ -175,106 +175,209 @@ def compute_big_five(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
 
 def compute_starseed(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
     """
-    Calculate Starseed Origins archetypal resonance.
-    
-    Mapping logic:
-    - pleiadian: q4_heal, q8, q9
-    - arcturian: q2_science, q6_logic, q7_structured
-    - sirian: q4_teach, q5_teaching, q9
-    - lyran: q3_earth, q4_protect, q11
-    - andromedan: q2_space, q3_sky, q12
-    - venusian: q5_oneonone, q3_water, q11
+    Calculate Starseed Origins using a point-based scoring system.
+
+    Questions 1-7 contribute fixed points per selected key.
+    Questions 8-12 are Likert (1-5) added directly as raw points.
+    Scores are normalized to percentages relative to the max score.
     """
     if isinstance(answers, dict):
         return answers
 
-    ans_map = {item.get("id") or item.get("question_id"): item.get("answer") for item in (answers or []) if isinstance(item, dict)}
-
-    def get_val(qid: int) -> Any:
-        return ans_map.get(qid)
-
-    def get_score(qid: int) -> float:
-        return _map_text_to_score(get_val(qid))
-
-    def is_match(qid: int, target: str) -> float:
-        val = get_val(qid)
-        if isinstance(val, list):
-            return 5.0 if any(target.lower() in str(v).lower() for v in val) else 1.0
-        if isinstance(val, str):
-            return 5.0 if target.lower() in val.lower() else 1.0
-        return 1.0
-
-    def avg_scores(lst):
-        return sum(lst) / len(lst) if lst else 3.0
-
-    def to_percent(avg_score):
-        return int(round(((avg_score - 1) / 4) * 100))
-
-    # Calculate dimension scores (1-5 range)
-    dists = {
-        "pleiadian": avg_scores([is_match(4, "heal"), get_score(8), get_score(9)]),
-        "arcturian": avg_scores([is_match(2, "science"), is_match(6, "logic"), is_match(7, "structured")]),
-        "sirian": avg_scores([is_match(4, "teach"), is_match(5, "teaching"), get_score(9)]),
-        "lyran": avg_scores([is_match(3, "earth"), is_match(4, "protect"), get_score(11)]),
-        "andromedan": avg_scores([is_match(2, "space"), is_match(3, "sky"), get_score(12)]),
-        "venusian": avg_scores([is_match(5, "oneonone"), is_match(3, "water"), get_score(11)]),
+    ans_map = {
+        item.get("id") or item.get("question_id"): item.get("answer")
+        for item in (answers or [])
+        if isinstance(item, dict)
     }
 
-    scores = {k: to_percent(v) for k, v in dists.items()}
-    
-    ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    scores: dict[str, float] = {
+        "pleiadian": 0, "arcturian": 0, "sirian": 0,
+        "lyran": 0, "andromedan": 0, "venusian": 0,
+    }
+
+    def add(key: str, pts: float) -> None:
+        if key in scores:
+            scores[key] += pts
+
+    # Q1 — social role
+    _q1 = {
+        "helper_wait": ("pleiadian", 2),
+        "observe_until_called": ("andromedan", 2),
+        "lead_immediately": ("sirian", 2),
+        "quiet_support": ("venusian", 2),
+    }
+    q1_ans = str(ans_map.get(1) or "").strip()
+    if q1_ans in _q1:
+        add(*_q1[q1_ans])
+
+    # Q2 — curiosity (multi-select)
+    _q2 = {
+        "space": ("andromedan", 2),
+        "ancient": ("sirian", 2),
+        "science": ("arcturian", 2),
+        "mystical": ("pleiadian", 1),
+        "nature": ("lyran", 2),
+        "energy": ("venusian", 2),
+    }
+    q2_ans = ans_map.get(2)
+    if isinstance(q2_ans, list):
+        for item in q2_ans:
+            key = str(item).strip()
+            if key in _q2:
+                add(*_q2[key])
+
+    # Q3 — nature resonance
+    _q3 = {
+        "earth": ("lyran", 2),
+        "water": ("venusian", 2),
+        "sky": ("andromedan", 2),
+        "plants": ("pleiadian", 1),
+    }
+    q3_ans = str(ans_map.get(3) or "").strip()
+    if q3_ans in _q3:
+        add(*_q3[q3_ans])
+
+    # Q4 — calling
+    _q4 = {
+        "heal": ("pleiadian", 3),
+        "innovate": ("arcturian", 3),
+        "teach": ("sirian", 3),
+        "protect": ("lyran", 3),
+    }
+    q4_ans = str(ans_map.get(4) or "").strip()
+    if q4_ans in _q4:
+        add(*_q4[q4_ans])
+
+    # Q5 — social energy
+    _q5 = {
+        "one_on_one": ("venusian", 2),
+        "small_groups": ("andromedan", 1),
+        "teach_crowd": ("sirian", 2),
+        "observe_edges": ("lyran", 1),
+    }
+    q5_ans = str(ans_map.get(5) or "").strip()
+    if q5_ans in _q5:
+        add(*_q5[q5_ans])
+
+    # Q6 — decision style
+    _q6 = {
+        "heart": ("pleiadian", 2),
+        "logic": ("arcturian", 2),
+        "balance": ("venusian", 1),
+    }
+    q6_ans = str(ans_map.get(6) or "").strip()
+    if q6_ans in _q6:
+        add(*_q6[q6_ans])
+
+    # Q7 — pace
+    _q7 = {
+        "grounded": ("lyran", 2),
+        "free_flowing": ("andromedan", 2),
+        "structured": ("arcturian", 2),
+        "reflective": ("sirian", 1),
+    }
+    q7_ans = str(ans_map.get(7) or "").strip()
+    if q7_ans in _q7:
+        add(*_q7[q7_ans])
+
+    # Q8-Q12 — Likert scales added as raw points
+    scale_map = {
+        "Strongly Disagree": 1.0, "Disagree": 2.0, "Neutral": 3.0,
+        "Agree": 4.0, "Strongly Agree": 5.0,
+    }
+
+    def get_likert(qid: int) -> float:
+        val = ans_map.get(qid)
+        if isinstance(val, str):
+            return scale_map.get(val.strip(), 3.0)
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return 3.0
+
+    scores["andromedan"] += get_likert(8)
+    scores["pleiadian"]  += get_likert(9)
+    scores["sirian"]     += get_likert(10)
+    scores["lyran"]      += get_likert(11)
+    scores["andromedan"] += get_likert(12)
+
+    # Normalize to percent relative to max
+    max_score = max(scores.values()) or 1
+    percent_scores = {k: round((v / max_score) * 100) for k, v in scores.items()}
+
+    ranked = sorted(percent_scores.items(), key=lambda x: x[1], reverse=True)
     primary = ranked[0][0]
     secondary = ranked[1][0]
 
     titles = {
-        "pleiadian": "Pleiadian Healer",
-        "arcturian": "Arcturian Innovator",
-        "sirian": "Sirian Teacher",
-        "lyran": "Lyran Guardian",
-        "andromedan": "Andromedan Explorer",
-        "venusian": "Venusian Harmonizer"
+        "pleiadian":   "Pleiadian Healer",
+        "arcturian":   "Arcturian Innovator",
+        "sirian":      "Sirian Teacher",
+        "lyran":       "Lyran Guardian",
+        "andromedan":  "Andromedan Explorer",
+        "venusian":    "Venusian Harmonizer",
     }
 
     return {
         "primary_origin": primary,
         "secondary_origin": secondary,
         "title": titles.get(primary, "Starseed Origins"),
-        "scores": scores
+        "scores": percent_scores,
     }
 
 def compute_core_values(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
     """
-    Calculate Core Values Sort scores and identify primary, secondary, and third values.
-    
-    Mapping:
-    - growth: q5
-    - connection: q6
-    - freedom: q7
-    - security: q8
-    - impact: q9
-    - creativity: q10
-    - harmony: q11
-    - achievement: q12
+    Calculate Core Values Sort scores.
+    Part A (q1-q4): +20 points to the selected value.
+    Part B (q5-q12): 0-100 points based on intensity.
     """
     if isinstance(answers, dict):
         return answers
 
     ans_map = {item.get("id") or item.get("question_id"): item.get("answer") for item in (answers or []) if isinstance(item, dict)}
 
+    scores = {
+        "growth": 0,
+        "connection": 0,
+        "freedom": 0,
+        "security": 0,
+        "impact": 0,
+        "creativity": 0,
+        "harmony": 0,
+        "achievement": 0
+    }
+
+    # Part A Mapping (q1-q4)
+    # A=growth, B=connection, C=freedom, D=security
+    part_a_keywords = {
+        "growth": ["learning", "improving", "personal growth"],
+        "connection": ["relationships", "connected", "helping others", "supporting"],
+        "freedom": ["independence", "own way", "exploring new", "freedom"],
+        "security": ["stability", "secure", "safety", "long-term stability"]
+    }
+
+    for qid in [1, 2, 3, 4]:
+        ans = str(ans_map.get(qid) or "").lower()
+        if not ans:
+            continue
+        for val, keywords in part_a_keywords.items():
+            if any(k in ans for k in keywords):
+                scores[val] += 20
+                break
+
     def to_percent(val: Any) -> int:
         score = _map_text_to_score(val)
         return int(round(((score - 1) / 4) * 100))
 
-    scores = {
-        "growth": to_percent(ans_map.get(5)),
-        "connection": to_percent(ans_map.get(6)),
-        "freedom": to_percent(ans_map.get(7)),
-        "security": to_percent(ans_map.get(8)),
-        "impact": to_percent(ans_map.get(9)),
-        "creativity": to_percent(ans_map.get(10)),
-        "harmony": to_percent(ans_map.get(11)),
-        "achievement": to_percent(ans_map.get(12)),
-    }
+    # Part B Mapping (q5-q12)
+    scores["growth"] += to_percent(ans_map.get(5))
+    scores["connection"] += to_percent(ans_map.get(6))
+    scores["freedom"] += to_percent(ans_map.get(7))
+    scores["security"] += to_percent(ans_map.get(8))
+    scores["impact"] += to_percent(ans_map.get(9))
+    scores["creativity"] += to_percent(ans_map.get(10))
+    scores["harmony"] += to_percent(ans_map.get(11))
+    scores["achievement"] += to_percent(ans_map.get(12))
 
     # Sort by score descending
     ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)

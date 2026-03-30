@@ -18,6 +18,17 @@ from app.core.redis import init_redis, close_redis
 from app.core.queue import get_arq_pool, close_arq_pool
 from app.db.seed import run_seed
 
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastapiIntegration
+
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        integrations=[FastapiIntegration()],
+        traces_sample_rate=1.0,
+        environment=settings.app_env,
+    )
+
 logger = logging.getLogger(__name__)
 
 _BACKEND_ROOT = Path(__file__).resolve().parent.parent

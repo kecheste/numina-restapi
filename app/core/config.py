@@ -90,4 +90,6 @@ class Settings(BaseSettings):
     seed_admin_email: str = ""
     seed_admin_password: str = ""
 
+    sentry_dsn: str | None = None
+
 settings = Settings()

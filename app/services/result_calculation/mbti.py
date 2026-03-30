@@ -18,25 +18,17 @@ from collections import Counter
 from typing import Any
 
 _QUESTION_DIMENSION: dict[int, tuple[str, str]] = {
-    1: ("I", "E"),
-    2: ("I", "E"),
-    3: ("I", "E"),
-    4: ("N", "S"),
-    5: ("N", "S"),
-    6: ("N", "S"),
-    7: ("F", "T"),
-    8: ("F", "T"),
-    9: ("F", "T"),
-    10: ("J", "P"),
-    11: ("J", "P"),
-    12: ("J", "P"),
+    1: ("I", "E"), 2: ("I", "E"), 3: ("I", "E"), 4: ("I", "E"),
+    5: ("N", "S"), 6: ("N", "S"), 7: ("N", "S"), 8: ("N", "S"),
+    9: ("T", "F"), 10: ("T", "F"), 11: ("T", "F"), 12: ("T", "F"),
+    13: ("J", "P"), 14: ("J", "P"), 15: ("J", "P"), 16: ("J", "P"),
 }
 
 _DIMENSION_GROUPS: list[tuple[str, str, list[int]]] = [
-    ("I", "E", [1, 2, 3]),
-    ("N", "S", [4, 5, 6]),
-    ("F", "T", [7, 8, 9]),
-    ("J", "P", [10, 11, 12]),
+    ("I", "E", [1, 2, 3, 4]),
+    ("N", "S", [5, 6, 7, 8]),
+    ("T", "F", [9, 10, 11, 12]), # Note: User's logic had T/F for q9-q12
+    ("J", "P", [13, 14, 15, 16]),
 ]
 
 
@@ -54,7 +46,7 @@ def _parse_answers(answers: list[Any] | dict[str, Any]) -> dict[int, str]:
     if isinstance(answers, list):
         for item in answers:
             d = item if isinstance(item, dict) else {}
-            qid = d.get("question_id") or getattr(item, "question_id", None)
+            qid = d.get("id") or d.get("question_id") or getattr(item, "question_id", None)
             ans = d.get("answer") or getattr(item, "answer", None)
             if qid is not None and ans is not None:
                 if isinstance(ans, list):
@@ -76,30 +68,15 @@ def compute_mbti_detailed(
     answers: list[Any] | dict[str, Any],
 ) -> dict[str, Any]:
     """
-    Deterministically compute MBTI type + per-dimension breakdown.
-
-    Returns:
-      {
-        "type": "INFJ",
-        "dimensions": {
-          "I": 3, "E": 0,
-          "N": 2, "S": 1,
-          "F": 3, "T": 0,
-          "J": 2, "P": 1,
-        },
-        "confidence": {
-          "Introversion": 100,   # percentage of votes
-          "Intuition": 67,
-          "Feeling": 100,
-          "Judging": 67,
-        },
-        "total_questions": 12,
-      }
+    Deterministically compute MBTI type + per-dimension breakdown using 16 questions.
+    Logic follows user specification:
+    - Type winner: x >= y ? X : Y
+    - Pair percentage: round(max(x,y) / total * 100)
     """
     _LABEL = {
         "I": "Introversion", "E": "Extraversion",
         "N": "Intuition", "S": "Sensing",
-        "F": "Feeling", "T": "Thinking",
+        "T": "Thinking", "F": "Feeling",
         "J": "Judging", "P": "Perceiving"
     }
 
@@ -109,36 +86,36 @@ def compute_mbti_detailed(
     confidence: dict[str, int] = {}
 
     for first, second, question_ids in _DIMENSION_GROUPS:
-        votes: Counter = Counter()
+        x_votes = 0
+        y_votes = 0
         for qid in question_ids:
             option_text = by_id.get(qid)
             if option_text:
                 letter = _letter_from_option(option_text)
-                if letter in (first, second):
-                    votes[letter] += 1
+                if letter == first:
+                    x_votes += 1
+                elif letter == second:
+                    y_votes += 1
 
-        total = sum(votes.values())
-        for letter in (first, second):
-            dimensions[letter] = votes.get(letter, 0)
+        dimensions[first] = x_votes
+        dimensions[second] = y_votes
 
-        if not votes:
-            winner = first
-        else:
-            winner = votes.most_common(1)[0][0]
-            if winner not in (first, second):
-                winner = first
-
+        winner = first if x_votes >= y_votes else second
         type_letters.append(winner)
 
-        q_count = len(question_ids)
-        winning_votes = dimensions[winner]
-        confidence[_LABEL[winner]] = round(winning_votes / q_count * 100) if q_count else 0
+        total = x_votes + y_votes
+        if total == 0:
+            percentage = 50
+        else:
+            percentage = round((max(x_votes, y_votes) / total) * 100)
+        
+        confidence[_LABEL[winner]] = percentage
 
     return {
         "type": "".join(type_letters),
         "dimensions": dimensions,
         "confidence": confidence,
-        "total_questions": max(len(question_ids) * 4, 12),
+        "total_questions": 16,
     }
 
 

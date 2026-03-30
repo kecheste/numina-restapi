@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 import pytz
+import sentry_sdk
+from sentry_sdk.integrations.arq import ArqIntegration
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1353,6 +1355,13 @@ async def refine_numerology_blueprint(ctx: dict[str, Any], user_id: int) -> None
 
 async def startup(ctx: dict[str, Any]) -> None:
     """Worker startup: init Redis for cache and rate limiting."""
+    if settings.sentry_dsn:
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            integrations=[ArqIntegration()],
+            traces_sample_rate=1.0,
+            environment=settings.app_env,
+        )
     try:
         await init_redis()
     except Exception as e:

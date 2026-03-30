@@ -611,16 +611,16 @@ async def call_llm_for_core_values(calculated_data: dict) -> dict:
     try:
         from openai import AsyncOpenAI
         client = AsyncOpenAI(api_key=settings.openai_api_key)
+        prompt_content = CORE_VALUES_USER.replace("{primary_value}", str(calculated_data.get("primary_value", "unknown"))) \
+                                        .replace("{secondary_value}", str(calculated_data.get("secondary_value", "unknown"))) \
+                                        .replace("{third_value}", str(calculated_data.get("third_value", "unknown"))) \
+                                        .replace("{scores}", json.dumps(calculated_data.get("scores", {}), indent=2))
+        
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": CORE_VALUES_SYSTEM},
-                {"role": "user", "content": CORE_VALUES_USER.format(
-                    primary_value=calculated_data.get("primary_value", "unknown"),
-                    secondary_value=calculated_data.get("secondary_value", "unknown"),
-                    third_value=calculated_data.get("third_value", "unknown"),
-                    scores=json.dumps(calculated_data.get("scores", {}), indent=2)
-                )},
+                {"role": "user", "content": prompt_content},
             ],
             max_tokens=OUTPUT_MAX_TOKENS,
             temperature=0.7,

@@ -97,125 +97,117 @@ MBTI_TYPE_QUESTIONS: list[QuestionOut] = [
     # --- I / E ---
     QuestionOut(
         id=1,
-        prompt="Where do you usually regain energy?",
+        prompt="After a demanding week, what restores you more?",
         answer_type="single_choice",
-        options=[
-            "Spending quiet time alone (I)",
-            "Being around people or social activity (E)",
-        ],
+        options=["Quiet time alone (I)", "Time with people or activity (E)"],
         required=True,
     ),
     QuestionOut(
         id=2,
-        prompt="In social situations you tend to:",
+        prompt="In group conversations, you usually:",
         answer_type="single_choice",
-        options=[
-            "Listen more and speak selectively (I)",
-            "Speak easily and engage actively (E)",
-        ],
+        options=["Listen first and speak when ready (I)", "Speak easily as ideas form (E)"],
         required=True,
     ),
     QuestionOut(
         id=3,
-        prompt="After a busy day you prefer to:",
+        prompt="When starting something new, you prefer:",
         answer_type="single_choice",
-        options=[
-            "Recharge in solitude (I)",
-            "Do something with others (E)",
-        ],
+        options=["Time to think it through privately first (I)", "Interaction and feedback from others (E)"],
+        required=True,
+    ),
+    QuestionOut(
+        id=4,
+        prompt="In social settings, you usually leave feeling:",
+        answer_type="single_choice",
+        options=["Drained if it goes on too long (I)", "More energized than before (E)"],
         required=True,
     ),
     # --- N / S ---
     QuestionOut(
-        id=4,
-        prompt="When learning something new you prefer:",
-        answer_type="single_choice",
-        options=[
-            "Concepts and possibilities (N)",
-            "Practical details and facts (S)",
-        ],
-        required=True,
-    ),
-    QuestionOut(
         id=5,
-        prompt="When thinking about the future you focus more on:",
+        prompt="When learning, you prefer:",
         answer_type="single_choice",
-        options=[
-            "What could be possible (N)",
-            "What is realistically likely (S)",
-        ],
+        options=["Concepts, patterns, and meaning (N)", "Practical examples and clear facts (S)"],
         required=True,
     ),
     QuestionOut(
         id=6,
-        prompt="You tend to trust more:",
+        prompt="When thinking ahead, you focus more on:",
         answer_type="single_choice",
-        options=[
-            "Patterns and intuition (N)",
-            "Experience and observable facts (S)",
-        ],
+        options=["What could emerge or become possible (N)", "What is realistic based on present evidence (S)"],
         required=True,
     ),
-    # --- F / T ---
     QuestionOut(
         id=7,
-        prompt="When making decisions you usually rely more on:",
+        prompt="When solving problems, you trust more:",
         answer_type="single_choice",
-        options=[
-            "Personal values and empathy (F)",
-            "Logic and objective analysis (T)",
-        ],
+        options=["Insight, pattern-recognition, and future implications (N)", "Experience, evidence, and what has worked before (S)"],
         required=True,
     ),
     QuestionOut(
         id=8,
-        prompt="In conflict situations you prioritize:",
+        prompt="You are more persuaded by:",
         answer_type="single_choice",
-        options=[
-            "Maintaining harmony (F)",
-            "Finding the most rational solution (T)",
-        ],
+        options=["A compelling idea or framework (N)", "Concrete proof and observable details (S)"],
         required=True,
     ),
+    # --- T / F ---
     QuestionOut(
         id=9,
-        prompt="You tend to evaluate situations based on:",
+        prompt="In decisions, you lean first toward:",
         answer_type="single_choice",
-        options=[
-            "How people are affected (F)",
-            "What makes the most sense logically (T)",
-        ],
+        options=["What makes the most sense logically (T)", "What feels most right for people involved (F)"],
         required=True,
     ),
-    # --- J / P ---
     QuestionOut(
         id=10,
-        prompt="You generally prefer your life to feel:",
+        prompt="In conflict, your instinct is to:",
         answer_type="single_choice",
-        options=[
-            "Organized and planned (J)",
-            "Flexible and spontaneous (P)",
-        ],
+        options=["Clarify the facts and resolve the issue directly (T)", "Reduce harm and preserve understanding (F)"],
         required=True,
     ),
     QuestionOut(
         id=11,
-        prompt="When approaching tasks you usually:",
+        prompt="When giving feedback, you naturally prioritize:",
         answer_type="single_choice",
-        options=[
-            "Plan ahead and follow structure (J)",
-            "Adapt as things unfold (P)",
-        ],
+        options=["Accuracy and directness (T)", "Timing and emotional impact (F)"],
         required=True,
     ),
     QuestionOut(
         id=12,
-        prompt="You feel most comfortable when:",
+        prompt="When judging a situation, you rely more on:",
         answer_type="single_choice",
-        options=[
-            "Decisions are settled (J)",
-            "Options remain open (P)",
-        ],
+        options=["Fairness through consistent principles (T)", "Fairness through empathy and context (F)"],
+        required=True,
+    ),
+    # --- J / P ---
+    QuestionOut(
+        id=13,
+        prompt="You feel best when:",
+        answer_type="single_choice",
+        options=["Decisions are settled and the plan is clear (J)", "Options remain open until more is known (P)"],
+        required=True,
+    ),
+    QuestionOut(
+        id=14,
+        prompt="In work or tasks, you usually:",
+        answer_type="single_choice",
+        options=["Structure things early and follow through (J)", "Adapt as the situation unfolds (P)"],
+        required=True,
+    ),
+    QuestionOut(
+        id=15,
+        prompt="Your natural rhythm is more:",
+        answer_type="single_choice",
+        options=["Organized, scheduled, and closing loops (J)", "Flexible, responsive, and keeping room to change (P)"],
+        required=True,
+    ),
+    QuestionOut(
+        id=16,
+        prompt="When plans change suddenly, you usually:",
+        answer_type="single_choice",
+        options=["Feel thrown off and want to re-stabilize quickly (J)", "Adjust relatively easily and improvise (P)"],
         required=True,
     ),
 ]
@@ -226,7 +218,8 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=1,
         prompt="How do you typically relate to others?",
         answer_type="single_choice",
-        options=[
+        options=["helper_wait", "observe_until_called", "lead_immediately", "quiet_support"],
+        option_labels=[
             "I’m a natural helper but often wait to be asked",
             "I prefer observing until I feel called in",
             "I leap in to lead or guide immediately",
@@ -239,7 +232,8 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=2,
         prompt="Which topics spark your deepest curiosity? (Select up to 3)",
         answer_type="multiple_choice",
-        options=[
+        options=["space", "ancient", "science", "mystical", "nature", "energy"],
+        option_labels=[
             "Space, stars, extraterrestrial life",
             "Ancient wisdom and civilizations",
             "Cutting-edge science and technology",
@@ -255,7 +249,8 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=3,
         prompt="When you’re in nature, what resonates most?",
         answer_type="single_choice",
-        options=[
+        options=["earth", "water", "sky", "plants"],
+        option_labels=[
             "The calm grounding earth beneath my feet",
             "The flow of water or breeze",
             "The vast sky and stars above",
@@ -268,7 +263,8 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=4,
         prompt="How would you describe your sense of calling?",
         answer_type="single_choice",
-        options=[
+        options=["heal", "innovate", "teach", "protect"],
+        option_labels=[
             "To heal and comfort others",
             "To build or innovate new systems",
             "To teach and share wisdom",
@@ -281,7 +277,8 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=5,
         prompt="At a gathering you feel most yourself when:",
         answer_type="single_choice",
-        options=[
+        options=["one_on_one", "small_groups", "teach_crowd", "observe_edges"],
+        option_labels=[
             "In deep one-on-one conversations",
             "In small groups exploring ideas",
             "Speaking to or teaching the crowd",
@@ -294,7 +291,8 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=6,
         prompt="When making big decisions you trust:",
         answer_type="single_choice",
-        options=[
+        options=["heart", "logic", "balance"],
+        option_labels=[
             "Emotional intuition",
             "Logical reasoning",
             "A balance of both",
@@ -306,7 +304,8 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=7,
         prompt="Which pace fits you best?",
         answer_type="single_choice",
-        options=[
+        options=["grounded", "free_flowing", "structured", "reflective"],
+        option_labels=[
             "Steady and grounded",
             "Free-flowing and adaptable",
             "Structured and goal-oriented",

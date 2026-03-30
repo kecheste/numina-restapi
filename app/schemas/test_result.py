@@ -23,6 +23,7 @@ class QuestionOut(BaseModel):
     prompt: str
     answer_type: AnswerType
     options: list[str] | None = None
+    option_labels: list[str] | None = None  # human-readable labels when options are keys
     slider_min: int = 0
     slider_max: int = 100
     required: bool = True

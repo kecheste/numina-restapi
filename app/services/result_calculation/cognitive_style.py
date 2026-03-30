@@ -2,115 +2,121 @@ from typing import Any, Dict
 
 def compute_cognitive_style(answers: list[Dict[str, Any]] | Dict[str, Any]) -> Dict[str, Any]:
     """
-    Calculate Cognitive Style (Analytical Empathy) dimensions.
+    Calculate Cognitive Style dimensions.
+
+    Scenario questions (q1-q4):
+    - Each "A" answer adds +0.5 to analytical
+    - Each "B" answer adds +0.5 to empathic
+    - Each "C" answer adds +0.5 to practical
+    - Each "D" answer adds +0.5 to observational
+
+    Likert scales (q5-q12):
+    - analytical: avg(q5, q10) + boost
+    - empathic:   avg(q6, q11) + boost
+    - practical:  q7 + boost
+    - observational: q8 + boost
+    - balanced:   avg(q9, q12)
     """
     if isinstance(answers, dict):
         return answers
 
-    ans_map = {item.get("id") or item.get("question_id"): item.get("answer") for item in (answers or [])}
+    ans_map = {
+        item.get("id") or item.get("question_id"): item.get("answer")
+        for item in (answers or [])
+        if isinstance(item, dict)
+    }
 
-    def get_ans(qid: int) -> Any:
-        return ans_map.get(qid)
+    _scenario_options: dict[int, dict[str, str]] = {
+        1: {
+            "Analyze recent events to deduce the cause": "A",
+            "Ask them directly how they feel": "B",
+            "Offer a practical suggestion": "C",
+            "Sit quietly and observe": "D",
+        },
+        2: {
+            "Research facts and data first": "A",
+            "Consider how people will feel": "B",
+            "Think about what will work best in practice": "C",
+            "Watch how the situation evolves": "D",
+        },
+        3: {
+            "Focus on the logical details": "A",
+            "Notice emotional tone and feelings": "B",
+            "Look for solutions": "C",
+            "Observe patterns and behavior": "D",
+        },
+        4: {
+            "Clarify the logical points": "A",
+            "Try to understand everyone's emotions": "B",
+            "Suggest a workable compromise": "C",
+            "Step back and watch before responding": "D",
+        },
+    }
 
-    def to_float(val: Any) -> float:
-        try: return float(val)
-        except: return 3.0
+    boost = {"analytical": 0, "empathic": 0, "practical": 0, "observational": 0}
+    _slot = {"A": "analytical", "B": "empathic", "C": "practical", "D": "observational"}
 
-    def get_choice_val(qid: int, target: str) -> float:
-        val = get_ans(qid)
-        if isinstance(val, str) and val.strip() == target:
-            return 5.0
-        return 1.0
-
-    # Q1
-    q1_a = get_choice_val(1, "Analyze recent events to deduce the cause")
-    q1_b = get_choice_val(1, "Ask them directly how they feel")
-    q1_c = get_choice_val(1, "Offer a practical suggestion")
-    q1_d = get_choice_val(1, "Sit quietly and observe")
-
-    # Q2
-    q2_a = get_choice_val(2, "Research facts and data first")
-    q2_b = get_choice_val(2, "Consider how people will feel")
-    q2_c = get_choice_val(2, "Think about what will work best in practice")
-    q2_d = get_choice_val(2, "Watch how the situation evolves")
-
-    # Q3
-    q3_a = get_choice_val(3, "Focus on the logical details")
-    q3_b = get_choice_val(3, "Notice emotional tone and feelings")
-    q3_c = get_choice_val(3, "Look for solutions")
-    q3_d = get_choice_val(3, "Observe patterns and behavior")
-
-    # Q4
-    q4_a = get_choice_val(4, "Clarify the logical points")
-    q4_b = get_choice_val(4, "Try to understand everyone's emotions")
-    q4_c = get_choice_val(4, "Suggest a workable compromise")
-    q4_d = get_choice_val(4, "Step back and watch before responding")
+    for qid in [1, 2, 3, 4]:
+        raw = ans_map.get(qid)
+        if not isinstance(raw, str):
+            continue
+        letter = _scenario_options.get(qid, {}).get(raw.strip())
+        if letter and letter in _slot:
+            boost[_slot[letter]] += 1
 
     scale_map = {
         "Strongly Disagree": 1.0,
         "Disagree": 2.0,
         "Neutral": 3.0,
         "Agree": 4.0,
-        "Strongly Agree": 5.0
+        "Strongly Agree": 5.0,
     }
 
-    def get_scale_val(qid: int) -> float:
-        val = get_ans(qid)
+    def get_scale(qid: int) -> float:
+        val = ans_map.get(qid)
         if isinstance(val, str):
             mapped = scale_map.get(val.strip())
             if mapped is not None:
                 return mapped
-        return to_float(val)
-
-    # Scales
-    q5 = get_scale_val(5)
-    q6 = get_scale_val(6)
-    q7 = get_scale_val(7)
-    q8 = get_scale_val(8)
-    q9 = get_scale_val(9)
-    q10 = get_scale_val(10)
-    q11 = get_scale_val(11)
-    q12 = get_scale_val(12)
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return 3.0
 
     def avg(lst: list[float]) -> float:
-        if not lst: return 3.0
-        return sum(lst) / len(lst)
+        return sum(lst) / len(lst) if lst else 3.0
 
-    analytical_avg = avg([q1_a, q2_a, q3_a, q4_a, q5, q10])
-    empathic_avg = avg([q1_b, q2_b, q3_b, q4_b, q6, q11])
-    practical_avg = avg([q1_c, q2_c, q3_c, q4_c, q7])
-    observational_avg = avg([q1_d, q2_d, q3_d, q4_d, q8])
-    balanced_avg = avg([q9, q12])
+    q5, q6, q7, q8, q9, q10, q11, q12 = (get_scale(i) for i in range(5, 13))
 
-    def to_percent(avg_score: float) -> int:
-        # Clamp bounds
-        if avg_score < 1.0: avg_score = 1.0
-        if avg_score > 5.0: avg_score = 5.0
-        return int(round(((avg_score - 1) / 4) * 100))
-
-    scores = {
-        "analytical": to_percent(analytical_avg),
-        "empathic": to_percent(empathic_avg),
-        "practical": to_percent(practical_avg),
-        "observational": to_percent(observational_avg),
-        "balanced": to_percent(balanced_avg)
+    raw_scores = {
+        "analytical":    avg([q5, q10]) + boost["analytical"] * 0.5,
+        "empathic":      avg([q6, q11]) + boost["empathic"] * 0.5,
+        "practical":     q7             + boost["practical"] * 0.5,
+        "observational": q8             + boost["observational"] * 0.5,
+        "balanced":      avg([q9, q12]),
     }
+
+    def to_percent(val: float) -> int:
+        clamped = max(1.0, min(5.0, val))
+        return int(round(((clamped - 1) / 4) * 100))
+
+    scores = {k: to_percent(v) for k, v in raw_scores.items()}
 
     ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     primary = ranked[0][0]
     secondary = ranked[1][0] if len(ranked) > 1 else primary
 
     titles = {
-        "analytical": "Analytical Thinker",
-        "empathic": "Empathic Processor",
-        "practical": "Practical Problem Solver",
+        "analytical":    "Analytical Thinker",
+        "empathic":      "Empathic Processor",
+        "practical":     "Practical Problem Solver",
         "observational": "Observational Strategist",
-        "balanced": "Balanced Integrator"
+        "balanced":      "Balanced Integrator",
     }
 
     return {
         "primary_style": primary,
         "secondary_style": secondary,
         "title": titles.get(primary, "Cognitive Style"),
-        "scores": scores
+        "scores": scores,
     }

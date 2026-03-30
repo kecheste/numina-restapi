@@ -62,6 +62,7 @@ dependencies = [
     "kerykeion (>=5.0.0,<6.0.0)",
     "pyswisseph (>=2.10.3.2)",
     "pytz (>=2026.1.post1,<2027.0)",
+    "sentry-sdk (>=2.56.0,<3.0.0)",
 ]
 
 [build-system]
