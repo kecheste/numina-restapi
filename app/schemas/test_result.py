@@ -62,6 +62,7 @@ class NumerologyResponse(BaseModel):
     life_path: int
     soul_urge: int
     birth_day: int
+    birthday_number: int | None = None
     expression_number: int
     life_path_description: str | None = None
     soul_urge_description: str | None = None

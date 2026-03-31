@@ -99,16 +99,16 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         test_id = int(row.test_id)
         answer_hash_val = answer_hash(row.answers)
 
-        if not await check_rate_limit(user_id):
-            logger.warning("AI rate limit exceeded for user_id=%s", user_id)
-            row.status = "completed"
-            row.score = 8.0
-            row.personality_type = "Rate limit"
-            row.insights = ["Daily AI limit reached. Try again tomorrow."]
-            row.recommendations = []
-            row.narrative = "Your responses have been saved. Daily AI limit reached; check back tomorrow for your full narrative."
-            await session.commit()
-            return
+        # if not await check_rate_limit(user_id):
+        #     logger.warning("AI rate limit exceeded for user_id=%s", user_id)
+        #     row.status = "completed"
+        #     row.score = 8.0
+        #     row.personality_type = "Rate limit"
+        #     row.insights = ["Daily AI limit reached. Try again tomorrow."]
+        #     row.recommendations = []
+        #     row.narrative = "Your responses have been saved. Daily AI limit reached; check back tomorrow for your full narrative."
+        #     await session.commit()
+        #     return
 
         cache_key = cache_key_ai_result(test_id, user_id, answer_hash_val)
         cached = await cache_get(cache_key)
@@ -162,7 +162,7 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
                         user.life_path_number = res_num["life_path"]
                         user.soul_urge_number = res_num["soul_urge"]
                         user.expression_number = res_num["expression_number"]
-                        user.birth_day = res_num["birth_day"]
+                        user.birthday_number = res_num["birth_day"]
             except Exception as e:
                 logger.warning("Numerology compute failed for user_id=%s: %s", user_id, e)
 

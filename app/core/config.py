@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
 
     ai_max_tokens_per_request: int = 1024
-    ai_max_requests_per_user_per_day: int = 20
+    ai_max_requests_per_user_per_day: int = 24
 
     ai_input_max_chars: int = 3500
 

@@ -35,6 +35,7 @@ class User(Base):
     life_path_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     soul_urge_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     expression_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    birthday_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     mbti_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     mbti_descriptor: Mapped[str | None] = mapped_column(String(100), nullable=True)
     strongest_chakra: Mapped[str | None] = mapped_column(String(50), nullable=True)

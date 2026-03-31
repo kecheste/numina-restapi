@@ -278,6 +278,7 @@ async def get_numerology(
             life_path_number=result["life_path"],
             soul_urge_number=result["soul_urge"],
             expression_number=result["expression_number"],
+            birthday_number=result["birth_day"],
         )
     )
     await db.commit()
@@ -296,6 +297,7 @@ async def get_numerology(
         life_path=result["life_path"],
         soul_urge=result["soul_urge"],
         birth_day=result["birth_day"],
+        birthday_number=result["birth_day"],
         expression_number=result["expression_number"],
         life_path_description=lp_desc,
         soul_urge_description=su_desc,
