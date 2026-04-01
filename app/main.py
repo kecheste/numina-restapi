@@ -19,12 +19,12 @@ from app.core.queue import get_arq_pool, close_arq_pool
 from app.db.seed import run_seed
 
 import sentry_sdk
-from sentry_sdk.integrations.fastapi import FastapiIntegration
+from sentry_sdk.integrations.starlette import StarletteIntegration
 
 if settings.sentry_dsn:
     sentry_sdk.init(
         dsn=settings.sentry_dsn,
-        integrations=[FastapiIntegration()],
+        integrations=[StarletteIntegration()],
         traces_sample_rate=1.0,
         environment=settings.app_env,
     )
