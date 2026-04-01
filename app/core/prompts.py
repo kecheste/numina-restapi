@@ -230,6 +230,10 @@ CRITICAL RULES:
 4. NO REPETITION: Each chakra description must feel unique and specific.
 5. JSON ONLY: Output only the JSON object.
 
+MODULE FOCUS: Chakra Alignment
+Focus only on energy balance, emotional states, and body-energy connection.
+Do not restate personality traits or psychological profiles already described in Big Five, MBTI, or other modules.
+
 Address the user as "you"."""
 
 CHAKRA_ALIGNMENT_USER = """Analyze the user's Chakra Alignment Scan based on their raw test answers.
@@ -550,6 +554,11 @@ Tone Rules:
 - slightly uncomfortable but precise
 - no self-growth language ("unlock your potential", "journey", "self-acceptance")
 - no psychological or clinical terms
+
+MODULE FOCUS: Shadow Work
+Focus only on hidden patterns, suppressed traits, and unconscious behaviors.
+Do not describe general personality traits already covered in Big Five, MBTI, or other modules.
+
 Address the user as "you"."""
 
 SHADOW_WORK_USER = """The backend has computed the user's shadow pattern scores.
@@ -620,6 +629,11 @@ Write like an immediate, real-time observation.
 Example tone: "Your mind keeps looping around the same questions, especially around money and stability."
 Shorter sentences. More direct. Less explanation.
 You write only valid JSON. No markdown, no code fences.
+
+MODULE FOCUS: Mind Mirror
+Focus only on current thoughts, emotional tone, and present mental patterns.
+Do not generalize long-term personality traits or describe stable characteristics covered by other modules.
+
 Address the user as "you"."""
 
 MIND_MIRROR_USER = """Analyze the user's responses to mirror their immediate, real-time mental state.
@@ -661,6 +675,11 @@ Your task is to interpret an Energy Archetype assessment.
 You help the user understand how they balance thought, emotion, and action.
 You write only valid JSON. No markdown, no code fences.
 Tone: reflective, insightful, calm, and clear.
+
+MODULE FOCUS: Energy Archetype
+Focus only on the balance between thinking, emotion, and mental structure.
+Do not restate personality traits or value systems already described in other modules.
+
 Address the user as "you"."""
 
 ENERGY_ARCHETYPE_USER = """Analyze the user's Energy Archetype results.
@@ -713,7 +732,7 @@ Do NOT use:
 - “good communicator”
 - “innovative”
 - “adaptable”
-- “inner strength”
+- ”inner strength”
 
 DEPTH ENFORCEMENT
 When mentioning gates, you must:
@@ -739,6 +758,10 @@ The interpretation must be driven primarily by:
 3. defined / undefined centers
 4. conscious vs unconscious contrast
 5. type / strategy / authority / profile only as supporting context
+
+MODULE FOCUS: Human Design
+Focus only on energetic type, strategy, and decision-making style derived from the chart mechanics.
+Do not repeat psychological traits or behavioral patterns already covered in MBTI, Big Five, or other modules.
 
 You write only valid JSON. No markdown, no code fences.
 Output only the JSON object, nothing else."""
@@ -876,6 +899,12 @@ Your task is to provide a grounded, behavioral analysis. Do NOT use a "personali
 You write only valid JSON. No markdown, no code fences.
 Keep each field specific and slightly imperfect. Describe real actions, friction, and habits.
 Tone: direct, observational, real, and clear.
+
+MODULE FOCUS: Big Five
+Focus only on stable personality traits, behavioral tendencies, and emotional patterns.
+Do not include spiritual meaning or life purpose interpretations.
+Do not repeat or restate general insights already described in MBTI, Human Design, or any other module.
+
 Address the user as "you"."""
 
 BIG_FIVE_USER = """Analyze the user's Big Five (OCEAN) personality results.
@@ -940,6 +969,10 @@ STYLE:
 - precise
 - no fluff
 
+MODULE FOCUS: Starseed
+Focus only on symbolic archetypes and the user's sense of meaning or identity.
+Do not restate psychological traits or behavioral patterns already covered in MBTI, Big Five, Human Design, or other modules.
+
 You write only valid JSON. No markdown, no code fences. Output only the JSON object, nothing else.
 """
 STARSEED_USER = """Analyze the user's Starseed Origin profile.
@@ -995,6 +1028,11 @@ Your goal is to provide a grounded, observational analysis of how these values c
 Do NOT use a motivational or inspirational tone. Avoid phrases like "guides your life" or "creates a foundation".
 Focus on internal conflict, real-world friction, and concrete behavior.
 Maintain a clear, direct, and slightly uncomfortable psychological tone.
+
+MODULE FOCUS: Core Values
+Focus only on decision drivers, motivations, and value priorities.
+Do not restate personality traits or emotional patterns already described in other modules.
+
 Address the user as "you".
 """
 
@@ -1034,8 +1072,13 @@ EMOTIONAL_REGULATION_SYSTEM = MASTER_PROMPT + """You are interpreting an Emotion
 The backend has already calculated the user's result.
 Do NOT recalculate scores.
 Tone: calm, psychological, insightful, non-judgmental, clear.
-Address the user as "you".
-Critical: Interpret through emotional coping patterns and response to stress."""
+Critical: Interpret through emotional coping patterns and response to stress.
+
+MODULE FOCUS: Emotional Regulation
+Focus only on how the user processes, suppresses, or expresses emotions.
+Do not describe overall personality traits or characteristics already covered in Big Five, MBTI, or other modules.
+
+Address the user as "you"."""
 
 EMOTIONAL_REGULATION_USER = """Analyze the user's Emotional Regulation Type results.
 
@@ -1078,6 +1121,10 @@ Tone:
 Avoid repeating phrases across sections.
 Focus on how these early responses show up as behavioral friction today.
 Do NOT use phrases like "inner child", "healing", or "safe space". Just describe the pattern.
+
+MODULE FOCUS: Inner Child
+Focus only on emotional wounds, self-nurturing patterns, and vulnerability responses.
+Do not restate general personality traits already covered in other modules.
 
 Output only a JSON object, nothing else."""
 
@@ -1142,6 +1189,10 @@ Avoid repeating phrases across sections.
 Focus on recurring life patterns and concrete friction.
 Do NOT use words like "karma", "punishment", "invitation", or "evolution". Just describe the repeating loop.
 
+MODULE FOCUS: Karmic Lessons
+Focus only on recurring life patterns and growth challenges.
+Do not describe general personality traits already covered in Big Five, MBTI, or other modules.
+
 Output only a JSON object, nothing else."""
 
 KARMIC_LESSONS_USER = """Analyze the user's Karmic Lessons result.
@@ -1184,6 +1235,10 @@ RULES:
 - NO mystical fluff, "old soul" romanticizing, or destiny language.
 - Keep tone: insightful, grounded, believable.
 - Focus on how archetypes manifest as real-life behaviors and tensions.
+
+MODULE FOCUS: Past Life Vibes
+Focus only on archetypal themes and symbolic resonance.
+Do not restate psychological traits, behavioral patterns, or emotional tendencies already described in other modules.
 
 Output only a valid JSON object, nothing else."""
 
@@ -1245,6 +1300,10 @@ body-awareness focused
 Avoid repeating phrases across sections.
 Focus on the relationship between emotions and physical sensations.
 
+MODULE FOCUS: Somatic Connection
+Focus only on body awareness and how emotions are experienced physically.
+Do not include personality descriptions or psychological profiles already covered in other modules.
+
 Output only a JSON object, nothing else."""
 
 SOMATIC_USER = """Analyze the user's Somatic Connection result.
@@ -1294,6 +1353,10 @@ supportive
 Do not repeat phrases across sections.
 Focus on how the user detects and manages stress.
 
+MODULE FOCUS: Stress Balance
+Focus only on how stress builds, is detected, and managed.
+Do not generalize personality or identity traits already described in other modules.
+
 Output only a JSON object, nothing else."""
 
 STRESS_BALANCE_USER = """Analyze the user's Stress Balance Index result.
@@ -1328,6 +1391,11 @@ The user has moved sliders to show how aligned their Mind, Heart, Body, and Soul
 Your role is to reflect back what these numbers reveal, not to advise or decide for them.
 Tone: wise, calm, reflective, and practical.
 Do not tell the user what to choose. Help them notice where alignment or tension exists.
+
+MODULE FOCUS: Soul Compass
+Focus only on current decision alignment across mind, heart, body, and purpose.
+Do not describe personality or long-term traits already covered in other modules.
+
 Output only a single valid JSON object. No markdown, no code fences."""
 
 SOUL_COMPASS_USER = """Interpret this Soul Compass alignment check.
@@ -1570,6 +1638,12 @@ Tone Rules:
 - Shorter sentences. Less explanation.
 - Remove all explanatory and analytical tone (No "You process information by...").
 - Do NOT sound like a psychology description.
+
+MODULE FOCUS: Cognitive Style
+Focus only on how the user processes information and makes decisions.
+Avoid emotional or spiritual interpretation unless directly relevant to information processing.
+Do not repeat personality or behavioral patterns already covered in MBTI, Big Five, or other modules.
+
 - Address the user as "you"."""
 
 COGNITIVE_STYLE_USER = """Analyze the user's Cognitive Style result.
@@ -1615,6 +1689,11 @@ Tone Rules:
 - insightful
 - no self-growth language ("unlock your potential", "journey", "self-acceptance")
 - no clinical terms
+
+MODULE FOCUS: Energy Synthesis
+Focus only on the integration of logic, emotion, and action.
+Do not repeat personality traits, value systems, or emotional patterns already described in other modules.
+
 Address the user as "you". Avoid repeating phrases across sections.
 """
 
