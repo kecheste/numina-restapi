@@ -17,13 +17,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate Environment
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Verify Fly Secrets Configured
         run: |
-          test -n "$DATABASE_URL" || (echo "DATABASE_URL is not set" && exit 1)
-          test -n "$OPENAI_API_KEY" || (echo "OPENAI_API_KEY is not set" && exit 1)
+          echo "Checking Fly.io secrets for num-api..."
+          SECRETS=$(flyctl secrets list -a num-api | awk '{print $1}')
+          
+          echo "$SECRETS" | grep -q "^DATABASE_URL$" || (echo "DATABASE_URL is not set in Fly.io secrets!" && exit 1)
+          echo "$SECRETS" | grep -q "^OPENAI_API_KEY$" || (echo "OPENAI_API_KEY is not set in Fly.io secrets!" && exit 1)
+          
+          echo "Core secrets are successfully configured in Fly.io!"
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Install poetry
         run: pipx install poetry
@@ -44,28 +50,18 @@ jobs:
 
       - name: Check DB Migrations
         run: poetry run alembic upgrade head
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Startup Check API
         run: |
           poetry run uvicorn app.main:app --host 0.0.0.0 --port 8000 &
           sleep 5
           curl -f http://localhost:8000/api/v1/health || exit 1
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
 
       - name: Startup Check Worker
         run: |
           poetry run python -m app.worker.run_worker &
           sleep 5
           ps aux | grep run_worker || exit 1
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          REDIS_URL: ${{ secrets.REDIS_URL }}
 
   deploy-api:
     name: Deploy API
