@@ -25,6 +25,7 @@ from app.db.models.test_result import TestResult
 from app.db.models.user import User as UserModel
 from app.db.session import AsyncSessionLocal
 
+from app.core.config import settings
 from app.services.result_calculation.astrology import compute_astrology
 from app.services.result_calculation.numerology import compute_numerology
 from app.services.result_calculation.mbti import compute_mbti_detailed
