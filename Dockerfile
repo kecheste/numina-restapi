@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir poetry==2.0.1 \
 
 COPY pyproject.toml poetry.lock* ./
 
-RUN poetry install --no-interaction --no-root --without dev
+RUN poetry lock && poetry install --no-interaction --no-root --without dev
 
 COPY app ./app
 COPY alembic ./alembic
