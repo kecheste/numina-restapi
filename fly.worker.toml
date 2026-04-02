@@ -1,6 +1,6 @@
 # Numina Arq worker app
 
-app = "numina-worker"
+app = "num-worker"
 
 [build]
   dockerfile = "Dockerfile"
