@@ -14,6 +14,30 @@ jobs:
     name: Test and Verify
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: numina
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: numina_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://numina:password@localhost:5432/numina_test
+      REDIS_URL: redis://localhost:6379/0
+      OPENAI_API_KEY: sk-dummy-key-for-testing
+
     steps:
       - uses: actions/checkout@v4
 
