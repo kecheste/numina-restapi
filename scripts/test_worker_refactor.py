@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 from sqlalchemy import select
 from app.db.session import AsyncSessionLocal

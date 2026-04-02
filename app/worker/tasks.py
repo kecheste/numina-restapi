@@ -1,6 +1,5 @@
 """Arq tasks: AI refinement and other async jobs."""
 
-import json
 import logging
 from datetime import datetime, timezone
 from typing import Any
@@ -10,7 +9,6 @@ import sentry_sdk
 from sentry_sdk.integrations.arq import ArqIntegration
 
 from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis import (
     AI_RESULT_CACHE_TTL,
@@ -30,7 +28,6 @@ from app.services.result_calculation.astrology import compute_astrology
 from app.services.result_calculation.numerology import compute_numerology
 from app.services.result_calculation.mbti import compute_mbti_detailed
 from app.services.result_calculation.life_path_number import compute_life_path_number
-from app.services.result_calculation.soul_urge import compute_soul_urge
 from app.services.result_calculation.human_design import calculate_human_design
 from app.services.result_calculation.inner_child import calculate_inner_child
 from app.services.result_calculation.karmic_lessons import calculate_karmic_lessons
@@ -74,12 +71,9 @@ from .helpers import (
     TEXT_TEST_COMPUTE_STUBS,
     answer_hash,
     call_openai_for_insights,
-    check_rate_limit,
-    extract_strongest_chakra_label,
     format_answers_for_ai,
     generate_synthesis_for_user,
     get_user_context,
-    zodiac_from_date,
 )
 
 logger = logging.getLogger(__name__)
@@ -620,7 +614,6 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         if test_id == 7:
             mbti_result = compute_mbti_detailed(row.answers)
             mbti_type = mbti_result.get("type") or ""
-            dimensions = mbti_result.get("dimensions", {})
             confidence = mbti_result.get("confidence", {})
 
             row.personality_type = mbti_type
@@ -975,8 +968,10 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             row.narrative = llm_result.get("currentClimate") or ""
             
             # Ensure insights and recommendations are lists (fixing potential string issues)
-            if isinstance(row.insights, str): row.insights = [row.insights]
-            if isinstance(row.recommendations, str): row.recommendations = [row.recommendations]
+            if isinstance(row.insights, str):
+                row.insights = [row.insights]
+            if isinstance(row.recommendations, str):
+                row.recommendations = [row.recommendations]
 
             out = {
                 "score": row.score,
@@ -1118,8 +1113,10 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
             row.extracted_json = extracted
 
             # Ensure insights and recommendations are lists
-            if isinstance(row.insights, str): row.insights = [row.insights]
-            if isinstance(row.recommendations, str): row.recommendations = [row.recommendations]
+            if isinstance(row.insights, str):
+                row.insights = [row.insights]
+            if isinstance(row.recommendations, str):
+                row.recommendations = [row.recommendations]
 
             out = {
                 "score": row.score,

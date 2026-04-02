@@ -1,3 +1,11 @@
+from alembic import context
+from sqlalchemy.engine import Connection
+from sqlalchemy.pool import NullPool
+from sqlalchemy.ext.asyncio import create_async_engine
+
+from app.core.config import get_database_url_and_connect_args
+from app.db.base import Base
+
 import asyncio
 import os
 from pathlib import Path
@@ -12,15 +20,6 @@ if _env_file.exists():
             key, value = key.strip(), value.strip().strip("'\"")
             if key and key not in os.environ:
                 os.environ[key] = value
-
-from alembic import context
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.pool import NullPool
-
-from app.core.config import get_database_url_and_connect_args, settings
-from app.db.base import Base
-from app.db.models import User, TestResult
 
 config = context.config
 _db_url, _connect_args = get_database_url_and_connect_args()

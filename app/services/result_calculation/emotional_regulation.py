@@ -1,5 +1,4 @@
 from typing import Any
-from collections import Counter
 
 def _map_text_to_score(val: Any) -> float:
     if val is None:

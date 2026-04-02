@@ -4,8 +4,6 @@ import re
 from collections import Counter
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from app.core.config import settings
 from app.core.prompts import (
     ASTROLOGY_BLUEPRINT_JSON_KEYS,
@@ -23,7 +21,6 @@ from app.core.prompts import (
     ENERGY_ARCHETYPE_JSON_KEYS,
     ENERGY_ARCHETYPE_SYSTEM,
     ENERGY_ARCHETYPE_USER,
-    NUMEROLOGY_BLUEPRINT_JSON_KEYS,
     NUMEROLOGY_BLUEPRINT_USER,
     NUMEROLOGY_NARRATIVE_JSON_KEYS,
     NUMEROLOGY_NARRATIVE_SYSTEM,
@@ -79,14 +76,13 @@ from app.core.prompts import (
     SOUL_URGE_JSON_KEYS,
 )
 
-logger = logging.getLogger(__name__)
+from app.constants.human_design_maps import GATE_MEANING_MAP, GATE_PRIORITY  # noqa: E402
 
-from app.constants.human_design_maps import GATE_MEANING_MAP, GATE_PRIORITY
+logger = logging.getLogger(__name__)
 
 INPUT_MAX_CHARS = getattr(settings, "ai_input_max_chars", 3500)
 TEST_RESULT_PROMPT_MAX_CHARS = 8000
 OUTPUT_MAX_TOKENS = getattr(settings, "ai_result_output_max_tokens", 1000)
-
 
 def _cap_input(text: str, max_chars: int | None = None) -> str:
     actual_max = int(max_chars or INPUT_MAX_CHARS)
@@ -112,9 +108,11 @@ def _extract_json_from_response(raw: str) -> dict[str, Any] | None:
 
 
 def get_case_insensitive_val(o: dict, k: str):
-    if k in o: return o[k]
+    if k in o:
+        return o[k]
     snake = re.sub(r'(?<!^)(?=[A-Z])', '_', k).lower()
-    if snake in o: return o[snake]
+    if snake in o:
+        return o[snake]
     def normalize(s: str) -> str:
         return s.lower().replace("_", "").replace(" ", "").replace("-", "")
     
@@ -178,10 +176,14 @@ def _validate_chakra_alignment_result(obj: dict[str, Any]) -> dict[str, Any]:
     """Validate and normalize chakra test result: standard keys + strongestChakra + needsRebalancing + statusSummary + chakras (7 items) + synchronicities."""
     base = _validate_and_filter(obj, TEST_RESULT_JSON_KEYS | frozenset({"strongestChakra", "needsRebalancing", "statusSummary"}))
     
-    if not base.get("statusSummary"): base["statusSummary"] = str(get_case_insensitive_val(obj, "statusSummary") or base.get("summary") or "").strip()
-    if not base["statusSummary"]: base["statusSummary"] = "Your chakra balance reflects your current energy flow."
-    if not base.get("strongestChakra"): base["strongestChakra"] = str(get_case_insensitive_val(obj, "strongestChakra") or "").strip()
-    if not base.get("needsRebalancing"): base["needsRebalancing"] = str(get_case_insensitive_val(obj, "needsRebalancing") or "").strip()
+    if not base.get("statusSummary"):
+        base["statusSummary"] = str(get_case_insensitive_val(obj, "statusSummary") or base.get("summary") or "").strip()
+    if not base["statusSummary"]:
+        base["statusSummary"] = "Your chakra balance reflects your current energy flow."
+    if not base.get("strongestChakra"):
+        base["strongestChakra"] = str(get_case_insensitive_val(obj, "strongestChakra") or "").strip()
+    if not base.get("needsRebalancing"):
+        base["needsRebalancing"] = str(get_case_insensitive_val(obj, "needsRebalancing") or "").strip()
 
     synch = get_case_insensitive_val(obj, "synchronicities")
     if isinstance(synch, list) and synch:
@@ -196,7 +198,8 @@ def _validate_chakra_alignment_result(obj: dict[str, Any]) -> dict[str, Any]:
         ]
 
     raw_chakras = get_case_insensitive_val(obj, "chakras")
-    if not isinstance(raw_chakras, list): raw_chakras = []
+    if not isinstance(raw_chakras, list):
+        raw_chakras = []
     
     by_id: dict[str, dict[str, Any]] = {}
     for c in raw_chakras:
@@ -206,8 +209,10 @@ def _validate_chakra_alignment_result(obj: dict[str, Any]) -> dict[str, Any]:
         if not cid:
             continue
         # Map IDs like "solar plexus" or "solar-plexus" to "solarPlexus"
-        if "solar" in cid: cid = "solarPlexus"
-        if "third" in cid or "eye" in cid: cid = "thirdEye"
+        if "solar" in cid:
+            cid = "solarPlexus"
+        if "third" in cid or "eye" in cid:
+            cid = "thirdEye"
 
         if cid in CHAKRA_IDS:
             by_id[cid] = {
@@ -414,8 +419,8 @@ def _build_human_design_traits(hd_data: dict[str, Any]) -> dict[str, Any]:
 
     seen_p: set[str] = set()
     personality_traits: list[str] = []
-    for _, label, gate in sorted(
-        [(s, l, g) for s, l, g in scored if l.startswith("personality_")],
+    for _, lbl, gate in sorted(
+        [(s, lbl, g) for s, lbl, g in scored if lbl.startswith("personality_")],
         key=lambda x: x[0], reverse=True
     ):
         meaning = GATE_MEANING_MAP[gate].capitalize()
@@ -427,8 +432,8 @@ def _build_human_design_traits(hd_data: dict[str, Any]) -> dict[str, Any]:
 
     seen_d: set[str] = set()
     design_traits: list[str] = []
-    for _, label, gate in sorted(
-        [(s, l, g) for s, l, g in scored if l.startswith("design_")],
+    for _, lbl, gate in sorted(
+        [(s, lbl, g) for s, lbl, g in scored if lbl.startswith("design_")],
         key=lambda x: x[0], reverse=True
     ):
         meaning = GATE_MEANING_MAP[gate].capitalize()
@@ -1649,7 +1654,7 @@ async def call_llm_for_past_life_vibes(computed_input: dict[str, Any]) -> dict[s
         res = _validate_and_filter(data, PAST_LIFE_VIBES_JSON_KEYS)
         res["extracted_json"] = computed_input
         return res
-    except Exception as e:
+    except Exception:
         return {
             "title": computed_input.get("title", "Past Life Vibes"),
             "soulNarrative": "Your result reveals a unique archetypal blueprint.",
@@ -1761,7 +1766,6 @@ async def call_llm_for_chakra_alignment(formatted_answers: str, user_context: st
     if not settings.openai_api_key:
         return _fallback_chakra_alignment_json()
 
-    from app.core.prompts import CHAKRA_ALIGNMENT_SYSTEM, CHAKRA_ALIGNMENT_USER
 
     user_content = CHAKRA_ALIGNMENT_USER.format(
         input_json=formatted_answers,

@@ -14,7 +14,6 @@ The letter with most votes per dimension wins; ties default to the first of the 
 """
 
 import re
-from collections import Counter
 from typing import Any
 
 _QUESTION_DIMENSION: dict[int, tuple[str, str]] = {

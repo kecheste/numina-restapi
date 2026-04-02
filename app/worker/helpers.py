@@ -6,7 +6,7 @@ import logging
 from datetime import date
 from typing import Any, Callable
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.synthesis import (
@@ -15,19 +15,10 @@ from app.constants.synthesis import (
 )
 from app.core.config import settings
 from app.core.redis import (
-    AI_RESULT_CACHE_TTL,
-    cache_get,
-    cache_key_ai_result,
-    cache_set,
     get_redis,
 )
 from app.db.models.test_result import TestResult
 from app.db.models.user import User as UserModel
-from app.db.models.user_synthesis import UserSynthesis
-from app.services.llm import (
-    call_llm_for_synthesis,
-    call_llm_for_test_result,
-)
 from app.services.result_calculation.life_path_number import compute_life_path_number
 from app.services.result_calculation.shadow_work import compute_shadow_work
 from app.services.result_calculation.soul_compass import compute_soul_compass
@@ -72,11 +63,16 @@ def compute_mind_mirror(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
             continue
         qid = item.get("id") or item.get("question_id")
         ans = item.get("answer")
-        if qid == 1: out["thought_concern"] = ans
-        elif qid == 2: out["emotional_state"] = ans
-        elif qid == 3: out["reflective_situation"] = ans
-        elif qid == 4: out["imbalance_area"] = ans
-        elif qid == 5: out["intention"] = ans
+        if qid == 1:
+            out["thought_concern"] = ans
+        elif qid == 2:
+            out["emotional_state"] = ans
+        elif qid == 3:
+            out["reflective_situation"] = ans
+        elif qid == 4:
+            out["imbalance_area"] = ans
+        elif qid == 5:
+            out["intention"] = ans
     
     return out
 
@@ -680,7 +676,7 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
             parts.append({"test": r.test_title, "data": blob})
         elif blob:
             parts.append({"test": r.test_title, "data": blob})
-    input_str = json.dumps(parts, indent=0)
+    json.dumps(parts, indent=0)
     if count >= SYNTHESIS_FULL_MIN_TESTS:
         # full_json = await call_llm_for_synthesis(input_str, count, full=True)
         # await session.execute(delete(UserSynthesis).where(

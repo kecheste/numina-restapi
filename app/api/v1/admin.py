@@ -253,8 +253,8 @@ async def get_subscription_stats(
     premium_r = await db.execute(select(func.count(UserModel.id)).where(UserModel.is_premium))
     active_subs = premium_r.scalar() or 0
     total_r = await db.execute(select(func.count(UserModel.id)))
-    total = total_r.scalar() or 0
-    free_r = await db.execute(select(func.count(UserModel.id)).where(UserModel.is_premium == False))
+    total_r.scalar() or 0
+    free_r = await db.execute(select(func.count(UserModel.id)).where(not UserModel.is_premium))
     free_users = free_r.scalar() or 0
     plan_breakdown = [
         {"name": "Free", "users": free_users, "revenue": 0.0},
@@ -275,7 +275,7 @@ async def get_tests_analytics(
     db: AsyncSession = Depends(get_db),
 ) -> AdminTestsAnalyticsResponse:
     """Tests analytics: per-test taken/completed, categories."""
-    tests_by_id = {t["id"]: dict(t) for t in TESTS}
+    {t["id"]: dict(t) for t in TESTS}
     r = await db.execute(
         select(TestResult.test_id, TestResult.status, func.count(TestResult.id).label("cnt"))
         .group_by(TestResult.test_id, TestResult.status)

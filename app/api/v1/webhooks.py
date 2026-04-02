@@ -1,7 +1,6 @@
 """Stripe webhook: update user subscription status from Stripe events. Uses raw body for signature verification."""
 
 import logging
-from typing import Any
 
 from fastapi import APIRouter, Request, Response
 from sqlalchemy import select

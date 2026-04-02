@@ -29,7 +29,6 @@ from app.schemas.test_result import (
     NumerologyBlueprintResponse,
     NumerologyResponse,
     QuestionOut,
-    SoulCompassResponse,
     SoulUrgeResponse,
     SubmitTestRequest,
     SubmitTestResponse,
