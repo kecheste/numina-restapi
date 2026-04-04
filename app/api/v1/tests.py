@@ -1,6 +1,9 @@
 """Tests and test results API. Submit creates a result and enqueues AI refinement job."""
 
-from fastapi import APIRouter, Depends, Query
+import json
+import time
+import asyncio
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,14 +12,14 @@ from app.db.session import AsyncSessionLocal
 
 from app.constants.questions import QUESTIONS_BY_TEST_ID
 from app.constants.tests import TESTS, get_test_id
-from app.core.dependencies import get_current_active_user, get_db, get_optional_current_user
+from app.core.dependencies import get_current_active_user, get_db, get_optional_current_user, get_current_user_ws
 from app.core.exceptions import conflict, not_found
 from app.core.queue import (
     enqueue_refine_test_result,
     enqueue_astrology_blueprint,
     enqueue_numerology_blueprint,
 )
-from app.core.redis import cache_get, cache_set, cache_key_test_list, TEST_LIST_CACHE_TTL
+from app.core.redis import cache_get, cache_set, cache_key_test_list, TEST_LIST_CACHE_TTL, get_redis
 from app.db.models.user import User as UserModel
 from app.db.models.test_result import TestResult
 from app.schemas.test_result import (
@@ -661,3 +664,85 @@ async def list_questions(
     if existing.scalar_one_or_none() is not None:
         raise conflict("You have already taken this test.")
     return QUESTIONS_BY_TEST_ID.get(test_id, [])
+
+@router.websocket("/tests/ws/updates")
+async def websocket_updates(
+    websocket: WebSocket,
+    user: UserModel = Depends(get_current_user_ws),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    WebSocket endpoint for real-time task updates.
+    Uses 'token' Query parameter for authentication via get_current_user_ws.
+    """
+    await websocket.accept()
+    
+    redis = get_redis()
+    if not redis:
+        try:
+            await websocket.send_json({"type": "error", "message": "Redis unavailable"})
+            await websocket.close(code=1011)
+        except Exception:
+            pass
+        return
+
+    channel_name = f"user_updates:{user.id}"
+    pubsub = redis.pubsub()
+    await pubsub.subscribe(channel_name)
+    last_heartbeat = time.time()
+
+    try:
+        # Check standard TestResult pending statuses
+        q = select(TestResult).where(
+            TestResult.user_id == user.id,
+            TestResult.status == "pending_ai"
+        )
+        res = await db.execute(q)
+        pending_rows = res.scalars().all()
+        for r in pending_rows:
+            await websocket.send_json({
+                "type": "TestResult",
+                "data": {"result_id": r.id, "status": "pending_ai"}
+            })
+
+        # Check blueprints in User model
+        if user.astrology_blueprint:
+            await websocket.send_json({"type": "AstrologyBlueprint", "data": {"status": "completed"}})
+        if user.numerology_blueprint:
+            await websocket.send_json({"type": "NumerologyBlueprint", "data": {"status": "completed"}})
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"Sync error for user {user.id}: {e}")
+
+    try:
+        while True:
+            # Check for messages from Redis. Short timeout to allow heartbeats.
+            message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=0.1)
+            
+            if message:
+                try:
+                    data = json.loads(message["data"])
+                    await websocket.send_json(data)
+                except Exception:
+                    pass
+            
+            # Keep-alive heartbeat every 30 seconds
+            now = time.time()
+            if now - last_heartbeat > 30:
+                try:
+                    await websocket.send_json({"type": "heartbeat"})
+                    last_heartbeat = now
+                except Exception:
+                    break
+                    
+            # Important: Yield control to ensure other tasks can run
+            await asyncio.sleep(0.01)
+            
+    except WebSocketDisconnect:
+        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error(f"WebSocket error for user {user.id}: {e}")
+    finally:
+        await pubsub.unsubscribe(channel_name)
+        await pubsub.close()

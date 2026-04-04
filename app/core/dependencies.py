@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator
 
-from fastapi import Depends
+from fastapi import Depends, Query, WebSocketException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -94,3 +94,36 @@ def require_roles(*allowed_roles: str):
         return user
 
     return _require_role
+
+async def get_current_user_ws(
+    db: AsyncSession = Depends(get_db),
+    token: str = Query(...),
+) -> UserModel:
+    """
+    Standard WebSocket authentication via the 'token' query parameter.
+    Simplest and most robust for production environments.
+    """
+    try:
+        payload = decode_access_token(token)
+        sub = payload.get("sub")
+        if not sub:
+            raise WebSocketException(
+                code=status.WS_1008_POLICY_VIOLATION, 
+                reason="Invalid token payload"
+            )
+        user_id = int(sub)
+    except (InvalidTokenError, TypeError, ValueError):
+        raise WebSocketException(
+            code=status.WS_1008_POLICY_VIOLATION, 
+            reason="Authentication failed"
+        )
+
+    result = await db.execute(select(UserModel).where(UserModel.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise WebSocketException(
+            code=status.WS_1008_POLICY_VIOLATION, 
+            reason="User not active"
+        )
+        
+    return user
