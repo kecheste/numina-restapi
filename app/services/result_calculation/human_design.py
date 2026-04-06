@@ -31,8 +31,8 @@ GATE_ORDER: list[int] = [
     26, 11, 10, 58, 38, 54, 61, 60,
 ]
 
-# Gate 41 begins at Aquarius 0° = 300° tropical longitude.
-WHEEL_START_LON: float = 300.0
+# Gate 41 begins at Aquarius 2°00'00" = 302.0° tropical longitude.
+WHEEL_START_LON: float = 302.0
 
 # 9 energy centers and their member gates
 CENTERS: dict[str, list[int]] = {
@@ -204,11 +204,13 @@ def longitude_to_gate_and_line(lon: float) -> tuple[int, int]:
     """
     lon = lon % 360.0
     # Offset from wheel start, wrapped to [0, 360)
-    offset = (lon - WHEEL_START_LON) % 360.0
-    idx    = int(offset / GATE_SIZE)
+    offset = (lon - WHEEL_START_LON + 360.0) % 360.0
+    idx    = int(offset / GATE_SIZE) % 64
     gate   = GATE_ORDER[idx]
     pos_in_gate = offset - idx * GATE_SIZE
-    line   = min(int(pos_in_gate / (GATE_SIZE / 6.0)) + 1, 6)
+    line = int(pos_in_gate / (GATE_SIZE / 6.0)) + 1
+    if line > 6:
+        line = 6
     return gate, line
 
 
