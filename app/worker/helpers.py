@@ -1089,7 +1089,11 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
             ctx_parts = []
             if user.mbti_type: ctx_parts.append(f"MBTI: {user.mbti_type}")
             if user.birth_year and user.birth_month and user.birth_day:
-                lp = compute_life_path_number(user.birth_year, user.birth_month, user.birth_day)
+                lp = compute_life_path_number(
+                    birth_year=user.birth_year,
+                    birth_month=user.birth_month,
+                    birth_day=user.birth_day
+                )
                 if lp: ctx_parts.append(f"Life Path: {lp.get('lifePath')}")
             if user.sun_sign: ctx_parts.append(f"Sun: {user.sun_sign}")
             if user.moon_sign: ctx_parts.append(f"Moon: {user.moon_sign}")

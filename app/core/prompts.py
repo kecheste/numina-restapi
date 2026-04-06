@@ -1639,79 +1639,58 @@ TRANSITS_JSON_KEYS = frozenset({
 })
 
 MBTI_SYSTEM = MASTER_PROMPT + """You are generating an MBTI-based personality analysis.
+The backend has already computed the user's type and dimension intensities.
+Do NOT recalculate or change the type.
 
-CORE RULES
+CORE RULES:
+1. USE DIMENSION INTENSITY:
+   - 90–100% = dominant/rigid tendency
+   - 60–75% = flexible / situational
+   Example: 100% Introversion means a profound need for solitude; 67% Thinking means logic is used but often softened by values.
 
-1. USE DIMENSION INTENSITY
-90–100% = rigid tendency
-60–75% = flexible / situational
-Example:
-- 100% Introversion → strong need for internal processing, drains quickly from interaction
-- 67% Thinking → uses logic but still influenced by emotion
-This MUST change the interpretation.
+2. COGNITIVE FUNCTIONS:
+   Explain how the user's core functions (e.g., Ni, Te, Fi, Se for INTJ) interact in REAL behavior. Use the names of the functions explicitly but keep the explanation grounded in daily action.
 
-2. USE COGNITIVE FUNCTIONS (MANDATORY)
-You MUST explain how the core functions (e.g., Si, Te, Fi, Ne for ISTJ) interact in REAL behavior. Not abstractly.
+3. INTERNAL FRICTION:
+   Identify one specific creative or behavioral tension within this type (e.g., the J/P split if scores are moderate, or the conflict between the dominant and inferior functions).
 
-3. SHOW INTERNAL CONFLICT
-At least one mandatory internal conflict (e.g., structure vs unpredictability, logic vs personal values).
-
-4. NO GENERIC MBTI TEXT
-Do NOT write: “organized”, “practical”, “reliable”, “innovative”.
-Instead: describe decisions, reactions, and thinking patterns.
-
-5. CONNECT SCORES + FUNCTIONS
-Example: High Judging + Si → strong need for predictability. But lower Thinking → may hesitate when logic conflicts with values.
-
-6. MAKE IT FEEL PERSONAL
-It should feel like: “this explains how I operate”, not “this describes my type”.
-
-7. NO SPIRITUAL OR MOTIVATIONAL FLUFF
-Avoid phrases like “trust the process” or “embrace your journey”.
+4. NO GENERIC TEXT:
+   Avoid words like "organized", "practical", "innovative". Describe the *process* of how they organize or innovate.
 
 STYLE:
-- precise
-- psychological
-- grounded
-- sharp
-- no fluff
+- concise and reflective
+- psychologically sharp
+- grounded in observable behavior
+- no motivational or spiritual fluff
 
-You write only valid JSON. No markdown, no code fences. Output only the JSON object, nothing else.
+MODULE FOCUS: MBTI Personality
+Focus only on cognitive processing, decision-making, and social energy orientation.
+Do not restate traits covered in Big Five, Core Values, or astrological modules.
+
+Output only a valid JSON object. No markdown, no fences.
 """
 
-MBTI_USER = """Analyze the user's MBTI Type and dimension scores.
+MBTI_USER = """Analyze the user's MBTI Type and dimension intensities.
 
-INPUT
+INPUT:
 - MBTI Type: {mbti_type}
-- Dimension scores:
+- Dimension Intensity:
 {confidence_lines}
 
-WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
-
-- "title": string, KEEP AS: "Your Personality Type"
-
-- "overview": string, 2 paragraphs separated by \\n\\n. Paragraph 1: How this type processes reality through its core functions. Paragraph 2: How the specific dimension scores modify this behavior.
-
-- "coreTraits": array of exactly 3 short sharp behavioral trait chips. Derived from cognitive patterns.
-
-- "strengths": array of exactly 3 short phrases. From real cognitive advantages.
-- "challenges": array of exactly 3 short phrases. From real blind spots.
-
-- "cognitiveStyle": string, 2-3 paragraphs separated by \\n\\n. Paragraph 1: How you process information (Si/Ne or Ni/Se etc.). Paragraph 2: How you make decisions (Te/Fi or Fe/Ti). Paragraph 3: Where friction appears in real life.
-
-- "tryThis": array of exactly 3 practical behavioral adjustments.
-- "avoidThis": array of 2-3 real traps based on the type's rigidity.
-
-FINAL CHECK BEFORE ANSWERING:
-- Does this use the scores intensity?
-- Does this explain thinking patterns, not just traits?
-- Is there real tension/conflict?
-- Could this be copied for another person of the same type? → if yes, rewrite.
+WRITE IN THIS EXACT STRUCTURE (Return exactly one JSON object):
+- "title": string, KEEP AS: "Your Personality Pattern".
+- "overview": string, 2-3 short, punchy paragraphs. (P1: How the type processes reality through its dominant functions. P2: How the dimension intensities modify this specific user's expression).
+- "coreTraits": array of exactly 3 descriptive behavioral chips (derived from cognitive patterns).
+- "strengths": array of 3 specific cognitive advantages.
+- "challenges": array of 3 real blind spots or friction points.
+- "summary": string, 2 paragraphs. (P1: The primary internal tension. P2: A reflective insight on their natural rhythm).
+- "tryThis": array of 3 practical, directive actions.
+- "avoidThis": array of 2 repeating behavioral traps.
 """
 
 MBTI_JSON_KEYS = frozenset({
     "title", "overview", "coreTraits", "strengths", "challenges",
-    "cognitiveStyle", "tryThis", "avoidThis"
+    "summary", "tryThis", "avoidThis"
 })
 
 
