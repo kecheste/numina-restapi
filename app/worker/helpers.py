@@ -1087,19 +1087,26 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
         user = user_result.scalar_one_or_none()
         if user:
             ctx_parts = []
-            if user.mbti_type: ctx_parts.append(f"MBTI: {user.mbti_type}")
+            if user.mbti_type:
+                ctx_parts.append(f"MBTI: {user.mbti_type}")
             if user.birth_year and user.birth_month and user.birth_day:
                 lp = compute_life_path_number(
                     birth_year=user.birth_year,
                     birth_month=user.birth_month,
                     birth_day=user.birth_day
                 )
-                if lp: ctx_parts.append(f"Life Path: {lp.get('lifePath')}")
-            if user.sun_sign: ctx_parts.append(f"Sun: {user.sun_sign}")
-            if user.moon_sign: ctx_parts.append(f"Moon: {user.moon_sign}")
-            if user.rising_sign: ctx_parts.append(f"Rising: {user.rising_sign}")
-            if user.life_path_number: ctx_parts.append(f"Life Path Number: {user.life_path_number}")
-            if user.strongest_chakra: ctx_parts.append(f"Dominant Chakra: {user.strongest_chakra}")
+                if lp:
+                    ctx_parts.append(f"Life Path: {lp.get('lifePath')}")
+            if user.sun_sign:
+                ctx_parts.append(f"Sun: {user.sun_sign}")
+            if user.moon_sign:
+                ctx_parts.append(f"Moon: {user.moon_sign}")
+            if user.rising_sign:
+                ctx_parts.append(f"Rising: {user.rising_sign}")
+            if user.life_path_number:
+                ctx_parts.append(f"Life Path Number: {user.life_path_number}")
+            if user.strongest_chakra:
+                ctx_parts.append(f"Dominant Chakra: {user.strongest_chakra}")
             profile_context = "; ".join(ctx_parts)
     except Exception as e:
         logger.warning("Profile context failed: %s", e)
