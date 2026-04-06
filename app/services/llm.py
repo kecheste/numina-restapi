@@ -1458,8 +1458,8 @@ async def call_llm_for_mbti_narrative(
         raw = (response.choices[0].message.content or "").strip()
         data = _extract_json_from_response(raw)
         if data:
-            if not data.get("cognitiveStyle"):
-                logger.warning("MBTI LLM response missing cognitiveStyle for type=%s", mbti_type)
+            if not data.get("summary"):
+                logger.warning("MBTI LLM response missing summary for type=%s", mbti_type)
             return _validate_mbti_result(data)
     except Exception as e:
         logger.warning("LLM MBTI call failed: %s", e)

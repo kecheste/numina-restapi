@@ -17,17 +17,17 @@ import re
 from typing import Any
 
 _QUESTION_DIMENSION: dict[int, tuple[str, str]] = {
-    1: ("I", "E"), 2: ("I", "E"), 3: ("I", "E"), 4: ("I", "E"),
-    5: ("N", "S"), 6: ("N", "S"), 7: ("N", "S"), 8: ("N", "S"),
-    9: ("T", "F"), 10: ("T", "F"), 11: ("T", "F"), 12: ("T", "F"),
-    13: ("J", "P"), 14: ("J", "P"), 15: ("J", "P"), 16: ("J", "P"),
+    1: ("I", "E"), 2: ("I", "E"), 3: ("I", "E"),
+    4: ("N", "S"), 5: ("N", "S"), 6: ("N", "S"),
+    7: ("F", "T"), 8: ("F", "T"), 9: ("F", "T"),
+    10: ("J", "P"), 11: ("J", "P"), 12: ("J", "P"),
 }
 
 _DIMENSION_GROUPS: list[tuple[str, str, list[int]]] = [
-    ("I", "E", [1, 2, 3, 4]),
-    ("N", "S", [5, 6, 7, 8]),
-    ("T", "F", [9, 10, 11, 12]), # Note: User's logic had T/F for q9-q12
-    ("J", "P", [13, 14, 15, 16]),
+    ("I", "E", [1, 2, 3]),
+    ("N", "S", [4, 5, 6]),
+    ("F", "T", [7, 8, 9]),
+    ("J", "P", [10, 11, 12]),
 ]
 
 
@@ -114,7 +114,7 @@ def compute_mbti_detailed(
         "type": "".join(type_letters),
         "dimensions": dimensions,
         "confidence": confidence,
-        "total_questions": 16,
+        "total_questions": 12,
     }
 
 

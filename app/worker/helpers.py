@@ -6,7 +6,7 @@ import logging
 from datetime import date
 from typing import Any, Callable
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.synthesis import (
@@ -19,6 +19,7 @@ from app.core.redis import (
 )
 from app.db.models.test_result import TestResult
 from app.db.models.user import User as UserModel
+from app.db.models.user_synthesis import UserSynthesis
 from app.services.result_calculation.life_path_number import compute_life_path_number
 from app.services.result_calculation.shadow_work import compute_shadow_work
 from app.services.result_calculation.soul_compass import compute_soul_compass
@@ -647,6 +648,386 @@ async def call_openai_for_narrative(
         return fallback_narrative_from_json(computed_result)
 
 
+async def call_llm_for_synthesis(
+    input_str: str,
+    count: int,
+    full: bool,
+    profile_context: str = "",
+    dynamic_str: str = "",
+) -> dict[str, Any]:
+    """
+    Call the LLM to produce either a full 14-section synthesis or a lightweight preview synthesis.
+    `input_str`   — compact signals from CORE (stable identity) modules only.
+    `dynamic_str` — compact signals from DYNAMIC (current-state) modules only.
+    Returns a dict with the appropriate JSON keys.
+    """
+    from openai import AsyncOpenAI
+    from app.core.prompts import (
+        SYNTHESIS_SYSTEM,
+        SYNTHESIS_FULL_USER_TEMPLATE,
+        SYNTHESIS_PREVIEW_USER_TEMPLATE,
+        SYNTHESIS_FULL_JSON_KEYS,
+        SYNTHESIS_PREVIEW_JSON_KEYS,
+    )
+
+    if full:
+        user_prompt = SYNTHESIS_FULL_USER_TEMPLATE.format(
+            count=count,
+            core_json=input_str,
+            dynamic_json=dynamic_str or "(no dynamic-state modules completed yet)",
+            profile_context=profile_context or "Not available",
+        )
+        required_keys = SYNTHESIS_FULL_JSON_KEYS
+        # Use gpt-4o for full synthesis — needs coherent 14-section output
+        model = "gpt-4o"
+        max_tokens = 3200
+    else:
+        user_prompt = SYNTHESIS_PREVIEW_USER_TEMPLATE.format(
+            count=count,
+            input_json=input_str,
+        )
+        required_keys = SYNTHESIS_PREVIEW_JSON_KEYS
+        model = "gpt-4o-mini"
+        max_tokens = 1000
+
+    def _fallback() -> dict[str, Any]:
+        if full:
+            return {
+                "identityLine": "You seek depth in a world that keeps rewarding speed.",
+                "coreIdentity": "Your pattern is still forming across these assessments.",
+                "dominantPatterns": ["Reflective by nature", "Values depth over breadth"],
+                "hiddenPatterns": ["Untapped decisiveness", "Suppressed emotional expression"],
+                "emergingPatterns": ["Building inner clarity"],
+                "innerConflictMap": "Your mind and heart are not yet operating from the same direction.",
+                "coreStrengths": ["Self-awareness", "Consistency under pressure"],
+                "coreChallenges": ["Overthinking before acting", "Difficulty finishing what you start"],
+                "psychologicalProfile": "You tend to analyze before acting, sometimes at the cost of momentum.",
+                "spiritualBlueprint": "Your life path and chart point toward a direction that rewards depth over speed.",
+                "yourDirection": "Focus less on finding the perfect path and more on committing to one.",
+                "tryThis": ["Set a 10-minute decision rule", "Write before talking", "Finish one thing before starting another"],
+                "avoidThis": ["Over-researching before acting", "Asking for more opinions than needed"],
+                "finalInsight": "The answers you're looking for won't come from more information — they'll come from action.",
+                "currentEnergy": "This period favors consolidation over expansion. Depth, not breadth.",
+            }
+        return {
+            "youAre": "You are someone still discovering your full pattern.",
+            "sureThings": ["Thoughtful", "Self-aware", "Depth-oriented"],
+            "identitySummary": "Your early results suggest a reflective, internally-driven personality.",
+            "growthAreas": ["Action and follow-through", "Emotional expression"],
+            "nextFocus": "Complete more assessments to unlock a fuller picture of who you are.",
+        }
+
+    if not settings.openai_api_key:
+        return _fallback()
+
+    try:
+        client = AsyncOpenAI(api_key=settings.openai_api_key)
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": SYNTHESIS_SYSTEM},
+                {"role": "user", "content": user_prompt},
+            ],
+            max_tokens=max_tokens,
+            temperature=0.6,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        raw = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        data = json.loads(raw)
+
+        # Validate required keys are present
+        missing = required_keys - set(data.keys())
+        if missing:
+            logger.warning("Synthesis LLM response missing keys %s — using fallback", missing)
+            return _fallback()
+
+        return data
+    except Exception as e:
+        logger.warning("call_llm_for_synthesis failed (full=%s): %s", full, e)
+        return _fallback()
+
+# These weights are used in the synthesis scoring pass:
+#   For each cross-module pattern, score += module_weight per confirming module.
+#   Dominant patterns are those with a total repetition score >= 2.0.
+MODULE_CONFIDENCE_WEIGHTS: dict[int, float] = {
+    # ── Psychology (1.0) ──────────────────────────────────────────────────────
+    # Stable cognition, behavioral patterns, decision-making, inner world
+    7:  1.0,   # MBTI Type
+    8:  1.0,   # Shadow Work Lens
+    9:  1.0,   # Big Five
+    10: 1.0,   # Core Values Sort
+    11: 1.0,   # Cognitive Style
+    12: 1.0,   # Mind Mirror
+    15: 1.0,   # Emotional Regulation Type
+    16: 1.0,   # Stress Balance Index
+    17: 1.0,   # Somatic Connection
+    23: 1.0,   # Inner Child Dialogue
+    # ── Hybrid / self-awareness (0.9) ─────────────────────────────────────────
+    # Energy, body-energy interface, modality expression
+    6:  0.9,   # Zodiac Element & Modality
+    13: 0.9,   # Chakra Alignment Scan
+    14: 0.9,   # Energy Archetype
+    # ── Spiritual / symbolic (0.75) ───────────────────────────────────────────
+    # Archetypes, numerology, astrology, soul path — symbolic layer
+    1:  0.75,  # Astrology Chart
+    2:  0.75,  # Numerology
+    3:  0.75,  # Starseed Origins
+    4:  0.75,  # Human Design
+    19: 0.75,  # Life Path Number
+    20: 0.75,  # Soul Urge / Heart's Desire
+    21: 0.75,  # Past Life Vibes / Past Life Echoes
+    22: 0.75,  # Karmic Lessons
+    # ── Forecast / current-state (0.55) ───────────────────────────────────────
+    # Ephemeral and directional — do not use as primary identity signals
+    5:  0.55,  # Transits
+    18: 0.55,  # Energy Synthesis (current energy state)
+    # ── Decision Tool (0.4) ───────────────────────────────────────────────────
+    # Excluded from identity synthesis; use only as supporting directional detail
+    24: 0.4,   # Soul Compass
+}
+DEFAULT_MODULE_WEIGHT: float = 0.75  # fallback for any unregistered test
+
+# ── Module layer classification ────────────────────────────────────────────────
+# CORE modules define stable identity (who the person IS).
+# They feed all 14 identity sections of the full synthesis.
+CORE_MODULE_IDS: frozenset[int] = frozenset({
+    1,   # Astrology Chart
+    2,   # Numerology
+    3,   # Starseed Origins
+    4,   # Human Design
+    6,   # Zodiac Element & Modality
+    7,   # MBTI Type
+    8,   # Shadow Work Lens
+    9,   # Big Five
+    10,  # Core Values Sort
+    11,  # Cognitive Style
+    14,  # Energy Archetype
+    19,  # Life Path Number
+    20,  # Soul Urge / Heart's Desire
+    21,  # Past Life Vibes / Past Life Echoes
+    22,  # Karmic Lessons
+    23,  # Inner Child Dialogue
+})
+
+# DYNAMIC modules reflect current state (how the person IS doing RIGHT NOW).
+# They feed only the currentEnergy / current-state overlay — NOT identity sections.
+DYNAMIC_MODULE_IDS: frozenset[int] = frozenset({
+    5,   # Transits
+    12,  # Mind Mirror
+    13,  # Chakra Alignment Scan
+    15,  # Emotional Regulation Type
+    16,  # Stress Balance Index
+    17,  # Somatic Connection
+    18,  # Energy Synthesis
+    24,  # Soul Compass (decision tool — excluded from identity)
+})
+
+
+def _short(val: Any, max_len: int = 100) -> str | None:
+    """Return a string only if it's short enough to be a signal chip, not a paragraph."""
+    if not isinstance(val, str):
+        return None
+    s = val.strip()
+    return s if len(s) <= max_len else None
+
+
+def _chips(lst: Any, n: int = 3) -> list[str]:
+    """Extract up to n short strings from a list, filtering out paragraphs."""
+    if not isinstance(lst, list):
+        return []
+    return [s for s in lst[:n] if isinstance(s, str) and len(s) <= 100]
+
+
+def _extract_synthesis_signal(
+    test_title: str,
+    llm_json: dict[str, Any] | None,
+    extracted_json: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """
+    Distill a single test result into a compact, paragraph-free signal fingerprint.
+    Shape: { "module_name": "...", <key signals only — no prose> }
+    Rules:
+      - No strings longer than 100 characters
+      - Arrays capped at 3–4 items
+      - No summary/narrative/spiritualInsight fields
+    """
+    llm = llm_json or {}
+    ext = extracted_json or {}
+    t = test_title.lower()
+
+    out: dict[str, Any] = {"module_name": test_title}
+
+    # Primary type/label — check both sources
+    for key in ("personality_type", "type", "primary", "primary_origin",
+                "primary_archetype", "primary_value"):
+        val = ext.get(key) or llm.get(key)
+        if val and isinstance(val, str) and len(val) <= 60:
+            out["type"] = val
+            break
+
+    # Secondary label
+    for key in ("secondary", "secondary_origin", "secondary_archetype", "secondary_value"):
+        val = ext.get(key) or llm.get(key)
+        if val and isinstance(val, str) and len(val) <= 60:
+            out["secondary"] = val
+            break
+
+    # Behavioral chips — always compact
+    core_traits = _chips(llm.get("coreTraits"))
+    if core_traits:
+        out["core_traits"] = core_traits
+
+    strengths = _chips(llm.get("strengths"))
+    if strengths:
+        out["strengths"] = strengths
+
+    challenges = _chips(llm.get("challenges"))
+    if challenges:
+        out["challenges"] = challenges
+
+    avoid = _chips(llm.get("avoidThis"), 2)
+    if avoid:
+        out["avoid"] = avoid
+
+    # Scores dict — always compact by nature
+    scores = ext.get("scores") or llm.get("scores")
+    if isinstance(scores, dict):
+        out["scores"] = scores
+
+    # MBTI (id=7) ──────────────────────────────────────────────────────────────
+    if "mbti" in t:
+        pt = llm.get("personality_type") or ext.get("personality_type")
+        if pt:
+            out["type"] = str(pt)
+
+    # Chakra Assessment Scan (id=13) ───────────────────────────────────────────
+    if "chakra" in t:
+        for key in ("strongestChakra", "needsRebalancing"):
+            val = _short(llm.get(key))
+            if val:
+                out[key] = val
+        # Chakra states: just id → status, no descriptions
+        chakras = llm.get("chakras")
+        if isinstance(chakras, list):
+            out["chakra_states"] = {
+                c.get("id"): c.get("status")
+                for c in chakras
+                if isinstance(c, dict) and c.get("id") and c.get("status")
+            }
+
+    # Shadow Work Lens (id=8) ──────────────────────────────────────────────────
+    if "shadow" in t:
+        for key in ("shadowPattern", "secondaryPattern", "howItShowsUp"):
+            val = _short(llm.get(key))
+            if val:
+                out[key] = val
+
+    # Mind Mirror (id=12) ──────────────────────────────────────────────────────
+    if "mind mirror" in t:
+        for key in ("mentalPattern", "emotionalTone", "currentImbalance"):
+            val = _short(llm.get(key))
+            if val:
+                out[key] = val
+
+    # Big Five (id=9) ──────────────────────────────────────────────────────────
+    if "big five" in t:
+        for key in ("openness", "conscientiousness", "extraversion",
+                    "agreeableness", "neuroticism"):
+            val = ext.get(key)
+            if val is not None:
+                out[key] = val
+
+    # Core Values Sort (id=10) ─────────────────────────────────────────────────
+    if "core values" in t or "values sort" in t:
+        for key in ("primary_value", "secondary_value", "third_value"):
+            val = ext.get(key)
+            if val and isinstance(val, str):
+                out[key] = val
+
+    # Energy Archetype (id=14) ─────────────────────────────────────────────────
+    if "energy archetype" in t:
+        balance = ext.get("balance_score") or llm.get("balance_score")
+        if balance is not None:
+            out["balance_score"] = balance
+
+    # Emotional Regulation Type (id=15) ───────────────────────────────────────
+    # handled by universal fields (type + chips)
+
+    # Starseed Origins (id=3) ──────────────────────────────────────────────────
+    if "starseed" in t:
+        for key in ("primary_origin", "secondary_origin"):
+            val = ext.get(key)
+            if val and isinstance(val, str):
+                out[key] = val
+        # scores already captured above
+
+    # Astrology Chart (id=1) & Zodiac Element & Modality (id=6) ───────────────
+    if "astrology" in t or "zodiac" in t:
+        for key in ("sun_sign", "moon_sign", "rising_sign"):
+            val = ext.get(key)
+            if val and isinstance(val, str):
+                out[key] = val
+        for key in ("dominantElement", "dominant_element", "modality",
+                    "element_distribution"):
+            val = ext.get(key)
+            if val:
+                out[key] = val
+
+    # Transits (id=5) ──────────────────────────────────────────────────────────
+    if "transit" in t:
+        phase = _short(llm.get("phaseDescription"))
+        if phase:
+            out["current_phase"] = phase
+        patterns = _chips(llm.get("currentPatterns"), 3)
+        if patterns:
+            out["current_patterns"] = patterns
+
+    # Numerology (id=2) ────────────────────────────────────────────────────────
+    if "numerology" in t:
+        for key in ("life_path", "soul_urge", "expression_number",
+                    "birthday_number", "birth_day"):
+            val = ext.get(key)
+            if val is not None:
+                out[key] = val
+
+    # Life Path Number (id=19) ─────────────────────────────────────────────────
+    if "life path" in t:
+        for key in ("lifePath", "life_path"):
+            val = ext.get(key) or llm.get(key)
+            if val is not None:
+                out["life_path"] = val
+                break
+        traits = _chips(ext.get("traits") or llm.get("traits"), 3)
+        if traits:
+            out["traits"] = traits
+
+    # Human Design (id=4) ──────────────────────────────────────────────────────
+    if "human design" in t:
+        for key in ("type", "strategy", "authority", "profile", "definition"):
+            val = ext.get(key) or llm.get(key)
+            if val and isinstance(val, str):
+                out[key] = val
+        for key in ("defined_centers", "undefined_centers"):
+            val = ext.get(key)
+            if isinstance(val, list):
+                out[key] = val[:5]
+
+    # Soul Compass (id=24) ─────────────────────────────────────────────────────
+    if "soul compass" in t:
+        for key in ("primary_archetype", "secondary_archetype"):
+            val = ext.get(key) or llm.get(key)
+            if val and isinstance(val, str):
+                out[key] = val
+
+    # Cognitive Style (id=11) ──────────────────────────────────────────────────
+    if "cognitive" in t:
+        val = _short(llm.get("cognitiveStyle"))
+        if val:
+            out["cognitive_style"] = val
+
+    return out
+
+
 async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> None:
     """If user has 3+ or 6+ completed results, generate preview or full synthesis (one LLM call per task to avoid 429)."""
     if not settings.openai_api_key:
@@ -660,6 +1041,8 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
     count = count_result.scalar() or 0
     if count < SYNTHESIS_PREVIEW_MIN_TESTS:
         return
+
+    # Fetch completed test results
     rows_result = await session.execute(
         select(TestResult)
         .where(
@@ -669,33 +1052,107 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
         .order_by(TestResult.completed_at.asc())
     )
     rows = list(rows_result.scalars().all())
-    parts = []
+
+    # 2. Build the signal map (test_id -> signal)
+    # This acts as our persistent input data for the synthesis.
+    signal_map: dict[str, Any] = {}
     for r in rows:
-        blob = r.llm_result_json or r.extracted_json
-        if isinstance(blob, dict):
-            parts.append({"test": r.test_title, "data": blob})
-        elif blob:
-            parts.append({"test": r.test_title, "data": blob})
-    json.dumps(parts, indent=0)
+        llm_json = r.llm_result_json if isinstance(r.llm_result_json, dict) else None
+        ext_json = r.extracted_json if isinstance(r.extracted_json, dict) else None
+        if llm_json or ext_json:
+            signal = _extract_synthesis_signal(r.test_title, llm_json, ext_json)
+            signal["weight"] = MODULE_CONFIDENCE_WEIGHTS.get(r.test_id, DEFAULT_MODULE_WEIGHT)
+            signal_map[str(r.test_id)] = signal
+
+    # Split into layers for the LLM
+    core_parts = []
+    dynamic_parts = []
+    for test_id_str, signal in signal_map.items():
+        tid = int(test_id_str)
+        if tid in CORE_MODULE_IDS:
+            core_parts.append(signal)
+        elif tid in DYNAMIC_MODULE_IDS:
+            dynamic_parts.append(signal)
+        else:
+            core_parts.append(signal)
+
+    core_str = json.dumps(core_parts, separators=(',', ':'))
+    dynamic_str = json.dumps(dynamic_parts, separators=(',', ':'))
+    all_str = json.dumps(core_parts + dynamic_parts, separators=(',', ':'))
+
+    # Build profile context
+    profile_context = ""
+    try:
+        user_result = await session.execute(select(UserModel).where(UserModel.id == user_id))
+        user = user_result.scalar_one_or_none()
+        if user:
+            ctx_parts = []
+            if user.mbti_type:
+                ctx_parts.append(f"MBTI: {user.mbti_type}")
+            if user.birth_year and user.birth_month and user.birth_day:
+                lp = compute_life_path_number(
+                    birth_year=user.birth_year,
+                    birth_month=user.birth_month,
+                    birth_day=user.birth_day
+                )
+                if lp:
+                    ctx_parts.append(f"Life Path: {lp.get('lifePath')}")
+            if user.sun_sign:
+                ctx_parts.append(f"Sun: {user.sun_sign}")
+            if user.moon_sign:
+                ctx_parts.append(f"Moon: {user.moon_sign}")
+            if user.rising_sign:
+                ctx_parts.append(f"Rising: {user.rising_sign}")
+            if user.life_path_number:
+                ctx_parts.append(f"Life Path Number: {user.life_path_number}")
+            if user.strongest_chakra:
+                ctx_parts.append(f"Dominant Chakra: {user.strongest_chakra}")
+            profile_context = "; ".join(ctx_parts)
+    except Exception as e:
+        logger.warning("Profile context failed: %s", e)
+
+    # Trigger LLM path
     if count >= SYNTHESIS_FULL_MIN_TESTS:
-        # full_json = await call_llm_for_synthesis(input_str, count, full=True)
-        # await session.execute(delete(UserSynthesis).where(
-        #     UserSynthesis.user_id == user_id,
-        #     UserSynthesis.synthesis_type == "full",
-        # ))
-        # session.add(UserSynthesis(user_id=user_id, synthesis_type="full", result_json=full_json))
+        full_json = await call_llm_for_synthesis(
+            core_str, count, full=True,
+            profile_context=profile_context,
+            dynamic_str=dynamic_str,
+        )
+        # Update/Replace Full
+        await session.execute(delete(UserSynthesis).where(
+            UserSynthesis.user_id == user_id,
+            UserSynthesis.synthesis_type == "full",
+        ))
+        session.add(UserSynthesis(
+            user_id=user_id,
+            synthesis_type="full",
+            result_json=full_json,
+            input_json=signal_map
+        ))
+        # Update/Replace Preview (keep in sync)
+        await session.execute(delete(UserSynthesis).where(
+            UserSynthesis.user_id == user_id,
+            UserSynthesis.synthesis_type == "preview",
+        ))
+        session.add(UserSynthesis(
+            user_id=user_id,
+            synthesis_type="preview",
+            result_json=full_json,
+            input_json=signal_map
+        ))
         logger.info("Synthesis full generated for user_id=%s", user_id)
-        # await session.execute(delete(UserSynthesis).where(
-        #     UserSynthesis.user_id == user_id,
-        #     UserSynthesis.synthesis_type == "preview",
-        # ))
-        # session.add(UserSynthesis(user_id=user_id, synthesis_type="preview", result_json=full_json))
     else:
-        # preview_json = await call_llm_for_synthesis(input_str, count, full=False)
-        # await session.execute(delete(UserSynthesis).where(
-        #     UserSynthesis.user_id == user_id,
-        #     UserSynthesis.synthesis_type == "preview",
-        # ))
-        # session.add(UserSynthesis(user_id=user_id, synthesis_type="preview", result_json=preview_json))
+        preview_json = await call_llm_for_synthesis(all_str, count, full=False)
+        await session.execute(delete(UserSynthesis).where(
+            UserSynthesis.user_id == user_id,
+            UserSynthesis.synthesis_type == "preview",
+        ))
+        session.add(UserSynthesis(
+            user_id=user_id,
+            synthesis_type="preview",
+            result_json=preview_json,
+            input_json=signal_map
+        ))
         logger.info("Synthesis preview generated for user_id=%s", user_id)
+
     await session.commit()
