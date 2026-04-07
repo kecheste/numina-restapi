@@ -48,13 +48,6 @@ from app.services.result_calculation.transits import compute_transits
 router = APIRouter()
 
 def _auto_generated_already_taken(user: UserModel, test_id: int) -> bool:
-    """True if this test (no separate test—result from existing data) is covered by user's onboarding data (birth, name)."""
-    if test_id == 1:
-        return (
-            user.birth_year is not None
-            and user.birth_month is not None
-            and user.birth_day is not None
-        )
     if test_id == 2:  # Numerology
         return (
             user.birth_year is not None
