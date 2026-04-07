@@ -678,9 +678,9 @@ async def call_llm_for_synthesis(
             profile_context=profile_context or "Not available",
         )
         required_keys = SYNTHESIS_FULL_JSON_KEYS
-        # Use gpt-4o for full synthesis — needs coherent 14-section output
+        # Use gpt-4o for full synthesis — needs coherent 18-section output
         model = "gpt-4o"
-        max_tokens = 3200
+        max_tokens = 5500
     else:
         user_prompt = SYNTHESIS_PREVIEW_USER_TEMPLATE.format(
             count=count,
@@ -688,7 +688,7 @@ async def call_llm_for_synthesis(
         )
         required_keys = SYNTHESIS_PREVIEW_JSON_KEYS
         model = "gpt-4o-mini"
-        max_tokens = 1000
+        max_tokens = 1800
 
     def _fallback() -> dict[str, Any]:
         if full:
