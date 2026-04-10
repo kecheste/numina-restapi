@@ -706,8 +706,8 @@ Use the data to generate a direct, behavioral interpretation.
 
 Return exactly one JSON object with these keys only:
 - "title": a short catchy title for these results.
-- "summary": 2-3 paragraphs. Focus on what this pattern actually looks like in daily life.
 - "shortDescription": a single paragraph (2-3 sentences) summarizing their behavioral tendency.
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "shadowPattern": explain the primary pattern (1 paragraph). Describe concrete behaviors (e.g., "You hold things in until they build up, then either withdraw or get frustrated"). 
 - "secondaryPattern": explain the secondary tendency and its interaction.
 - "howItShowsUp": 1 paragraph describing exactly how they react under pressure or stress in real life.
@@ -726,7 +726,7 @@ CRITICAL RULES:
 Output only the JSON object, nothing else."""
 
 SHADOW_WORK_JSON_KEYS = frozenset({
-    "title", "summary", "shortDescription", "shadowPattern", "secondaryPattern", 
+    "title", "summary", "shortDescription", "oneSentenceInsight", "shadowPattern", "secondaryPattern", 
     "howItShowsUp", "hiddenStrength", "growthEdge", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -780,7 +780,8 @@ Return exactly one JSON object with these keys. Ensure EVERY key is present:
 1. "title": a short catchy title for these results.
 2. "summary": 2-3 paragraphs. Describe exactly what is happening in their mind right now. Use short sentences. Example: "Even when nothing is happening, you still feel like something is unresolved."
 3. "shortDescription": a single paragraph (2-3 sentences) summarizing their immediate state.
-4. "mentalPattern": describe the dominant loop or thought process right now (1 paragraph).
+4. "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
+5. "mentalPattern": describe the dominant loop or thought process right now (1 paragraph).
 5. "emotionalTone": name what they are feeling right now. NO "underlying theme" language (1 paragraph).
 6. "currentImbalance": identify exactly where they are neglecting themselves (Mind/Heart/Body/Spirit) and the friction it causes (1 paragraph).
 7. "hiddenInsight": reveal a less obvious tension they are ignoring (1 paragraph).
@@ -800,7 +801,7 @@ CRITICAL RULES:
 Output only the JSON object, nothing else."""
 
 MIND_MIRROR_JSON_KEYS = frozenset({
-    "title", "summary", "shortDescription", "mentalPattern", "emotionalTone",
+    "title", "summary", "shortDescription", "oneSentenceInsight", "mentalPattern", "emotionalTone",
     "currentImbalance", "hiddenInsight", "growthDirection", "coreTraits",
     "strengths", "challenges", "yourBlueprint", "tryThis", "avoidThis",
 })
@@ -833,6 +834,7 @@ Input Data:
 
 Return exactly one JSON object with these keys only:
 - "title": the archetype title (e.g., "The Harmonized Mind").
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "coreTraits": array of 3-4 short statements summarizing their state. Max 50 character each.
 - "strengths": array of 3 key strengths.
 - "challenges": array of 3 current areas of friction.
@@ -851,7 +853,7 @@ Avoid clinical or diagnostic language. Output only the JSON object, nothing else
 NB: Interpret through energetic behavior patterns and natural vitality expression."""
 
 ENERGY_ARCHETYPE_JSON_KEYS = frozenset({
-    "title", "coreTraits", "strengths", "challenges", "spiritualInsight",
+    "title", "oneSentenceInsight", "coreTraits", "strengths", "challenges", "spiritualInsight",
     "summary", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1120,7 +1122,7 @@ INPUT
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
 - "title": string, KEEP AS: "Your Starseed Origin"
-
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "originSummary": string, 2-3 sentences. A short, sharp overview of the dominant archetypal energy.
 
 - "cosmicProfile": string, 2 paragraphs separated by \\n\\n.
@@ -1152,7 +1154,7 @@ FINAL CHECK BEFORE ANSWERING:
 """
 
 STARSEED_JSON_KEYS = frozenset({
-    "title", "originSummary", "cosmicProfile", "coreTraits", "strengths", "challenges",
+    "title", "oneSentenceInsight", "originSummary", "cosmicProfile", "coreTraits", "strengths", "challenges",
     "spiritualInsight", "tryThis", "avoidThis",
 })
 
@@ -1182,6 +1184,7 @@ Input Data:
 
 Write the following sections (Output ONLY valid JSON):
 - "title": A compelling result title highlighting their core driver.
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "shortDescription": (Core Values Map). 2 sentences. Do NOT explain nicely. Show friction in how their values conflict or limit them. Example: "You often choose the safer option, even when a more interesting path is available."
 - "coreTraits": Array of 3 specific, behavioral bullet points showing tension (e.g., "You value autonomy, but you avoid delegating work to keep control").
 - "strengths": Array of 3 key strengths derived from these values, stated as behaviors.
@@ -1199,7 +1202,7 @@ Output only the JSON object, nothing else.
 """
 
 CORE_VALUES_JSON_KEYS = frozenset({
-    "title", "shortDescription", "coreTraits", "strengths", "challenges",
+    "title", "oneSentenceInsight", "shortDescription", "coreTraits", "strengths", "challenges",
     "summary", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1277,6 +1280,7 @@ Q2 Detail (Optional): {q13}
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
 - "title": string
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "summary": string
 - "coreTraits": array of strings
 - "strengths": array of strings
@@ -1292,7 +1296,7 @@ Important Rules:
 """
 
 INNER_CHILD_JSON_KEYS = frozenset({
-    "title", "summary", "coreTraits", "strengths", "challenges",
+    "title", "oneSentenceInsight", "summary", "coreTraits", "strengths", "challenges",
     "energyBlueprint", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1344,6 +1348,7 @@ Q2 Response (Conflict response): {q2}
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
 - "title": string
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "overview": string (2 paragraphs)
 - "coreTraits": array of strings
 - "strengths": array of strings
@@ -1355,7 +1360,7 @@ Return exactly one JSON object with these keys:
 """
 
 KARMIC_LESSONS_JSON_KEYS = frozenset({
-    "title", "overview", "coreTraits", "strengths", "challenges",
+    "title", "oneSentenceInsight", "overview", "coreTraits", "strengths", "challenges",
     "spiritualInsight", "energyBlueprint", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1390,8 +1395,8 @@ Q2 Response (Second nature activities): {q2}
 Return exactly ONE JSON object with these keys:
 
 - "title": string. A 2–4 word blend label (e.g. "The Builder-Healer").
-
-- "soulNarrative": string, 2 paragraphs separated by \\n\\n. Describe the user's identity blend. Focus on how the two archetypes INTERACT — the creative tension, not a list of traits. Keep it grounded.
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
+- "soulNarrative": string, 2 paragraphs separated by \n\n. Describe the user's identity blend. Focus on how the two archetypes INTERACT — the creative tension, not a list of traits. Keep it grounded.
 
 - "archetypeEchoes": array of exactly 3 strings. Observable personality tendencies — how these archetypes show up in everyday real life.
 
@@ -1410,7 +1415,7 @@ Return exactly ONE JSON object with these keys:
 Output ONLY the JSON object."""
 
 PAST_LIFE_VIBES_JSON_KEYS = frozenset({
-    "title", "soulNarrative", "archetypeEchoes", "ancientGifts", "karmicShadows",
+    "title", "oneSentenceInsight", "soulNarrative", "archetypeEchoes", "ancientGifts", "karmicShadows",
     "pastLifeEchoes", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1454,6 +1459,7 @@ Q2 Response (Current practice): {q2}
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
 - "title": string
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "overview": string (2 paragraphs)
 - "strengths": array of strings
 - "challenges": array of strings
@@ -1463,7 +1469,7 @@ Return exactly one JSON object with these keys:
 """
 
 SOMATIC_JSON_KEYS = frozenset({
-    "title", "overview", "strengths", "challenges",
+    "title", "oneSentenceInsight", "overview", "strengths", "challenges",
     "energyBlueprint", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1508,6 +1514,7 @@ Q3 Response (Break awareness speed): {q3}
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
 - "title": string
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "overview": string (2 paragraphs)
 - "strengths": array of strings
 - "challenges": array of strings
@@ -1517,7 +1524,7 @@ Return exactly one JSON object with these keys:
 """
 
 STRESS_BALANCE_JSON_KEYS = frozenset({
-    "title", "overview", "strengths", "challenges",
+    "title", "oneSentenceInsight", "overview", "strengths", "challenges",
     "energyBlueprint", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1679,6 +1686,7 @@ INPUT:
 
 WRITE IN THIS EXACT STRUCTURE (Return exactly one JSON object):
 - "title": string, KEEP AS: "Your Personality Pattern".
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "overview": string, 2-3 short, punchy paragraphs. (P1: How the type processes reality through its dominant functions. P2: How the dimension intensities modify this specific user's expression).
 - "coreTraits": array of exactly 3 descriptive behavioral chips (derived from cognitive patterns).
 - "strengths": array of 3 specific cognitive advantages.
@@ -1689,7 +1697,7 @@ WRITE IN THIS EXACT STRUCTURE (Return exactly one JSON object):
 """
 
 MBTI_JSON_KEYS = frozenset({
-    "title", "overview", "coreTraits", "strengths", "challenges",
+    "title", "oneSentenceInsight", "overview", "coreTraits", "strengths", "challenges",
     "summary", "tryThis", "avoidThis"
 })
 
