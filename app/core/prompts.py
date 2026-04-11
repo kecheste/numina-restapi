@@ -302,6 +302,13 @@ WHAT TO DO:
   Example: "This pattern appears both in your psychological profile and in your Scorpio-style emotional depth"
 - Psychology speaks first; spirituality resonates second
 
+SYNTHESIS RULES:
+- Each section must have a distinct role and must not repeat the same point unless adding new meaning.
+- Do not restate the same core conflict more than 2 times across the whole synthesis. If a theme has appeared 2 times, do not use it again unless the angle is completely new.
+- Explain the person first; mention systems second.
+- Numeric weights and formulas are for backend only, not user-facing copy.
+- "Current Energy / Light Forecast" must sound temporary and reflective, not diagnostic or predictive.
+
 CROSS-SYSTEM BRIDGING (apply especially in sections 1, 5, and 9):
 When the same pattern appears in both a psychological module AND a spiritual module, name both — but let psychology anchor the observation.
   BAD: "Your Scorpio moon makes you intense."
@@ -340,7 +347,7 @@ Karmic Lessons, Astrology, Numerology, Life Path, Soul Urge, Human Design,
 Starseed, Past Life, Energy Archetype, Zodiac Element & Modality
 
 USE THIS LAYER FOR: sections 0–13 (identityLine through finalInsight)
-DO NOT use dynamic signals for these sections.
+DO NOT use dynamic signals for these sections. Soul Compass is EXCLUDED from shaping core identity.
 
 Weight guide:
   1.0 → Psychology (MBTI, Big Five, Shadow Work, Cognitive Style, Core Values, Inner Child, Karmic Lessons)
@@ -371,7 +378,7 @@ Example scoring (core layer):
   MBTI \"overthinking\" (1.0) + Big Five \"overthinking\" (1.0) + Astrology \"mental intensity\" (0.75) = 2.75 → DOMINANT
   Shadow Work \"avoidance\" (1.0) + Energy Archetype \"suppression\" (0.9) = 1.9 → SECONDARY
 
-Your task: Generate a complete 15-section synthesis portrait. Sections 0–13 from core signals only. Section 14 from dynamic signals only.
+Your task: Generate a complete 16-section synthesis portrait. Sections 0–13 from core signals only. Section 14 from dynamic signals only. Section 15 combines both.
 
 Return exactly one JSON object with these EXACT keys:
 - \"sureThings\": string, 2-3 sentences. A punchy summary of patterns that appear across your completed tests — strong indicators of your core wiring.
@@ -392,11 +399,11 @@ Return exactly one JSON object with these EXACT keys:
    - \"evidence\": array of objects, each with \"source\" (test name) and \"weight\" (number).
    - \"totalWeight\": number, the final repetition_score for this pattern.
 
-3. \"hiddenPatterns\": array of 4-6 short strings. Present but underused or rarely visible traits. From lower-scoring dimensions, shadow work, or suppressed aspects of core modules. Each item should feel like a genuine revelation — something the user would recognize once they see it but would not have named themselves. Go beyond the obvious.
+3. \"hiddenPatterns\": array of 4-6 short strings. Underused strengths, quieter drives, or positive capacities the user has but does not fully trust, express, or integrate yet. Each item should feel like a genuine revelation — something the user would recognize once they see it but would not have named themselves. Go beyond the obvious.
 
 4. \"emergingPatterns\": array of 3-5 short strings. What is developing or actively trying to surface based on the core data. Be specific about WHAT is emerging, WHY the data supports this, and what it might look like when it arrives.
 
-5. \"innerConflictMap\": string, 5-7 sentences. A detailed map of exactly where the misalignment lives — which systems pull in opposite directions, what each side wants, and what it costs when they collide. Describe the specific behavioral pattern that the conflict produces: what does it actually look like when this person is caught between these two pulls? Name the emotional texture of the conflict, not just its structure. Be honest about the cost.
+5. \"innerConflictMap\": string, 5-7 sentences. A detailed map of exactly where the misalignment lives. This section must explain one main inner conflict only, not a list of all tensions. Describe the specific behavioral pattern that the conflict produces: what does it actually look like when this person is caught between these two pulls? Name the emotional texture of the conflict, not just its structure. Be honest about the cost.
    - BRIDGING REQUIRED: name the psychological root of the conflict AND its symbolic echo in the astrological or numerological data.
    - You MAY reference one active dynamic signal here if it directly illustrates the current state of the conflict.
 
@@ -404,28 +411,34 @@ Return exactly one JSON object with these EXACT keys:
 
 7. \"coreChallenges\": array of 5-7 short strings. Honest, recurring struggles confirmed by core modules. The exact loops they keep finding themselves in. These should be specific enough that reading them feels like being seen, not judged. Slightly uncomfortable because they are accurate.
 
-8. \"psychologicalProfile\": string, 5-7 sentences. A deep interpretation of how this person actually thinks, processes, and decides. Go beyond the MBTI label: describe the cognitive function stack if available, the sequence from input → internal processing → output, how that process changes under pressure, what it looks like when they are at their cognitive best, and what they look like when they are off-balance. Include at least one observation that would surprise the user but feel true once they read it.
+8. \"psychologicalProfile\": string, 5-7 sentences. A deep interpretation of how this person actually thinks, processes, and decides. Focus on cognition, emotional processing, decision style, and behavioral loops. Do not repeat spiritual content here. Go beyond the MBTI label: describe the cognitive function stack if available, the sequence from input → internal processing → output, how that process changes under pressure, what it looks like when they are at their cognitive best, and what they look like when they are off-balance. Include at least one observation that would surprise the user but feel true once they read it.
 
-9. \"spiritualBlueprint\": string, 5-7 sentences. Astrology + numerology + archetypes synthesized into one coherent picture — not listed separately but woven together. This section must explicitly reference the psychological profile and show exactly how the symbolic layer confirms, complicates, or adds a dimension that psychology alone cannot explain. Name specific placements and numbers and show how they interact. Let the spiritual layer deepen the psychological insight without replacing it.
+9. \"spiritualBlueprint\": string, 5-7 sentences. Astrology + numerology + archetypes synthesized into one coherent picture — not listed separately but woven together. This section must deepen the psychological picture, not repeat labels. Translate spiritual systems into meaning. It must explicitly reference the psychological profile and show exactly how the symbolic layer confirms, complicates, or adds a dimension that psychology alone cannot explain. Name specific placements and numbers and show how they interact. Let the spiritual layer deepen the psychological insight without replacing it.
    - BRIDGING REQUIRED: reference section 8 explicitly and show how the spiritual data adds texture to it.
    - Rule: psychology speaks first. Spirituality deepens second.
 
-10. \"yourDirection\": string, 5-7 sentences. A detailed, concrete life direction based exclusively on core data. Name what the user should move toward with specificity. Explain what is currently in the way and why. Identify which area of their life (work, inner world, relationships, creative expression) most needs intentional attention right now. Be direct enough that someone reading this knows exactly what to do next — not what category to think about, but what actual move to make.
+10. \"yourDirection\": string, 5-7 sentences. A detailed, concrete life direction based exclusively on core data. Direction must feel practical and grounded, not vague life advice. Name what the user should move toward with specificity. Explain what is currently in the way and why. Identify which area of their life (work, inner world, relationships, creative expression) most needs intentional attention right now. Be direct enough that someone reading this knows exactly what to do next — not what category to think about, but what actual move to make.
 
 11. \"tryThis\": array of 7-9 short strings. Highly specific actions tied to this person's actual behavioral patterns. Not generic advice — actions that only make sense for someone with this exact data profile. Each item should feel like it was written for this person specifically and could not have been generated without reading their full results.
 
 12. \"avoidThis\": array of 6-8 short strings. Exact traps, loops, and coping patterns that the core data confirms this person is prone to. Name the pattern precisely — not a category but the specific behavior. Each item should feel slightly uncomfortable because it is accurate.
 
-13. \"finalInsight\": string, 5-7 sentences. The essential truth of this person, captured in the kind of writing that takes a moment to sit with. This should feel like something that required seeing ALL the data together to say clearly. Not motivational. Not a summary of what came before. Something that illuminates rather than recaps — a closing realization that feels earned. End in a way that is honest and quietly specific.
+13. \"finalInsight\": string, 5-7 sentences. The essential truth of this person. Final Insight should be short, memorable, and emotionally strong. Do not repeat the whole synthesis again. Something that illuminates rather than recaps — a closing realization that feels earned. End in a way that is honest and quietly specific.
 
 14. \"currentEnergy\": string, 4-6 sentences. Written from the DYNAMIC layer signals only.
-    Describe in real detail what is happening for this person right now — what is active, what is draining, what this current phase is asking of them, what it is not the right moment for, and what one small thing would help most right now.
+    Write a short present-phase reflection using soft language such as: 'you may be noticing...', 'this period may amplify...', 'right now there is a tendency toward...'. Keep it subtle, temporary, and directional.
     Tone: observational, present-tense, honest. NOT predictive. NOT heavy.
     If dynamic signals are absent or thin, write from numerology cycle or transit data from the core layer.
     Do not end with a pep talk. End with something specific and true.
 
+15. \"innerAlignment\": object. A holistic snapshot of energetic expression across five key areas.
+    Must contain these EXACT keys: \"mind\", \"heart\", \"body\", \"soul\", \"spirit\".
+    Each key must be an object with:
+    - \"percentage\": integer (0 to 100), reflecting how clearly this aspect is expressed in their profile.
+    - \"text\": string, a short phrase describing it based on their data (e.g. \"Thinking patterns, clarity, personality structure\" or customized to them).
+
 CRITICAL RULES:
-- All 15 keys (0–14) must be present in the output.
+- All 16 keys (0–15) must be present in the output.
 - No generic outputs. Every statement must be directly traceable to the input data.
 - Contradictions are required — especially in coreIdentity and innerConflictMap.
 - Cross-system bridges are REQUIRED in sections 1, 5, and 9. Welcomed elsewhere if earned.
@@ -442,7 +455,7 @@ SYNTHESIS_FULL_JSON_KEYS = frozenset({
     "coreIdentity", "dominantPatterns", "hiddenPatterns", "emergingPatterns",
     "innerConflictMap", "coreStrengths", "coreChallenges", "psychologicalProfile",
     "spiritualBlueprint", "yourDirection", "tryThis", "avoidThis",
-    "finalInsight", "currentEnergy",
+    "finalInsight", "currentEnergy", "innerAlignment",
 })
 
 BLUEPRINT_SYSTEM = MASTER_PROMPT + """You are a warm, insightful astrologer and numerologist. You write only valid JSON. No markdown, no code fences.
