@@ -323,7 +323,7 @@ SYNTHESIS_PREVIEW_USER_TEMPLATE = """The user has completed {count} tests so far
 
 Return exactly one JSON object with these keys only:
 - "youAre": string, 3-5 sentences. Who this person is based on these early signals. Include at least one internal tension or contradiction. Be specific — NOT generic.
-- "sureThings": array of 5-7 short strings. Patterns that already stand out clearly across tests. At least one item should name a behavioral contradiction.
+- "sureThings": string, a short 1 sentencecsummary of patterns that stand out clearly across tests. Focus on what is already unmistakable.
 - "identitySummary": string, 2-3 paragraphs separated by \\n\\n. An emerging portrait of who this person is: their core drive, their recurring friction, and what is beginning to define them.
 - "growthAreas": array of 3-5 short strings. Honest gaps, blind spots, or areas not yet explored. Make them specific, not generic.
 - "nextFocus": string, 2-3 sentences. What this person should focus on or explore next — and why, based on what the data already shows.
@@ -374,6 +374,7 @@ Example scoring (core layer):
 Your task: Generate a complete 15-section synthesis portrait. Sections 0–13 from core signals only. Section 14 from dynamic signals only.
 
 Return exactly one JSON object with these EXACT keys:
+- \"sureThings\": string, 2-3 sentences. A punchy summary of patterns that appear across your completed tests — strong indicators of your core wiring.
 
 0. \"identityLine\": string, ONE powerful sentence, maximum 20 words. The sharpest possible distillation of who this person is. This is the hero line displayed at the very top of their synthesis — specific, not generic, slightly confronting, and instantly recognizable. Do NOT use their name. Do NOT use soft language.
    - BAD: \"You are a thoughtful and creative person who seeks meaning.\"
@@ -386,10 +387,10 @@ Return exactly one JSON object with these EXACT keys:
    - BRIDGING REQUIRED: in one sentence name a pattern that appears in both the psychological data AND the astrological/numerological data. Let the psychology anchor it; let the spiritual layer deepen it.
    - Example: \"Your MBTI and shadow work both show a pattern of withdrawing under pressure — something your Scorpio moon mirrors in how you internalize conflict rather than release it.\"
 
-2. \"dominantPatterns\": array of 5-7 short strings. Only include patterns with repetition_score >= 2.0. Not traits — observable behaviors you could watch play out in real life.
-   - Every item must name which systems confirmed it.
-   - Example: \"Needs certainty before committing — confirmed by MBTI (1.0) + Core Values (1.0) + Capricorn sun (0.75) = 2.75\"
-   - Keep items concise (max 22 words). Score annotation is required.
+2. \"dominantPatterns\": array of 5-7 objects. Only include patterns with repetition_score >= 2.0. Each object must have:
+   - \"pattern\": short string phrase, the behavioral pattern (e.g., \"Driven to lead and achieve\", \"Struggles with emotional expression\").
+   - \"evidence\": array of objects, each with \"source\" (test name) and \"weight\" (number).
+   - \"totalWeight\": number, the final repetition_score for this pattern.
 
 3. \"hiddenPatterns\": array of 4-6 short strings. Present but underused or rarely visible traits. From lower-scoring dimensions, shadow work, or suppressed aspects of core modules. Each item should feel like a genuine revelation — something the user would recognize once they see it but would not have named themselves. Go beyond the obvious.
 
@@ -437,7 +438,7 @@ Output only the JSON object, nothing else."""
 
 SYNTHESIS_PREVIEW_JSON_KEYS = frozenset({"youAre", "sureThings", "identitySummary", "growthAreas", "nextFocus"})
 SYNTHESIS_FULL_JSON_KEYS = frozenset({
-    "identityLine",
+    "identityLine", "sureThings",
     "coreIdentity", "dominantPatterns", "hiddenPatterns", "emergingPatterns",
     "innerConflictMap", "coreStrengths", "coreChallenges", "psychologicalProfile",
     "spiritualBlueprint", "yourDirection", "tryThis", "avoidThis",
@@ -1554,7 +1555,7 @@ State: {alignment_state}
 Decision context: {decision}
 
 Return exactly one JSON object with these keys only:
-- "title": string, a descriptive and punchy 2-3 word phrase that captures the alignment state (e.g., "A Soul Ready to Move", "Heart and Mind at Odds").
+- "title": string, a descriptive and punchy 2-3 word phrase that captures the alignment state (e.g., "Observant Empath", "Grounded Strategist").
 - "decisionInsight": string, 2 paragraphs separated by \\n\\n. Help the user understand the interplay of these 4 dimensions without prescribing a choice.
 - "alignmentAnalysis": object with EXACTLY these keys: "mind", "heart", "body", "soul". Each value is 1–2 sentences describing what that dimension's score reveals.
 - "whatThisMeans": string, 1 paragraph. Summarize the overall alignment state and what it suggests about where the user is right now.
