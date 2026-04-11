@@ -174,7 +174,7 @@ Computed/structured result for this user (use only this; do not invent data):
 {input_json}
 
 Return exactly one JSON object with these keys only:
-- "title": string, one short catchy title (e.g. "The Reflective Seeker")
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "summary": string, 2-3 paragraphs separated by \\n\\n (Paragraph 1: core personality/theme. Paragraph 2: deeper dynamic/inner workings. Paragraph 3: life direction/how these energies show up in life patterns)
 - "shortDescription": string, a single paragraph (2-4 sentences) summarizing the result, completely distinct from the summary paragraphs above
 - "coreTraits": array of 2-5 short descriptive phrases, not single words (e.g. "You recharge alone, but care deeply about others")
@@ -243,7 +243,7 @@ Answers: {input_json}
 Context: {user_context}
 
 WRITE IN THIS EXACT STRUCTURE (Return ONE JSON object):
-- "title": string, one catchy behavioral title (e.g., "The Restless Visionary").
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "summary": string, 3 short paragraphs. (P1: Main behavioral theme. P2: The tension/conflict in their current state. P3: The impact on their life direction).
 - "shortDescription": string, 2-3 punchy sentences summarizing their overall state.
 - "coreTraits": array of exactly 4 descriptive behavioral statements.
@@ -543,7 +543,7 @@ INPUT
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
-- "title": string, Keep title as: "Your Astrology Chart"
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 
 - "coreTraits": array of exactly 3 short trait chips (Cosmic Summary). Derived from the overall chart.
 
@@ -643,7 +643,7 @@ INPUT
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
-- "title": string, KEEP AS: "Your Numerology Profile"
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 
 - "corePattern": string, 3 paragraphs separated by \\n\\n.
 Paragraph 1: How the numbers combine and interact. No abstract traits. Show behavior.
@@ -705,7 +705,7 @@ Computed Scores (0-100):
 Use the data to generate a direct, behavioral interpretation.
 
 Return exactly one JSON object with these keys only:
-- "title": a short catchy title for these results.
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "shortDescription": a single paragraph (2-3 sentences) summarizing their behavioral tendency.
 - "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "shadowPattern": explain the primary pattern (1 paragraph). Describe concrete behaviors (e.g., "You hold things in until they build up, then either withdraw or get frustrated"). 
@@ -777,7 +777,7 @@ User Responses:
 {input_json}
 
 Return exactly one JSON object with these keys. Ensure EVERY key is present:
-1. "title": a short catchy title for these results.
+1. "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 2. "summary": 2-3 paragraphs. Describe exactly what is happening in their mind right now. Use short sentences. Example: "Even when nothing is happening, you still feel like something is unresolved."
 3. "shortDescription": a single paragraph (2-3 sentences) summarizing their immediate state.
 4. "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
@@ -833,7 +833,7 @@ Input Data:
 {input_json}
 
 Return exactly one JSON object with these keys only:
-- "title": the archetype title (e.g., "The Harmonized Mind").
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "coreTraits": array of 3-4 short statements summarizing their state. Max 50 character each.
 - "strengths": array of 3 key strengths.
@@ -995,7 +995,7 @@ STYLE
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys)
 
-- "title": Create a short result title, max 4 words. It should feel specific to the chart. Avoid words like Leader, Visionary, Explorer unless truly justified by the data. Never use the word "blueprint".
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "summary": Write 2 short paragraphs separated by \n\n. Paragraph 1: briefly frame using Type / Strategy / Authority / Profile — keep it short. Paragraph 2: move immediately into the strongest gate / channel / center dynamics — this paragraph must already feel unique to this chart.
 - "personalityConscious": Array of 3 to 5 short bullet-style trait lines using mainly personality_traits and strongest personality gates. These sound like qualities the person recognizes in themselves. Keep them specific and behavior-based.
 - "designUnconscious": Array of 3 to 5 short bullet-style trait lines using mainly design_traits and strongest design gates. These sound like automatic behaviors or underlying tendencies others may notice.
@@ -1050,7 +1050,7 @@ Input Data (Dimension Percentages):
 {input_json}
 
 Write the following sections (Return exactly one JSON object):
-- "title": A compelling result title.
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "summary": 2 paragraphs. Describe how this mix shows up in real situations. NO report tone (e.g., Avoid "you exhibit a blend..."). Example: "You think things through carefully, but that often slows you down when a quick decision is needed."
 - "shortDescription": (Your Psychological Signature). 2 sentences. Remove polished explanation tone. Make it real. Example: "You come across confident in discussions, but you can also come off too direct when you’re sure you’re right."
 - "coreTraits": An array of 3-4 short statements. Make each one specific and slightly imperfect. (Bad: "You value structure". Good: "You like having a plan, but you can get stuck refining it instead of starting").
@@ -1121,7 +1121,7 @@ INPUT
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
-- "title": string, KEEP AS: "Your Starseed Origin"
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "originSummary": string, 2-3 sentences. A short, sharp overview of the dominant archetypal energy.
 
@@ -1183,7 +1183,7 @@ Input Data:
 - All Dimension Scores: {scores}
 
 Write the following sections (Output ONLY valid JSON):
-- "title": A compelling result title highlighting their core driver.
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "shortDescription": (Core Values Map). 2 sentences. Do NOT explain nicely. Show friction in how their values conflict or limit them. Example: "You often choose the safer option, even when a more interesting path is available."
 - "coreTraits": Array of 3 specific, behavioral bullet points showing tension (e.g., "You value autonomy, but you avoid delegating work to keep control").
@@ -1226,7 +1226,7 @@ Input Data:
 - Dimension Scores: {scores}
 
 Requirements (Output ONLY valid JSON):
-- "title": The result title (e.g., "Quiet Containment").
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "overview": 2 paragraphs explaining the person's energetic nature and how they process emotions.
 - "strengths": Array of 3 bullet points summarizing their strengths (short phrases).
 - "challenges": Array of 3 common pitfalls or challenges (short phrases).
@@ -1279,7 +1279,7 @@ Q2 Detail (Optional): {q13}
 
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
-- "title": string
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "summary": string
 - "coreTraits": array of strings
@@ -1347,7 +1347,7 @@ Q2 Response (Conflict response): {q2}
 
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
-- "title": string
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "overview": string (2 paragraphs)
 - "coreTraits": array of strings
@@ -1394,7 +1394,7 @@ Q2 Response (Second nature activities): {q2}
 
 Return exactly ONE JSON object with these keys:
 
-- "title": string. A 2–4 word blend label (e.g. "The Builder-Healer").
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "soulNarrative": string, 2 paragraphs separated by \n\n. Describe the user's identity blend. Focus on how the two archetypes INTERACT — the creative tension, not a list of traits. Keep it grounded.
 
@@ -1458,7 +1458,7 @@ Q2 Response (Current practice): {q2}
 
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
-- "title": string
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "overview": string (2 paragraphs)
 - "strengths": array of strings
@@ -1513,7 +1513,7 @@ Q3 Response (Break awareness speed): {q3}
 
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
-- "title": string
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "overview": string (2 paragraphs)
 - "strengths": array of strings
@@ -1554,7 +1554,7 @@ State: {alignment_state}
 Decision context: {decision}
 
 Return exactly one JSON object with these keys only:
-- "title": a short reflective title capturing the alignment state (e.g. "A Soul Ready to Move" or "Heart and Mind at Odds").
+- "title": string, a descriptive and punchy 2-3 word phrase that captures the alignment state (e.g., "A Soul Ready to Move", "Heart and Mind at Odds").
 - "decisionInsight": string, 2 paragraphs separated by \\n\\n. Help the user understand the interplay of these 4 dimensions without prescribing a choice.
 - "alignmentAnalysis": object with EXACTLY these keys: "mind", "heart", "body", "soul". Each value is 1–2 sentences describing what that dimension's score reveals.
 - "whatThisMeans": string, 1 paragraph. Summarize the overall alignment state and what it suggests about where the user is right now.
@@ -1609,7 +1609,7 @@ INPUT:
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
-- "title": string, KEEP AS: "Your Current Phase"
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the current life phase (e.g., "Observant Transition", "Grounded Shift").
 
 - "phaseDescription": string, 2 paragraphs separated by \\n\\n.
 Paragraph 1: What is happening and what is being activated.
@@ -1685,7 +1685,7 @@ INPUT:
 {confidence_lines}
 
 WRITE IN THIS EXACT STRUCTURE (Return exactly one JSON object):
-- "title": string, KEEP AS: "Your Personality Pattern".
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "overview": string, 2-3 short, punchy paragraphs. (P1: How the type processes reality through its dominant functions. P2: How the dimension intensities modify this specific user's expression).
 - "coreTraits": array of exactly 3 descriptive behavioral chips (derived from cognitive patterns).
@@ -1736,7 +1736,7 @@ ZODIAC_ELEMENT_MODALITY_USER = """INPUT:
 - supporting astrology context: {astrology_context}
 
 Return exactly one JSON object with these keys only:
-- "title": string, short and specific
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "energyProfile": string, 2 short paragraphs explaining the interaction and real-life manifestation/tension
 - "coreTraits": array of exactly 3 short recognition patterns
 - "strengths": array of exactly 3 short real-life advantages
@@ -1776,7 +1776,7 @@ Secondary Style: {secondary_style}
 Scores: {scores}
 
 Write the following sections (Return exactly ONE JSON object):
-- "title": Result Title (short, catchy, specific).
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "overview": (Cognitive Signature). 3 paragraphs. Describe how this actually plays out in real life like an observation. Use short sentences. Avoid repeating the same "emotion vs logic" idea.
     - Paragraph 1: how you think (e.g., "You pick up on how people feel very quickly, sometimes before they say anything.").
     - Paragraph 2: how you decide (e.g., "You then try to factor that into decisions, which can slow you down.").
@@ -1830,7 +1830,7 @@ Integration Score: {integration_score}
 Scores: {scores}
 
 Write the following sections (Return exactly ONE JSON object):
-- "title": Result Title (use the exact Primary Type name passed, e.g. "Unified Synthesizer").
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the integration style (e.g., "Observant Synthesizer", "Grounded Harmony").
 - "overview": string, 2 paragraphs separated by \n\n. Describe their specific mind-heart integration style. How do they balance logic and emotion? Does one override the other?
 - "coreTraits": Array of exactly 3 descriptive behavioral statements. Not single words.
 - "strengths": Array of exactly 3 short bullet points. Concrete and behavioral.
@@ -1888,7 +1888,7 @@ Source: {source}
 33 — The Master Teacher (Master) (Desire: unconditional service, emotional upliftment)
 
 WRITE SECTIONS (Return exactly ONE JSON object):
-- "title": Result Title (Use number meaning, e.g. "The Nurturer").
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the core urge (e.g., "Observant Seeker", "Grounded Nurturer").
 - "coreDesire": string, 2 paragraphs separated by \n\n. Explain what the person deeply wants emotionally, what fulfillment feels like to them, and what drives them internally.
 - "innerMotivations": Array of exactly 3 bullet points. Specific psychological drivers (not surface traits).
 - "shadowExpression": Array of exactly 3 bullet points. How this energy becomes distorted: unmet needs, overcompensation, emotional imbalance.
