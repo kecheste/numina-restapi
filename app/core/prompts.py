@@ -330,7 +330,11 @@ SYNTHESIS_PREVIEW_USER_TEMPLATE = """The user has completed {count} tests so far
 
 Return exactly one JSON object with these keys only:
 - "youAre": string, 3-5 sentences. Who this person is based on these early signals. Include at least one internal tension or contradiction. Be specific — NOT generic.
-- "sureThings": string, a short 1 sentencecsummary of patterns that stand out clearly across tests. Focus on what is already unmistakable.
+- "sureThings": array of 3-5 short strings. Patterns that stand out clearly across these early tests. Each item should be a short phrase (max 8 words), not a single word. Focus on what is already unmistakable.
+- "mostSureThings": array of exactly 3-5 strings. Ultra-short chip labels only — maximum 3 words each. The single clearest truths about this person distilled to a label. No sentences, no punctuation.
+  Examples: "Depth Over Speed", "Analytical Empath", "Reluctant Initiator", "Inner Conflict Driver"
+  BAD: "You tend to overthink before taking action" — TOO LONG.
+  GOOD: "Overthinking Initiator" — correct format.
 - "identitySummary": string, 2-3 paragraphs separated by \\n\\n. An emerging portrait of who this person is: their core drive, their recurring friction, and what is beginning to define them.
 - "growthAreas": array of 3-5 short strings. Honest gaps, blind spots, or areas not yet explored. Make them specific, not generic.
 - "nextFocus": string, 2-3 sentences. What this person should focus on or explore next — and why, based on what the data already shows.
@@ -381,7 +385,10 @@ Example scoring (core layer):
 Your task: Generate a complete 16-section synthesis portrait. Sections 0–13 from core signals only. Section 14 from dynamic signals only. Section 15 combines both.
 
 Return exactly one JSON object with these EXACT keys:
-- \"sureThings\": string, 2-3 sentences. A punchy summary of patterns that appear across your completed tests — strong indicators of your core wiring.
+- \"sureThings\": array of 3-5 short strings. Patterns that appear consistently across completed tests — strong indicators of core wiring. Each item max 8 words.
+- \"mostSureThings\": array of exactly 3-5 strings. Ultra-short chip labels — maximum 3 words each. The single clearest truths about this person in chip form. No sentences.
+  Examples: \"Depth Over Speed\", \"Analytical Empath\", \"Reluctant Initiator\"
+  These will be displayed as small tags on the user's profile. Keep them punchy, specific, and chip-sized.
 
 0. \"identityLine\": string, ONE powerful sentence, maximum 20 words. The sharpest possible distillation of who this person is. This is the hero line displayed at the very top of their synthesis — specific, not generic, slightly confronting, and instantly recognizable. Do NOT use their name. Do NOT use soft language.
    - BAD: \"You are a thoughtful and creative person who seeks meaning.\"
@@ -449,14 +456,36 @@ CRITICAL RULES:
 
 Output only the JSON object, nothing else."""
 
-SYNTHESIS_PREVIEW_JSON_KEYS = frozenset({"youAre", "sureThings", "identitySummary", "growthAreas", "nextFocus"})
+SYNTHESIS_PREVIEW_JSON_KEYS = frozenset({"youAre", "sureThings", "mostSureThings", "identitySummary", "growthAreas", "nextFocus"})
 SYNTHESIS_FULL_JSON_KEYS = frozenset({
-    "identityLine", "sureThings",
+    "identityLine", "sureThings", "mostSureThings",
     "coreIdentity", "dominantPatterns", "hiddenPatterns", "emergingPatterns",
     "innerConflictMap", "coreStrengths", "coreChallenges", "psychologicalProfile",
     "spiritualBlueprint", "yourDirection", "tryThis", "avoidThis",
     "finalInsight", "currentEnergy", "innerAlignment",
 })
+
+# ── Daily Message Prompts ──────────────────────────────────────────────────────
+
+DAILY_MESSAGE_SYSTEM = """You write a short, grounded, personal daily message for a self-discovery app.
+Tone: warm, direct, slightly introspective. NOT motivational-poster language. NOT generic advice.
+The message must feel like it was written specifically for this person — not a horoscope.
+You write only valid JSON. No markdown, no code fences, no extra text."""
+
+DAILY_MESSAGE_USER_TEMPLATE = """User profile:
+- Core trait chips: {most_sure_things}
+- MBTI type: {mbti_type}
+- Zodiac sign: {zodiac}
+- Life Path number: {life_path}
+- Tests completed so far: {count}
+
+Write a daily message that feels personal and specific to who this person actually is.
+
+Return exactly one JSON object with:
+- "message": string, 2-3 sentences. Grounded and specific to their traits. Reference something concrete from their profile (e.g. their thinking style, emotional pattern, or core tension). Slightly confronting where true. Do NOT say "embrace your journey" or similar generic phrases.
+- "quote": string, one original short quote (5-12 words) that distills something true about them — not a famous quote, an original one.
+
+Output only the JSON object, nothing else."""
 
 BLUEPRINT_SYSTEM = MASTER_PROMPT + """You are a warm, insightful astrologer and numerologist. You write only valid JSON. No markdown, no code fences.
 Keep each field concise: 1-3 sentences for descriptions."""

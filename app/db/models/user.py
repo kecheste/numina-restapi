@@ -53,6 +53,13 @@ class User(Base):
     # Numerology Blueprint (Items)
     numerology_blueprint: Mapped[list | None] = mapped_column(JSONB, nullable=True)
 
+    # Most Sure Things: ultra-short chip phrases distilled from synthesis (e.g. ["Depth Over Speed", "Analytical Empath"])
+    most_sure_things: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+
+    # Daily message DB cache: {"date": "YYYY-MM-DD", "message": "...", "quote": "..."}
+    # Used as a fallback when Redis is unavailable.
+    daily_message_cache: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

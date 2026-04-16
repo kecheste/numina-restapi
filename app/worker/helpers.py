@@ -6,7 +6,7 @@ import logging
 from datetime import date
 from typing import Any, Callable
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.synthesis import (
@@ -198,10 +198,10 @@ def compute_starseed(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
 
     # Q1 — social role
     _q1 = {
-        "helper_wait": ("pleiadian", 2),
-        "observe_until_called": ("andromedan", 2),
-        "lead_immediately": ("sirian", 2),
-        "quiet_support": ("venusian", 2),
+        "Helper Wait": ("pleiadian", 2),
+        "Observe Until Called": ("andromedan", 2),
+        "Lead Immediately": ("sirian", 2),
+        "Quiet Support": ("venusian", 2),
     }
     q1_ans = str(ans_map.get(1) or "").strip()
     if q1_ans in _q1:
@@ -209,12 +209,12 @@ def compute_starseed(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
 
     # Q2 — curiosity (multi-select)
     _q2 = {
-        "space": ("andromedan", 2),
-        "ancient": ("sirian", 2),
-        "science": ("arcturian", 2),
-        "mystical": ("pleiadian", 1),
-        "nature": ("lyran", 2),
-        "energy": ("venusian", 2),
+        "Space": ("andromedan", 2),
+        "Ancient": ("sirian", 2),
+        "Science": ("arcturian", 2),
+        "Mystical": ("pleiadian", 1),
+        "Nature": ("lyran", 2),
+        "Energy": ("venusian", 2),
     }
     q2_ans = ans_map.get(2)
     if isinstance(q2_ans, list):
@@ -225,10 +225,10 @@ def compute_starseed(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
 
     # Q3 — nature resonance
     _q3 = {
-        "earth": ("lyran", 2),
-        "water": ("venusian", 2),
-        "sky": ("andromedan", 2),
-        "plants": ("pleiadian", 1),
+        "Earth": ("lyran", 2),
+        "Water": ("venusian", 2),
+        "Sky": ("andromedan", 2),
+        "Plants": ("pleiadian", 1),
     }
     q3_ans = str(ans_map.get(3) or "").strip()
     if q3_ans in _q3:
@@ -236,10 +236,10 @@ def compute_starseed(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
 
     # Q4 — calling
     _q4 = {
-        "heal": ("pleiadian", 3),
-        "innovate": ("arcturian", 3),
-        "teach": ("sirian", 3),
-        "protect": ("lyran", 3),
+        "Heal": ("pleiadian", 3),
+        "Innovate": ("arcturian", 3),
+        "Teach": ("sirian", 3),
+        "Protect": ("lyran", 3),
     }
     q4_ans = str(ans_map.get(4) or "").strip()
     if q4_ans in _q4:
@@ -247,10 +247,10 @@ def compute_starseed(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
 
     # Q5 — social energy
     _q5 = {
-        "one_on_one": ("venusian", 2),
-        "small_groups": ("andromedan", 1),
-        "teach_crowd": ("sirian", 2),
-        "observe_edges": ("lyran", 1),
+        "One On One": ("venusian", 2),
+        "Small Groups": ("andromedan", 1),
+        "Teach Crowd": ("sirian", 2),
+        "Observe Edges": ("lyran", 1),
     }
     q5_ans = str(ans_map.get(5) or "").strip()
     if q5_ans in _q5:
@@ -258,9 +258,9 @@ def compute_starseed(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
 
     # Q6 — decision style
     _q6 = {
-        "heart": ("pleiadian", 2),
-        "logic": ("arcturian", 2),
-        "balance": ("venusian", 1),
+        "Heart": ("pleiadian", 2),
+        "Logic": ("arcturian", 2),
+        "Balance": ("venusian", 1),
     }
     q6_ans = str(ans_map.get(6) or "").strip()
     if q6_ans in _q6:
@@ -268,10 +268,10 @@ def compute_starseed(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
 
     # Q7 — pace
     _q7 = {
-        "grounded": ("lyran", 2),
-        "free_flowing": ("andromedan", 2),
-        "structured": ("arcturian", 2),
-        "reflective": ("sirian", 1),
+        "Grounded": ("lyran", 2),
+        "Free Flowing": ("andromedan", 2),
+        "Structured": ("arcturian", 2),
+        "Reflective": ("sirian", 1),
     }
     q7_ans = str(ans_map.get(7) or "").strip()
     if q7_ans in _q7:
@@ -290,7 +290,7 @@ def compute_starseed(answers: list[Any] | dict[str, Any]) -> dict[str, Any]:
         try:
             return float(val)
         except (TypeError, ValueError):
-            return 3.0
+            return 3.0 
 
     scores["andromedan"] += get_likert(8)
     scores["pleiadian"]  += get_likert(9)
@@ -1141,6 +1141,14 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
             input_json=signal_map
         ))
         logger.info("Synthesis full generated for user_id=%s", user_id)
+        # Persist mostSureThings from full synthesis to user model
+        _most_sure = full_json.get("mostSureThings")
+        if isinstance(_most_sure, list) and _most_sure:
+            await session.execute(
+                update(UserModel)
+                .where(UserModel.id == user_id)
+                .values(most_sure_things=_most_sure[:5])
+            )
     else:
         preview_json = await call_llm_for_synthesis(all_str, count, full=False)
         await session.execute(delete(UserSynthesis).where(
@@ -1154,5 +1162,20 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
             input_json=signal_map
         ))
         logger.info("Synthesis preview generated for user_id=%s", user_id)
+        # Persist mostSureThings from preview synthesis to user model
+        _most_sure = preview_json.get("mostSureThings")
+        if isinstance(_most_sure, list) and _most_sure:
+            await session.execute(
+                update(UserModel)
+                .where(UserModel.id == user_id)
+                .values(most_sure_things=_most_sure[:5])
+            )
 
     await session.commit()
+
+    # Invalidate user profile cache so My Soul page sees fresh most_sure_things
+    try:
+        from app.core.redis import cache_delete, cache_key_user_profile
+        await cache_delete(cache_key_user_profile(user_id))
+    except Exception as e:
+        logger.warning("Failed to invalidate user profile cache for user_id=%s: %s", user_id, e)
