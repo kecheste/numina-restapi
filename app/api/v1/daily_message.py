@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.dependencies import get_db, get_optional_current_user
-from app.core.redis import cache_get, cache_set, get_redis
+from app.core.redis import cache_get, cache_set
 from app.db.models.test_result import TestResult
 from app.db.models.user import User as UserModel
 from app.schemas.daily_message import DailyMessageResponse
