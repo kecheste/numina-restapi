@@ -190,7 +190,7 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=1,
         prompt="How do you typically relate to others?",
         answer_type="single_choice",
-        options=["helper_wait", "observe_until_called", "lead_immediately", "quiet_support"],
+        options=["Helper Wait", "Observe Until Called", "Lead Immediately", "Quiet Support"],
         option_labels=[
             "I’m a natural helper but often wait to be asked",
             "I prefer observing until I feel called in",
@@ -204,7 +204,7 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=2,
         prompt="Which topics spark your deepest curiosity? (Select up to 3)",
         answer_type="multiple_choice",
-        options=["space", "ancient", "science", "mystical", "nature", "energy"],
+        options=["Space", "Ancient", "Science", "Mystical", "Nature", "Energy"],
         option_labels=[
             "Space, stars, extraterrestrial life",
             "Ancient wisdom and civilizations",
@@ -221,7 +221,7 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=3,
         prompt="When you’re in nature, what resonates most?",
         answer_type="single_choice",
-        options=["earth", "water", "sky", "plants"],
+        options=["Earth", "Water", "Sky", "Plants"],
         option_labels=[
             "The calm grounding earth beneath my feet",
             "The flow of water or breeze",
@@ -235,7 +235,7 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=4,
         prompt="How would you describe your sense of calling?",
         answer_type="single_choice",
-        options=["heal", "innovate", "teach", "protect"],
+        options=["Heal", "Innovate", "Teach", "Protect"],
         option_labels=[
             "To heal and comfort others",
             "To build or innovate new systems",
@@ -249,7 +249,7 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=5,
         prompt="At a gathering you feel most yourself when:",
         answer_type="single_choice",
-        options=["one_on_one", "small_groups", "teach_crowd", "observe_edges"],
+        options=["One On One", "Small Groups", "Teach Crowd", "Observe Edges"],
         option_labels=[
             "In deep one-on-one conversations",
             "In small groups exploring ideas",
@@ -263,7 +263,7 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=6,
         prompt="When making big decisions you trust:",
         answer_type="single_choice",
-        options=["heart", "logic", "balance"],
+        options=["Heart", "Logic", "Balance"],
         option_labels=[
             "Emotional intuition",
             "Logical reasoning",
@@ -276,7 +276,7 @@ STARSEED_ORIGINS_QUESTIONS: list[QuestionOut] = [
         id=7,
         prompt="Which pace fits you best?",
         answer_type="single_choice",
-        options=["grounded", "free_flowing", "structured", "reflective"],
+        options=["Grounded", "Free Flowing", "Structured", "Reflective"],
         option_labels=[
             "Steady and grounded",
             "Free-flowing and adaptable",
