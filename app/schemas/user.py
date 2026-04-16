@@ -42,6 +42,8 @@ class UserResponse(BaseModel):
     astrology_blueprint: dict | None = None
     # Numerology Blueprint
     numerology_blueprint: list | None = None
+    # Most Sure Things chip tags from latest synthesis
+    most_sure_things: list | None = None
 
     created_at: datetime
     updated_at: datetime

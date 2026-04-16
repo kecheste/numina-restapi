@@ -23,7 +23,7 @@ CHAKRA_ALIGNMENT_SCAN_QUESTIONS: list[QuestionOut] = [
         id=3,
         prompt="Where in your body do you most often notice tension or discomfort?",
         answer_type="single_choice",
-        options=["Root - safety / stability", "Sacral - emotion / creativity", "Solar Plexus - stress / control", "Heart - love / grief", "Throat - expression", "Third Eye - overthinking", "Crown - meaning / connection"],
+        options=["Root (lower body / safety)", "Sacral (lower abdomen / emotion)", "Solar Plexus (stomach / stress)", "Heart (chest / love or grief)", "Throat (throat / expression)", "Third Eye (forehead / overthinking)", "Crown (head / meaning)"],
         required=True,
     ),
     QuestionOut(

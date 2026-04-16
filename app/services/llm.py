@@ -127,7 +127,7 @@ def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> d
     if not isinstance(obj, dict):
         return {}
     list_keys = (
-        "insights", "recommendations", "sureThings", "growthAreas", "themes",
+        "insights", "recommendations", "sureThings", "mostSureThings", "growthAreas", "themes",
         "strengths", "challenges", "shadowPatterns", "coreTraits", "tryThis", "avoidThis",
         "yourBlueprint", "personalityConscious", "designUnconscious",
         "currentPatterns",

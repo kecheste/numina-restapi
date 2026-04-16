@@ -6,7 +6,7 @@ import logging
 from datetime import date
 from typing import Any, Callable
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.synthesis import (
@@ -1141,6 +1141,14 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
             input_json=signal_map
         ))
         logger.info("Synthesis full generated for user_id=%s", user_id)
+        # Persist mostSureThings from full synthesis to user model
+        _most_sure = full_json.get("mostSureThings")
+        if isinstance(_most_sure, list) and _most_sure:
+            await session.execute(
+                update(UserModel)
+                .where(UserModel.id == user_id)
+                .values(most_sure_things=_most_sure[:5])
+            )
     else:
         preview_json = await call_llm_for_synthesis(all_str, count, full=False)
         await session.execute(delete(UserSynthesis).where(
@@ -1154,5 +1162,20 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
             input_json=signal_map
         ))
         logger.info("Synthesis preview generated for user_id=%s", user_id)
+        # Persist mostSureThings from preview synthesis to user model
+        _most_sure = preview_json.get("mostSureThings")
+        if isinstance(_most_sure, list) and _most_sure:
+            await session.execute(
+                update(UserModel)
+                .where(UserModel.id == user_id)
+                .values(most_sure_things=_most_sure[:5])
+            )
 
     await session.commit()
+
+    # Invalidate user profile cache so My Soul page sees fresh most_sure_things
+    try:
+        from app.core.redis import cache_delete, cache_key_user_profile
+        await cache_delete(cache_key_user_profile(user_id))
+    except Exception as e:
+        logger.warning("Failed to invalidate user profile cache for user_id=%s: %s", user_id, e)
