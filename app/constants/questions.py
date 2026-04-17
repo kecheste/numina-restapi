@@ -1467,10 +1467,10 @@ BIG_FIVE_QUESTIONS: list[QuestionOut] = [
 
 SOUL_COMPASS_QUESTIONS: list[QuestionOut] = [
     QuestionOut(id=0, prompt="What is the important life decision you are evaluating?", answer_type="text", required=True),
-    QuestionOut(id=1, prompt="Mind (Clarity)", answer_type="slider", required=True, slider_min=0, slider_max=100),
-    QuestionOut(id=2, prompt="Heart (Emotion)", answer_type="slider", required=True, slider_min=0, slider_max=100),
-    QuestionOut(id=3, prompt="Body (Grounding)", answer_type="slider", required=True, slider_min=0, slider_max=100),
-    QuestionOut(id=4, prompt="Soul (Purpose)", answer_type="slider", required=True, slider_min=0, slider_max=100),
+    QuestionOut(id=1, prompt="Mind — what seems logical or makes sense", answer_type="slider", required=True, slider_min=0, slider_max=100),
+    QuestionOut(id=2, prompt="Heart — what feels emotionally true", answer_type="slider", required=True, slider_min=0, slider_max=100),
+    QuestionOut(id=3, prompt="Body — what feels safe, calm, or tense in your body", answer_type="slider", required=True, slider_min=0, slider_max=100),
+    QuestionOut(id=4, prompt="Soul — what feels deeply meaningful or aligned", answer_type="slider", required=True, slider_min=0, slider_max=100),
 ]
 
 ENERGY_SYNTHESIS_QUESTIONS: list[QuestionOut] = [
