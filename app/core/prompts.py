@@ -328,7 +328,7 @@ SYNTHESIS_PREVIEW_USER_TEMPLATE = """The user has completed {count} tests so far
 
 {input_json}
 
-Return exactly one JSON object with these keys only:
+Return exactly one JSON object with these EXACT keys (all are mandatory):
 - "youAre": string, 3-5 sentences. Who this person is based on these early signals. Include at least one internal tension or contradiction. Be specific — NOT generic.
 - "sureThings": array of 3-5 short strings. Patterns that stand out clearly across these early tests. Each item should be a short phrase (max 8 words), not a single word. Focus on what is already unmistakable.
 - "mostSureThings": array of exactly 3-5 strings. Ultra-short chip labels only — maximum 3 words each. The single clearest truths about this person distilled to a label. No sentences, no punctuation.
@@ -339,7 +339,11 @@ Return exactly one JSON object with these keys only:
 - "growthAreas": array of 3-5 short strings. Honest gaps, blind spots, or areas not yet explored. Make them specific, not generic.
 - "nextFocus": string, 2-3 sentences. What this person should focus on or explore next — and why, based on what the data already shows.
 
-Output only the JSON object, nothing else."""
+STRICT OUTPUT VALIDATION:
+1. Output MUST be ONLY the JSON object.
+2. ALL 6 keys listed above MUST be present.
+3. If data is thin, do not skip keys—provide grounded, high-quality emerging observations instead.
+4. No markdown. No text outside the JSON."""
 
 SYNTHESIS_FULL_USER_TEMPLATE = """The user has completed {count} tests. Below is their structured data split into two layers.
 

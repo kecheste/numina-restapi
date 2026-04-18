@@ -712,6 +712,7 @@ async def call_llm_for_synthesis(
         return {
             "youAre": "You are someone still discovering your full pattern.",
             "sureThings": ["Thoughtful", "Self-aware", "Depth-oriented"],
+            "mostSureThings": ["Thoughtful", "Self-aware", "Explorer"],
             "identitySummary": "Your early results suggest a reflective, internally-driven personality.",
             "growthAreas": ["Action and follow-through", "Emotional expression"],
             "nextFocus": "Complete more assessments to unlock a fuller picture of who you are.",
