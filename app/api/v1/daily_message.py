@@ -8,13 +8,10 @@ import logging
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.dependencies import get_db, get_optional_current_user
-from app.core.redis import cache_get, cache_set
-from app.db.models.test_result import TestResult
+from app.core.dependencies import get_optional_current_user
+from app.core.redis import cache_get
 from app.db.models.user import User as UserModel
 from app.schemas.daily_message import DailyMessageResponse
 
@@ -129,7 +126,6 @@ async def _generate_personalized_message(user: UserModel, completed_count: int) 
 @router.get("/daily-message", response_model=DailyMessageResponse)
 async def get_daily_message(
     current_user: UserModel | None = Depends(get_optional_current_user),
-    db: AsyncSession = Depends(get_db),
 ) -> DailyMessageResponse:
     """
     Return today's daily message and quote.
@@ -137,14 +133,43 @@ async def get_daily_message(
       Cached in Redis (key: daily_msg:{user_id}:{YYYY-MM-DD}) with DB fallback.
     - All other cases fall back to the static day-of-month list.
     """
-    # No user or no synthesis context → static
-    if current_user is None or not current_user.most_sure_things:
+    if current_user is None:
         return _static_message()
 
+    # 1. Try Snapshot from User model
+    snapshot = current_user.soul_snapshot
     today_str = date.today().isoformat()
-    redis_key = f"daily_msg:{current_user.id}:{today_str}"
+    
+    if snapshot:
+        # If it's today, return it
+        if snapshot.get("daily_date") == today_str:
+            return DailyMessageResponse(
+                message=snapshot.get("daily_message", ""),
+                quote=snapshot.get("daily_quote", ""),
+            )
+        
+        # If it's a new day, we should ideally refresh it.
+        # For now, we'll try to refresh it synchronously if they have enough data, 
+        # or just trigger a background refresh and return static/old context.
+        try:
+            from app.db.session import AsyncSessionLocal
+            from app.db.models.user import User as _User
+            from app.worker.soul_snapshot import generate_soul_snapshot
+            async with AsyncSessionLocal() as session:
+                await generate_soul_snapshot(session, current_user.id, refresh_pulse_only=True)
+                refreshed = await session.get(_User, current_user.id)
+                if refreshed:
+                    snapshot = refreshed.soul_snapshot
+            if snapshot and snapshot.get("daily_date") == today_str:
+                return DailyMessageResponse(
+                    message=snapshot.get("daily_message", ""),
+                    quote=snapshot.get("daily_quote", ""),
+                )
+        except Exception as e:
+            logger.warning("Synchronous snapshot refresh failed for user_id=%s: %s", current_user.id, e)
 
-    # 1. Try Redis cache
+    # 2. Try legacy Redis cache (migration period)
+    redis_key = f"daily_msg:{current_user.id}:{today_str}"
     cached = await cache_get(redis_key)
     if cached:
         return DailyMessageResponse(
@@ -152,47 +177,12 @@ async def get_daily_message(
             quote=cached.get("quote", ""),
         )
 
-    # 2. Try DB cache (in case Redis was flushed)
-    db_cache = current_user.daily_message_cache
-    if isinstance(db_cache, dict) and db_cache.get("date") == today_str:
-        result = DailyMessageResponse(
-            message=db_cache.get("message", ""),
-            quote=db_cache.get("quote", ""),
-        )
-        # Re-warm Redis
-        await cache_set(redis_key, db_cache, ttl_seconds=_seconds_until_midnight())
-        return result
+    # 3. Fallback to LLM-generated message (legacy logic)
+    # This also helps for users who don't have a snapshot yet but have synthesis.
+    if current_user.most_sure_things:
+        result = await _generate_personalized_message(current_user, 0)
+        if result:
+            return result
 
-    # 3. Get completed test count for context
-    completed_count = 0
-    try:
-        count_res = await db.execute(
-            select(TestResult.id).where(
-                TestResult.user_id == current_user.id,
-                TestResult.status == "completed",
-            )
-        )
-        completed_count = len(count_res.scalars().all())
-    except Exception:
-        pass
-
-    # 4. Generate personalized message via LLM
-    result = await _generate_personalized_message(current_user, completed_count)
-    if result:
-        payload = {"date": today_str, "message": result.message, "quote": result.quote}
-        # Cache in Redis until midnight
-        await cache_set(redis_key, payload, ttl_seconds=_seconds_until_midnight())
-        # Persist to DB as fallback
-        try:
-            await db.execute(
-                update(UserModel)
-                .where(UserModel.id == current_user.id)
-                .values(daily_message_cache=payload)
-            )
-            await db.commit()
-        except Exception as e:
-            logger.warning("Failed to persist daily_message_cache for user_id=%s: %s", current_user.id, e)
-        return result
-
-    # 5. All else fails → static
+    # 4. All else fails → static
     return _static_message()

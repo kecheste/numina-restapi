@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.constants.synthesis import (
     SYNTHESIS_FULL_MIN_TESTS,
-    SYNTHESIS_PREVIEW_MIN_TESTS,
 )
 from app.core.config import settings
 from app.core.redis import (
@@ -1030,17 +1029,26 @@ def _extract_synthesis_signal(
 
 
 async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> None:
-    """If user has 3+ or 6+ completed results, generate preview or full synthesis (one LLM call per task to avoid 429)."""
+    """Generate full synthesis if user is premium and has 12+ completed results."""
+    from app.db.models.user import User as UserModel
     if not settings.openai_api_key:
         return
+
+    user_q = await session.execute(select(UserModel).where(UserModel.id == user_id))
+    user = user_q.scalar_one_or_none()
+    if not user:
+        return
+
     count_result = await session.execute(
-        select(func.count(TestResult.id)).where(
+        select(func.count(func.distinct(TestResult.test_id))).where(
             TestResult.user_id == user_id,
             TestResult.status == "completed",
         )
     )
     count = count_result.scalar() or 0
-    if count < SYNTHESIS_PREVIEW_MIN_TESTS:
+
+    # Only generate synthesis if user is premium and has completed 12+ tests
+    if not user.is_premium or count < SYNTHESIS_FULL_MIN_TESTS:
         return
 
     # Fetch completed test results
@@ -1079,7 +1087,6 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
 
     core_str = json.dumps(core_parts, separators=(',', ':'))
     dynamic_str = json.dumps(dynamic_parts, separators=(',', ':'))
-    all_str = json.dumps(core_parts + dynamic_parts, separators=(',', ':'))
 
     # Build profile context
     profile_context = ""
@@ -1113,64 +1120,41 @@ async def generate_synthesis_for_user(session: AsyncSession, user_id: int) -> No
         logger.warning("Profile context failed: %s", e)
 
     # Trigger LLM path
-    if count >= SYNTHESIS_FULL_MIN_TESTS:
-        full_json = await call_llm_for_synthesis(
-            core_str, count, full=True,
-            profile_context=profile_context,
-            dynamic_str=dynamic_str,
+    # Only Full Synthesis exists now (12+ tests, Premium checked above)
+    full_json = await call_llm_for_synthesis(
+        core_str, count, full=True,
+        profile_context=profile_context,
+        dynamic_str=dynamic_str,
+    )
+
+    # Update/Replace Full
+    await session.execute(delete(UserSynthesis).where(
+        UserSynthesis.user_id == user_id,
+        UserSynthesis.synthesis_type == "full",
+    ))
+    session.add(UserSynthesis(
+        user_id=user_id,
+        synthesis_type="full",
+        result_json=full_json,
+        input_json=signal_map
+    ))
+
+    # Clean up any leftover previews
+    await session.execute(delete(UserSynthesis).where(
+        UserSynthesis.user_id == user_id,
+        UserSynthesis.synthesis_type == "preview",
+    ))
+
+    logger.info("Synthesis full generated for user_id=%s", user_id)
+
+    # Persist mostSureThings from full synthesis to user model
+    _most_sure = full_json.get("mostSureThings")
+    if isinstance(_most_sure, list) and _most_sure:
+        await session.execute(
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(most_sure_things=_most_sure[:5])
         )
-        # Update/Replace Full
-        await session.execute(delete(UserSynthesis).where(
-            UserSynthesis.user_id == user_id,
-            UserSynthesis.synthesis_type == "full",
-        ))
-        session.add(UserSynthesis(
-            user_id=user_id,
-            synthesis_type="full",
-            result_json=full_json,
-            input_json=signal_map
-        ))
-        # Update/Replace Preview (keep in sync)
-        await session.execute(delete(UserSynthesis).where(
-            UserSynthesis.user_id == user_id,
-            UserSynthesis.synthesis_type == "preview",
-        ))
-        session.add(UserSynthesis(
-            user_id=user_id,
-            synthesis_type="preview",
-            result_json=full_json,
-            input_json=signal_map
-        ))
-        logger.info("Synthesis full generated for user_id=%s", user_id)
-        # Persist mostSureThings from full synthesis to user model
-        _most_sure = full_json.get("mostSureThings")
-        if isinstance(_most_sure, list) and _most_sure:
-            await session.execute(
-                update(UserModel)
-                .where(UserModel.id == user_id)
-                .values(most_sure_things=_most_sure[:5])
-            )
-    else:
-        preview_json = await call_llm_for_synthesis(all_str, count, full=False)
-        await session.execute(delete(UserSynthesis).where(
-            UserSynthesis.user_id == user_id,
-            UserSynthesis.synthesis_type == "preview",
-        ))
-        session.add(UserSynthesis(
-            user_id=user_id,
-            synthesis_type="preview",
-            result_json=preview_json,
-            input_json=signal_map
-        ))
-        logger.info("Synthesis preview generated for user_id=%s", user_id)
-        # Persist mostSureThings from preview synthesis to user model
-        _most_sure = preview_json.get("mostSureThings")
-        if isinstance(_most_sure, list) and _most_sure:
-            await session.execute(
-                update(UserModel)
-                .where(UserModel.id == user_id)
-                .values(most_sure_things=_most_sure[:5])
-            )
 
     await session.commit()
 

@@ -508,11 +508,11 @@ Return exactly one JSON object with these keys only:
 - "sunDescription": string, 1-2 sentences on core personality from their sun sign (personalized, warm)
 - "moonDescription": string, 1-2 sentences on emotional self from their moon sign
 - "risingDescription": string, 1-2 sentences on how others see them from rising sign
-- "cosmicTraitsSummary": string, exactly 4 lines in this format (use the exact emoji at the start of each line, then one value per line derived from their chart):
-  Line 1: 🜂 Element: [one of: Water / Earth / Fire / Air — pick the dominant element from their chart]
-  Line 2: ☌ Modality: [one of: Fixed / Mutable / Cardinal — from their sun/moon/rising]
-  Line 3: ♇ Ruling Planet: [e.g. Pluto, Mars, Venus — main ruling planet(s) for their chart]
-  Line 4: 🌠 Most active house: [e.g. 7th – Partnerships — the most emphasized house]
+- "cosmicTraitsSummary": object with these exactly 4 keys:
+    - "element": string (e.g. "Water", "Earth", "Fire", "Air" - the dominant one)
+    - "modality": string (e.g. "Cardinal", "Fixed", "Mutable")
+    - "rulingPlanet": string (e.g. "Mars", "Pluto", "Venus")
+    - "mostActiveHouse": string (e.g. "1st", "8th - Transformations", "10th - Career")
 - "strengths": array of 2-5 short phrases
 - "challenges": array of 2-5 short phrases
 - "avoidThis": array of 2-4 short phrases
@@ -1952,3 +1952,27 @@ SOUL_URGE_JSON_KEYS = frozenset({
     "title", "coreDesire", "innerMotivations", "shadowExpression", "fulfillmentPath",
     "tryThis", "avoidThis", "strengths", "challenges", "extracted_json"
 })
+
+SOUL_SNAPSHOT_SYSTEM = MASTER_PROMPT + """You are generating a 'Personality Pulse' or 'Soul Snapshot' for a premium self-discovery app.
+
+This is a high-level, dynamic summary that appears on the user's home screen. It must be sharp, specific, and evolve based on the provided data.
+
+CORE RULES:
+1. SUMMARY: Write exactly one ultra-short descriptive phrase of 5-8 words maximum. Style: "A [adjective] [noun] with [quality]" — e.g. "A grounded intuitive with cosmic insights" or "A strategic empath driven by depth". No full sentences. No period at the end.
+2. SURE THINGS: Distill 3-5 keywords or ultra-short phrases (max 3 words each) that are unmistakable truths about this person based on their test results.
+3. DAILY MESSAGE: Write 2-3 sentences of present-tense insight. It should feel like a direct observation of their current state or a recurring pattern they are likely experiencing today.
+4. QUOTE: Write one original, short quote (5-12 words) that encapsulates their essence or a current growth theme.
+
+Tone: Warm, psychologically sharp, direct, and premium. No generic motivational language. No spiritual fluff.
+You write only valid JSON. No markdown."""
+
+SOUL_SNAPSHOT_USER_TEMPLATE = """User Data:
+{input_data}
+
+Return exactly one JSON object with:
+- 'summary': string (5-8 word descriptive phrase ONLY, e.g. "A grounded intuitive with cosmic insights")
+- 'sure_things': array of 3-5 ultra-short strings (max 3 words each)
+- 'daily_message': string (2-3 sentences)
+- 'daily_quote': string (5-12 words)
+
+Output only the JSON object, strictly conform to the keys above."""
