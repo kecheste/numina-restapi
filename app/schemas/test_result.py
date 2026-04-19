@@ -39,6 +39,13 @@ class ElementDistribution(BaseModel):
     water: int = 0
 
 
+class CosmicTraitsSummary(BaseModel):
+    element: str = "—"
+    modality: str = "—"
+    rulingPlanet: str = "—"
+    mostActiveHouse: str = "—"
+
+
 class AstrologyChartResponse(BaseModel):
     """Response for GET /tests/astrology-chart (computed from user birth data)."""
 
@@ -84,7 +91,7 @@ class AstrologyBlueprintResponse(BaseModel):
     sun_description: str | None = None
     moon_description: str | None = None
     rising_description: str | None = None
-    cosmic_traits_summary: str | None = None
+    cosmic_traits_summary: CosmicTraitsSummary | None = None
     strengths: list[str] | None = None
     challenges: list[str] | None = None
     avoid_this: list[str] | None = None

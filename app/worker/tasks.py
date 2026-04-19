@@ -76,6 +76,7 @@ from .helpers import (
     generate_synthesis_for_user,
     get_user_context,
 )
+from .soul_snapshot import generate_soul_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -1253,6 +1254,8 @@ async def _refine_test_result_impl(ctx: dict[str, Any], result_id: int) -> None:
         row.status = "completed"
         await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
         await session.commit()
+        async with AsyncSessionLocal() as snapshot_session:
+            await generate_soul_snapshot(snapshot_session, user_id)
         async with AsyncSessionLocal() as syn_session:
             await generate_synthesis_for_user(syn_session, user_id)
         logger.info("Refined result_id=%s", result_id)
@@ -1308,6 +1311,11 @@ async def _refine_astrology_blueprint_impl(ctx: dict[str, Any], user_id: int) ->
         )
         await session.commit()
         await cache_delete(cache_key_user_profile(user_id))
+        
+        # Trigger Soul Snapshot update
+        async with AsyncSessionLocal() as snapshot_session:
+            await generate_soul_snapshot(snapshot_session, user_id)
+            
         logger.info("Refined astrology blueprint for user_id=%s (saved to User)", user_id)
 
 
@@ -1349,6 +1357,11 @@ async def _refine_numerology_blueprint_impl(ctx: dict[str, Any], user_id: int) -
         )
         await session.commit()
         await cache_delete(cache_key_user_profile(user_id))
+
+        # Trigger Soul Snapshot update
+        async with AsyncSessionLocal() as snapshot_session:
+            await generate_soul_snapshot(snapshot_session, user_id)
+
         logger.info("Refined numerology blueprint for user_id=%s (saved to User)", user_id)
 
 

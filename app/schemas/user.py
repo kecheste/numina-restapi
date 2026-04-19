@@ -38,12 +38,13 @@ class UserResponse(BaseModel):
     moon_description: str | None = None
     rising_sign: str | None = None
     rising_description: str | None = None
-    cosmic_traits_summary: str | None = None
+    cosmic_traits_summary: dict | None = None
     astrology_blueprint: dict | None = None
     # Numerology Blueprint
     numerology_blueprint: list | None = None
     # Most Sure Things chip tags from latest synthesis
     most_sure_things: list | None = None
+    soul_snapshot: dict | None = None
 
     created_at: datetime
     updated_at: datetime

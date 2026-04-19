@@ -5,7 +5,7 @@ import time
 import asyncio
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 
-from sqlalchemy import select, update
+from sqlalchemy import select, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal
@@ -46,6 +46,17 @@ from app.services.result_calculation.soul_urge import compute_soul_urge
 from app.services.result_calculation.transits import compute_transits
 
 router = APIRouter()
+
+# These modules support being retaken multiple times (history is kept, latest is shown)
+RETAKEABLE_TEST_IDS = {
+    5,   # Transits
+    12,  # Mind Mirror
+    13,  # Chakra Assessment Scan
+    15,  # Emotional Regulation Type
+    16,  # Stress Balance Index
+    17,  # Somatic Connection
+    24,  # Soul Compass
+}
 
 def _auto_generated_already_taken(user: UserModel, test_id: int) -> bool:
     if test_id == 2:  # Numerology
@@ -427,11 +438,12 @@ async def post_onboarding_finish(
                 await enqueue_refine_test_result(lp_res.id)
 
 
-    # 3. Trigger Synthesis (Ensure it's ready for first home view)
+    # 3. Trigger Snapshot & Synthesis (Ensure it's ready for first home view)
     async with AsyncSessionLocal() as session:
+        from app.worker.soul_snapshot import generate_soul_snapshot
         from app.worker.helpers import generate_synthesis_for_user
+        await generate_soul_snapshot(session, user.id)
         await generate_synthesis_for_user(session, user.id)
-
     return {"message": "Onboarding completed"}
 
 
@@ -505,7 +517,7 @@ async def submit_test(
         ).order_by(TestResult.completed_at.desc()).limit(1)
     )
     existing = existing_q.scalar_one_or_none()
-    if existing is not None:
+    if existing is not None and body.test_id not in RETAKEABLE_TEST_IDS:
         return SubmitTestResponse(result_id=existing.id, status=existing.status)
 
     answers_data = [item.model_dump() for item in body.answers]
@@ -647,16 +659,35 @@ async def list_questions(
     test_id = get_test_id(id_or_slug)
     if test_id is None:
         raise not_found("Test not found")
-    existing = await db.execute(
+
+    # Check if already taken
+    existing_q = await db.execute(
         select(TestResult.id).where(
             TestResult.user_id == user.id,
             TestResult.test_id == test_id,
             TestResult.status.in_(["pending_ai", "completed"]),
         ).limit(1)
     )
-    if existing.scalar_one_or_none() is not None:
+    is_taken = existing_q.scalar_one_or_none() is not None
+
+    if is_taken and test_id not in RETAKEABLE_TEST_IDS:
         raise conflict("You have already taken this test.")
+
+    # Enforce 8-test limit for non-premium users starting a NEW test
+    if not user.is_premium and not is_taken:
+        count_q = await db.execute(
+            select(func.count(func.distinct(TestResult.test_id))).where(
+                TestResult.user_id == user.id,
+                TestResult.status.in_(["pending_ai", "completed"]),
+            )
+        )
+        count = count_q.scalar() or 0
+        if count >= 8:
+            from app.core.exceptions import forbidden
+            raise forbidden("You have reached your free limit of 8 tests. Upgrade to premium to continue.")
+
     return QUESTIONS_BY_TEST_ID.get(test_id, [])
+
 
 @router.websocket("/tests/ws/updates")
 async def websocket_updates(

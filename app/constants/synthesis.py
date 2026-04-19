@@ -7,7 +7,5 @@ Synthesis logic constants.
 - Weekly predictions: generated from stored synthesis JSON + timing tags only (not from raw answers).
 """
 
-SYNTHESIS_PREVIEW_MIN_TESTS = 3
-
-SYNTHESIS_FULL_MIN_TESTS = 6
-SYNTHESIS_FULL_MAX_TESTS = 8
+SYNTHESIS_FULL_MIN_TESTS = 12
+SYNTHESIS_FULL_MAX_TESTS = 24
