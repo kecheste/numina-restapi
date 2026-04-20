@@ -19,6 +19,7 @@ from app.core.redis import (
     cache_set,
     init_redis,
 )
+from app.core.pubsub import broadcast_user_update
 from app.db.models.test_result import TestResult
 from app.db.models.user import User as UserModel
 from app.db.session import AsyncSessionLocal
@@ -75,10 +76,11 @@ from .helpers import (
     generate_synthesis_for_user,
     get_user_context,
 )
+from .soul_snapshot import generate_soul_snapshot
 
 logger = logging.getLogger(__name__)
 
-async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
+async def _refine_test_result_impl(ctx: dict[str, Any], result_id: int) -> None:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(TestResult).where(TestResult.id == result_id)
@@ -1252,12 +1254,14 @@ async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
         row.status = "completed"
         await cache_set(cache_key, out, ttl_seconds=AI_RESULT_CACHE_TTL)
         await session.commit()
+        async with AsyncSessionLocal() as snapshot_session:
+            await generate_soul_snapshot(snapshot_session, user_id)
         async with AsyncSessionLocal() as syn_session:
             await generate_synthesis_for_user(syn_session, user_id)
         logger.info("Refined result_id=%s", result_id)
 
 
-async def refine_astrology_blueprint(ctx: dict[str, Any], user_id: int) -> None:
+async def _refine_astrology_blueprint_impl(ctx: dict[str, Any], user_id: int) -> None:
     """Worker task to generate astrology blueprint copy and save to User model."""
     async with AsyncSessionLocal() as session:
         user_q = await session.execute(select(UserModel).where(UserModel.id == user_id))
@@ -1307,10 +1311,15 @@ async def refine_astrology_blueprint(ctx: dict[str, Any], user_id: int) -> None:
         )
         await session.commit()
         await cache_delete(cache_key_user_profile(user_id))
+        
+        # Trigger Soul Snapshot update
+        async with AsyncSessionLocal() as snapshot_session:
+            await generate_soul_snapshot(snapshot_session, user_id)
+            
         logger.info("Refined astrology blueprint for user_id=%s (saved to User)", user_id)
 
 
-async def refine_numerology_blueprint(ctx: dict[str, Any], user_id: int) -> None:
+async def _refine_numerology_blueprint_impl(ctx: dict[str, Any], user_id: int) -> None:
     """Worker task to generate numerology blueprint copy and save to User model."""
     async with AsyncSessionLocal() as session:
         user_q = await session.execute(select(UserModel).where(UserModel.id == user_id))
@@ -1348,7 +1357,46 @@ async def refine_numerology_blueprint(ctx: dict[str, Any], user_id: int) -> None
         )
         await session.commit()
         await cache_delete(cache_key_user_profile(user_id))
+
+        # Trigger Soul Snapshot update
+        async with AsyncSessionLocal() as snapshot_session:
+            await generate_soul_snapshot(snapshot_session, user_id)
+
         logger.info("Refined numerology blueprint for user_id=%s (saved to User)", user_id)
+
+
+async def refine_test_result(ctx: dict[str, Any], result_id: int) -> None:
+    try:
+        await _refine_test_result_impl(ctx, result_id)
+    finally:
+        async with AsyncSessionLocal() as session:
+            row = await session.get(TestResult, result_id)
+            if row and row.status in ("completed", "failed"):
+                await broadcast_user_update(row.user_id, "TestResult", {"result_id": result_id, "status": row.status})
+
+
+async def refine_astrology_blueprint(ctx: dict[str, Any], user_id: int) -> None:
+    try:
+        await _refine_astrology_blueprint_impl(ctx, user_id)
+    finally:
+        async with AsyncSessionLocal() as session:
+            user = await session.get(UserModel, user_id)
+            if user and user.astrology_blueprint:
+                await broadcast_user_update(user_id, "AstrologyBlueprint", {"status": "completed"})
+            else:
+                await broadcast_user_update(user_id, "AstrologyBlueprint", {"status": "failed"})
+
+
+async def refine_numerology_blueprint(ctx: dict[str, Any], user_id: int) -> None:
+    try:
+        await _refine_numerology_blueprint_impl(ctx, user_id)
+    finally:
+        async with AsyncSessionLocal() as session:
+            user = await session.get(UserModel, user_id)
+            if user and user.numerology_blueprint:
+                await broadcast_user_update(user_id, "NumerologyBlueprint", {"status": "completed"})
+            else:
+                await broadcast_user_update(user_id, "NumerologyBlueprint", {"status": "failed"})
 
 
 async def startup(ctx: dict[str, Any]) -> None:

@@ -76,7 +76,7 @@ async def register(
         hashed_password=hashed,
         is_active=True,
         role="user",
-        is_premium=True,
+        is_premium=False,
         subscription_status="free",
         **register_data,
     )

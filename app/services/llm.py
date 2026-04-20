@@ -127,7 +127,7 @@ def _validate_and_filter(obj: dict[str, Any], allowed_keys: frozenset[str]) -> d
     if not isinstance(obj, dict):
         return {}
     list_keys = (
-        "insights", "recommendations", "sureThings", "growthAreas", "themes",
+        "insights", "recommendations", "sureThings", "mostSureThings", "growthAreas", "themes",
         "strengths", "challenges", "shadowPatterns", "coreTraits", "tryThis", "avoidThis",
         "yourBlueprint", "personalityConscious", "designUnconscious",
         "currentPatterns",
@@ -1010,6 +1010,16 @@ def _validate_astrology_blueprint(obj: dict[str, Any]) -> dict[str, Any]:
                 ][:6]
             else:
                 out[k] = []
+        elif k == "cosmicTraitsSummary":
+            if isinstance(v, dict):
+                out[k] = {
+                    "element": str(v.get("element", "")),
+                    "modality": str(v.get("modality", "")),
+                    "rulingPlanet": str(v.get("rulingPlanet", "")),
+                    "mostActiveHouse": str(v.get("mostActiveHouse", "")),
+                }
+            else:
+                out[k] = fallback.get("cosmicTraitsSummary")
         elif k in ("strengths", "challenges", "avoidThis", "tryThis"):
             out[k] = [str(x) for x in v][:8] if isinstance(v, list) else []
         else:
@@ -1023,7 +1033,12 @@ def _fallback_astrology_blueprint() -> dict[str, Any]:
         "sunDescription": "Your sun sign shapes your core personality and life direction.",
         "moonDescription": "Your moon sign reveals how you process emotions and seek comfort.",
         "risingDescription": "Your rising sign reflects how others see you and your outward style.",
-        "cosmicTraitsSummary": "🜂 Element: —\n☌ Modality: —\n♇ Ruling Planet: —\n🌠 Most active house: —",
+        "cosmicTraitsSummary": {
+            "element": "—",
+            "modality": "—",
+            "rulingPlanet": "—",
+            "mostActiveHouse": "—",
+        },
         "strengths": [],
         "challenges": [],
         "avoidThis": [],
@@ -1458,8 +1473,8 @@ async def call_llm_for_mbti_narrative(
         raw = (response.choices[0].message.content or "").strip()
         data = _extract_json_from_response(raw)
         if data:
-            if not data.get("cognitiveStyle"):
-                logger.warning("MBTI LLM response missing cognitiveStyle for type=%s", mbti_type)
+            if not data.get("summary"):
+                logger.warning("MBTI LLM response missing summary for type=%s", mbti_type)
             return _validate_mbti_result(data)
     except Exception as e:
         logger.warning("LLM MBTI call failed: %s", e)

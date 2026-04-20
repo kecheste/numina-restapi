@@ -47,11 +47,18 @@ class User(Base):
     moon_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
     rising_sign: Mapped[str | None] = mapped_column(String(50), nullable=True)
     rising_description: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    cosmic_traits_summary: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    cosmic_traits_summary: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     astrology_blueprint: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     # Numerology Blueprint (Items)
     numerology_blueprint: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+
+    # Most Sure Things: ultra-short chip phrases distilled from synthesis (e.g. ["Depth Over Speed", "Analytical Empath"])
+    most_sure_things: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+
+    # Soul Snapshot: dynamic summary, chips, and daily pulse (message+quote)
+    # { "summary": "...", "sure_things": [...], "daily_message": "...", "daily_quote": "...", "daily_date": "YYYY-MM-DD" }
+    soul_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),

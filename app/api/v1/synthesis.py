@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.constants.synthesis import SYNTHESIS_FULL_MIN_TESTS, SYNTHESIS_PREVIEW_MIN_TESTS
+from app.constants.synthesis import SYNTHESIS_FULL_MIN_TESTS
 from app.core.dependencies import get_current_active_user, get_db
 from app.core.exceptions import not_found
 from app.db.models.test_result import TestResult
@@ -44,18 +44,4 @@ async def get_synthesis(
                 result=syn.result_json,
             )
 
-    if completed_count >= SYNTHESIS_PREVIEW_MIN_TESTS:
-        row = await db.execute(
-            select(UserSynthesis).where(
-                UserSynthesis.user_id == user.id,
-                UserSynthesis.synthesis_type == "preview",
-            )
-        )
-        syn = row.scalar_one_or_none()
-        if syn:
-            return SynthesisResultResponse(
-                type="preview",
-                completed_count=completed_count,
-                result=syn.result_json,
-            )
-    raise not_found("Complete at least 3 tests to unlock your synthesis.")
+    raise not_found(f"Complete at least {SYNTHESIS_FULL_MIN_TESTS} tests and upgrade to premium to unlock your full synthesis.")

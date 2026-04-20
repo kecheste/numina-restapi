@@ -9,4 +9,7 @@ from app.worker.worker_settings import WorkerSettings
 logging.basicConfig(level=logging.INFO)
 
 if __name__ == "__main__":
-    run_worker(WorkerSettings)
+    try:
+        run_worker(WorkerSettings)
+    except KeyboardInterrupt:
+        print("\nWorker stopped.")

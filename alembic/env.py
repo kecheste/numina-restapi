@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import get_database_url_and_connect_args
 from app.db.base import Base
+import app.db.models  # NOQA
 
 import asyncio
 import os

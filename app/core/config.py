@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "numina-api"
     jwt_audience: str = "numina-api"
-    jwt_access_token_expire_minutes: int = 60
+    jwt_access_token_expire_minutes: int = 10080
 
     stripe_secret_key: str | None = None
     stripe_webhook_secret: str | None = None

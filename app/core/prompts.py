@@ -174,7 +174,7 @@ Computed/structured result for this user (use only this; do not invent data):
 {input_json}
 
 Return exactly one JSON object with these keys only:
-- "title": string, one short catchy title (e.g. "The Reflective Seeker")
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "summary": string, 2-3 paragraphs separated by \\n\\n (Paragraph 1: core personality/theme. Paragraph 2: deeper dynamic/inner workings. Paragraph 3: life direction/how these energies show up in life patterns)
 - "shortDescription": string, a single paragraph (2-4 sentences) summarizing the result, completely distinct from the summary paragraphs above
 - "coreTraits": array of 2-5 short descriptive phrases, not single words (e.g. "You recharge alone, but care deeply about others")
@@ -243,7 +243,7 @@ Answers: {input_json}
 Context: {user_context}
 
 WRITE IN THIS EXACT STRUCTURE (Return ONE JSON object):
-- "title": string, one catchy behavioral title (e.g., "The Restless Visionary").
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "summary": string, 3 short paragraphs. (P1: Main behavioral theme. P2: The tension/conflict in their current state. P3: The impact on their life direction).
 - "shortDescription": string, 2-3 punchy sentences summarizing their overall state.
 - "coreTraits": array of exactly 4 descriptive behavioral statements.
@@ -269,45 +269,227 @@ EVERY string must be sharp and free of generic spiritual language. Land the obse
 """
 
 
-SYNTHESIS_SYSTEM = MASTER_PROMPT + """You are a spiritual and psychological synthesis coach. You weave multiple test results into one coherent portrait.
-You write only valid JSON. No markdown, no code fences, no extra text.
-Keep each field concise: short paragraphs, 3-6 list items where applicable."""
+SYNTHESIS_SYSTEM = MASTER_PROMPT + """You are generating the premium full synthesis for a self-discovery app.
 
-SYNTHESIS_PREVIEW_USER_TEMPLATE = """The user has completed {count} onboarding tests. Below is the structured data from those results (compact).
+Your job is NOT to summarize modules one by one.
+Your job is to identify repeated truths, contradictions, hidden traits, and direction across completed modules.
+
+The synthesis must feel:
+- psychologically believable
+- spiritually resonant
+- honest, not flattering
+- insightful, not generic
+- emotionally intelligent
+- specific enough that the user feels "this is really me"
+
+PHILOSOPHY:
+Psychology is the foundation. Spiritual frameworks support and deepen the insight — they do not replace it.
+Roughly 70% of the synthesis should feel psychologically grounded.
+Roughly 30% should feel spiritually enriched.
+
+WHAT TO AVOID:
+- Do NOT dump module summaries
+- Do NOT repeat the same point in multiple sections
+- Do NOT use overly generic spiritual language
+- Do NOT make everything sound positive
+- Never sound like a horoscope or therapy disclaimer
+- Avoid excessive jargon
+
+WHAT TO DO:
+- Include contradictions and tension where real
+- Use recurring weighted patterns as the evidence for your claims
+- Occasionally connect systems naturally:
+  Example: "This pattern appears both in your psychological profile and in your Scorpio-style emotional depth"
+- Psychology speaks first; spirituality resonates second
+
+SYNTHESIS RULES:
+- Each section must have a distinct role and must not repeat the same point unless adding new meaning.
+- Do not restate the same core conflict more than 2 times across the whole synthesis. If a theme has appeared 2 times, do not use it again unless the angle is completely new.
+- Explain the person first; mention systems second.
+- Numeric weights and formulas are for backend only, not user-facing copy.
+- "Current Energy / Light Forecast" must sound temporary and reflective, not diagnostic or predictive.
+
+CROSS-SYSTEM BRIDGING (apply especially in sections 1, 5, and 9):
+When the same pattern appears in both a psychological module AND a spiritual module, name both — but let psychology anchor the observation.
+  BAD: "Your Scorpio moon makes you intense."
+  GOOD: "Your tendency to analyze before trusting — visible in your MBTI and shadow work — is also reflected in your Scorpio moon, which adds a layer of emotional guardedness that is rarely accidental."
+
+STYLE:
+- Warm but intelligent
+- Honest
+- Clear
+- Slightly poetic in places, but grounded
+- Mobile-readable (no walls of text)
+- Not corporate, not childish, not therapy-speak
+
+You write only valid JSON. No markdown, no code fences, no extra text."""
+
+SYNTHESIS_PREVIEW_USER_TEMPLATE = """The user has completed {count} tests so far. Below is their structured result data (compact).
 
 {input_json}
 
-Return exactly one JSON object with these keys only:
-- "youAre": string, 2-3 sentences describing who they are based on these first tests
-- "sureThings": array of 3-5 short strings (traits/patterns that already stand out)
-- "identitySummary": string, one short paragraph (emerging identity)
-- "growthAreas": array of 2-4 short strings (areas to explore next)
-- "nextFocus": string, one sentence suggesting what to do next
+Return exactly one JSON object with these EXACT keys (all are mandatory):
+- "youAre": string, 3-5 sentences. Who this person is based on these early signals. Include at least one internal tension or contradiction. Be specific — NOT generic.
+- "sureThings": array of 3-5 short strings. Patterns that stand out clearly across these early tests. Each item should be a short phrase (max 8 words), not a single word. Focus on what is already unmistakable.
+- "mostSureThings": array of exactly 3-5 strings. Ultra-short chip labels only — maximum 3 words each. The single clearest truths about this person distilled to a label. No sentences, no punctuation.
+  Examples: "Depth Over Speed", "Analytical Empath", "Reluctant Initiator", "Inner Conflict Driver"
+  BAD: "You tend to overthink before taking action" — TOO LONG.
+  GOOD: "Overthinking Initiator" — correct format.
+- "identitySummary": string, 2-3 paragraphs separated by \\n\\n. An emerging portrait of who this person is: their core drive, their recurring friction, and what is beginning to define them.
+- "growthAreas": array of 3-5 short strings. Honest gaps, blind spots, or areas not yet explored. Make them specific, not generic.
+- "nextFocus": string, 2-3 sentences. What this person should focus on or explore next — and why, based on what the data already shows.
+
+STRICT OUTPUT VALIDATION:
+1. Output MUST be ONLY the JSON object.
+2. ALL 6 keys listed above MUST be present.
+3. If data is thin, do not skip keys—provide grounded, high-quality emerging observations instead.
+4. No markdown. No text outside the JSON."""
+
+SYNTHESIS_FULL_USER_TEMPLATE = """The user has completed {count} tests. Below is their structured data split into two layers.
+
+Profile context: {profile_context}
+
+LAYER 1 — CORE IDENTITY SIGNALS
+Modules: MBTI, Big Five, Cognitive Style, Core Values, Shadow Work, Inner Child,
+Karmic Lessons, Astrology, Numerology, Life Path, Soul Urge, Human Design,
+Starseed, Past Life, Energy Archetype, Zodiac Element & Modality
+
+USE THIS LAYER FOR: sections 0–13 (identityLine through finalInsight)
+DO NOT use dynamic signals for these sections. Soul Compass is EXCLUDED from shaping core identity.
+
+Weight guide:
+  1.0 → Psychology (MBTI, Big Five, Shadow Work, Cognitive Style, Core Values, Inner Child, Karmic Lessons)
+  0.9 → Hybrid (Energy Archetype, Zodiac Element & Modality)
+  0.75 → Spiritual/symbolic (Astrology, Numerology, Human Design, Starseed, Past Life, Life Path, Soul Urge)
+
+{core_json}
+
+LAYER 2 — DYNAMIC / CURRENT-STATE SIGNALS
+Modules: Mind Mirror, Chakra Alignment, Emotional Regulation, Stress Balance,
+Somatic Connection, Transits, Energy Synthesis, Soul Compass
+
+USE THIS LAYER FOR: section 14 (currentEnergy) ONLY.
+Also allowed: lightly enrich innerConflictMap (section 5) with what is active RIGHT NOW.
+DO NOT let these signals shape identity, patterns, strengths, or direction.
+
+{dynamic_json}
+
+PATTERN SCORING RULE (apply to CORE layer only, before writing any section):
+For every behavioral pattern that appears across multiple core modules:
+  repetition_score = sum of weight for each module that confirms that pattern
+Thresholds:
+  score >= 2.0   → DOMINANT pattern  → must appear in dominantPatterns and drive coreStrengths/coreChallenges
+  score 1.5–1.9  → SECONDARY pattern → may appear in hiddenPatterns or innerConflictMap
+  score < 1.5    → LOW SIGNAL        → omit or use only as supporting detail
+
+Example scoring (core layer):
+  MBTI \"overthinking\" (1.0) + Big Five \"overthinking\" (1.0) + Astrology \"mental intensity\" (0.75) = 2.75 → DOMINANT
+  Shadow Work \"avoidance\" (1.0) + Energy Archetype \"suppression\" (0.9) = 1.9 → SECONDARY
+
+Your task: Generate a complete 16-section synthesis portrait. Sections 0–13 from core signals only. Section 14 from dynamic signals only. Section 15 combines both.
+
+Return exactly one JSON object with these EXACT keys:
+- \"sureThings\": array of 3-5 short strings. Patterns that appear consistently across completed tests — strong indicators of core wiring. Each item max 8 words.
+- \"mostSureThings\": array of exactly 3-5 strings. Ultra-short chip labels — maximum 3 words each. The single clearest truths about this person in chip form. No sentences.
+  Examples: \"Depth Over Speed\", \"Analytical Empath\", \"Reluctant Initiator\"
+  These will be displayed as small tags on the user's profile. Keep them punchy, specific, and chip-sized.
+
+0. \"identityLine\": string, ONE powerful sentence, maximum 20 words. The sharpest possible distillation of who this person is. This is the hero line displayed at the very top of their synthesis — specific, not generic, slightly confronting, and instantly recognizable. Do NOT use their name. Do NOT use soft language.
+   - BAD: \"You are a thoughtful and creative person who seeks meaning.\"
+   - GOOD: \"You build walls to protect depth that most people would never know to look for.\"
+   - Pull this from the highest-scoring patterns only (repetition_score >= 2.0).
+
+1. \"coreIdentity\": string, 5-7 sentences. Who they are at their core — with at least two internal contradictions explicitly stated. Go beyond a surface label: describe HOW they operate day-to-day, what drives them beneath the surface, what makes their specific combination of traits uniquely theirs, where they are most alive, and where they most often get in their own way. Make this feel like a complete portrait, not a summary.
+   - Anchor on patterns with the highest repetition scores (>= 2.0).
+   - Pull from MBTI + numerology + astrology together.
+   - BRIDGING REQUIRED: in one sentence name a pattern that appears in both the psychological data AND the astrological/numerological data. Let the psychology anchor it; let the spiritual layer deepen it.
+   - Example: \"Your MBTI and shadow work both show a pattern of withdrawing under pressure — something your Scorpio moon mirrors in how you internalize conflict rather than release it.\"
+
+2. \"dominantPatterns\": array of 5-7 objects. Only include patterns with repetition_score >= 2.0. Each object must have:
+   - \"pattern\": short string phrase, the behavioral pattern (e.g., \"Driven to lead and achieve\", \"Struggles with emotional expression\").
+   - \"evidence\": array of objects, each with \"source\" (test name) and \"weight\" (number).
+   - \"totalWeight\": number, the final repetition_score for this pattern.
+
+3. \"hiddenPatterns\": array of 4-6 short strings. Underused strengths, quieter drives, or positive capacities the user has but does not fully trust, express, or integrate yet. Each item should feel like a genuine revelation — something the user would recognize once they see it but would not have named themselves. Go beyond the obvious.
+
+4. \"emergingPatterns\": array of 3-5 short strings. What is developing or actively trying to surface based on the core data. Be specific about WHAT is emerging, WHY the data supports this, and what it might look like when it arrives.
+
+5. \"innerConflictMap\": string, 5-7 sentences. A detailed map of exactly where the misalignment lives. This section must explain one main inner conflict only, not a list of all tensions. Describe the specific behavioral pattern that the conflict produces: what does it actually look like when this person is caught between these two pulls? Name the emotional texture of the conflict, not just its structure. Be honest about the cost.
+   - BRIDGING REQUIRED: name the psychological root of the conflict AND its symbolic echo in the astrological or numerological data.
+   - You MAY reference one active dynamic signal here if it directly illustrates the current state of the conflict.
+
+6. \"coreStrengths\": array of 6-8 short strings. Only strengths that appear in 2+ core modules. Not compliments — real-life advantages derived from the data. Each item should describe the strength as a specific behavioral capability the user actually has, not a personality label.
+
+7. \"coreChallenges\": array of 5-7 short strings. Honest, recurring struggles confirmed by core modules. The exact loops they keep finding themselves in. These should be specific enough that reading them feels like being seen, not judged. Slightly uncomfortable because they are accurate.
+
+8. \"psychologicalProfile\": string, 5-7 sentences. A deep interpretation of how this person actually thinks, processes, and decides. Focus on cognition, emotional processing, decision style, and behavioral loops. Do not repeat spiritual content here. Go beyond the MBTI label: describe the cognitive function stack if available, the sequence from input → internal processing → output, how that process changes under pressure, what it looks like when they are at their cognitive best, and what they look like when they are off-balance. Include at least one observation that would surprise the user but feel true once they read it.
+
+9. \"spiritualBlueprint\": string, 5-7 sentences. Astrology + numerology + archetypes synthesized into one coherent picture — not listed separately but woven together. This section must deepen the psychological picture, not repeat labels. Translate spiritual systems into meaning. It must explicitly reference the psychological profile and show exactly how the symbolic layer confirms, complicates, or adds a dimension that psychology alone cannot explain. Name specific placements and numbers and show how they interact. Let the spiritual layer deepen the psychological insight without replacing it.
+   - BRIDGING REQUIRED: reference section 8 explicitly and show how the spiritual data adds texture to it.
+   - Rule: psychology speaks first. Spirituality deepens second.
+
+10. \"yourDirection\": string, 5-7 sentences. A detailed, concrete life direction based exclusively on core data. Direction must feel practical and grounded, not vague life advice. Name what the user should move toward with specificity. Explain what is currently in the way and why. Identify which area of their life (work, inner world, relationships, creative expression) most needs intentional attention right now. Be direct enough that someone reading this knows exactly what to do next — not what category to think about, but what actual move to make.
+
+11. \"tryThis\": array of 7-9 short strings. Highly specific actions tied to this person's actual behavioral patterns. Not generic advice — actions that only make sense for someone with this exact data profile. Each item should feel like it was written for this person specifically and could not have been generated without reading their full results.
+
+12. \"avoidThis\": array of 6-8 short strings. Exact traps, loops, and coping patterns that the core data confirms this person is prone to. Name the pattern precisely — not a category but the specific behavior. Each item should feel slightly uncomfortable because it is accurate.
+
+13. \"finalInsight\": string, 5-7 sentences. The essential truth of this person. Final Insight should be short, memorable, and emotionally strong. Do not repeat the whole synthesis again. Something that illuminates rather than recaps — a closing realization that feels earned. End in a way that is honest and quietly specific.
+
+14. \"currentEnergy\": string, 4-6 sentences. Written from the DYNAMIC layer signals only.
+    Write a short present-phase reflection using soft language such as: 'you may be noticing...', 'this period may amplify...', 'right now there is a tendency toward...'. Keep it subtle, temporary, and directional.
+    Tone: observational, present-tense, honest. NOT predictive. NOT heavy.
+    If dynamic signals are absent or thin, write from numerology cycle or transit data from the core layer.
+    Do not end with a pep talk. End with something specific and true.
+
+15. \"innerAlignment\": object. A holistic snapshot of energetic expression across five key areas.
+    Must contain these EXACT keys: \"mind\", \"heart\", \"body\", \"soul\", \"spirit\".
+    Each key must be an object with:
+    - \"percentage\": integer (0 to 100), reflecting how clearly this aspect is expressed in their profile.
+    - \"text\": string, a short phrase describing it based on their data (e.g. \"Thinking patterns, clarity, personality structure\" or customized to them).
+
+CRITICAL RULES:
+- All 16 keys (0–15) must be present in the output.
+- No generic outputs. Every statement must be directly traceable to the input data.
+- Contradictions are required — especially in coreIdentity and innerConflictMap.
+- Cross-system bridges are REQUIRED in sections 1, 5, and 9. Welcomed elsewhere if earned.
+- Bridges: psychology anchors, spirituality deepens. Never the reverse.
+- currentEnergy MUST draw primarily from Layer 2. Keep it directional, never fatalistic.
+- NEVER let dynamic signals shape coreIdentity, dominantPatterns, coreStrengths, coreChallenges, psychologicalProfile, or spiritualBlueprint.
+- Depth over length: every sentence should add something new, not restate what was already said.
 
 Output only the JSON object, nothing else."""
 
-SYNTHESIS_FULL_USER_TEMPLATE = """The user has completed {count} tests. Below is the structured data from all their results (compact).
-
-{input_json}
-
-Return exactly one JSON object with these keys only:
-- "youAre": string, 3-5 sentences describing their full portrait across all tests
-- "sureThings": array of 5-8 short strings (traits/patterns that appear consistently)
-- "identitySummary": string, one rich paragraph (integrated identity)
-- "growthAreas": array of 3-5 short strings (areas for growth)
-- "nextFocus": string, 1-2 sentences for what to focus on next
-- "themes": array of 3-5 short strings (cross-cutting themes)
-- "strengths": array of 3-5 short strings (core strengths)
-- "shadowPatterns": array of 0-3 short strings (patterns to be aware of, if any)
-
-Output only the JSON object, nothing else."""
-
-SYNTHESIS_PREVIEW_JSON_KEYS = frozenset({"youAre", "sureThings", "identitySummary", "growthAreas", "nextFocus"})
+SYNTHESIS_PREVIEW_JSON_KEYS = frozenset({"youAre", "sureThings", "mostSureThings", "identitySummary", "growthAreas", "nextFocus"})
 SYNTHESIS_FULL_JSON_KEYS = frozenset({
-    "youAre", "sureThings", "identitySummary", "growthAreas", "nextFocus",
-    "themes", "strengths", "shadowPatterns",
+    "identityLine", "sureThings", "mostSureThings",
+    "coreIdentity", "dominantPatterns", "hiddenPatterns", "emergingPatterns",
+    "innerConflictMap", "coreStrengths", "coreChallenges", "psychologicalProfile",
+    "spiritualBlueprint", "yourDirection", "tryThis", "avoidThis",
+    "finalInsight", "currentEnergy", "innerAlignment",
 })
 
+# ── Daily Message Prompts ──────────────────────────────────────────────────────
+
+DAILY_MESSAGE_SYSTEM = """You write a short, grounded, personal daily message for a self-discovery app.
+Tone: warm, direct, slightly introspective. NOT motivational-poster language. NOT generic advice.
+The message must feel like it was written specifically for this person — not a horoscope.
+You write only valid JSON. No markdown, no code fences, no extra text."""
+
+DAILY_MESSAGE_USER_TEMPLATE = """User profile:
+- Core trait chips: {most_sure_things}
+- MBTI type: {mbti_type}
+- Zodiac sign: {zodiac}
+- Life Path number: {life_path}
+- Tests completed so far: {count}
+
+Write a daily message that feels personal and specific to who this person actually is.
+
+Return exactly one JSON object with:
+- "message": string, 2-3 sentences. Grounded and specific to their traits. Reference something concrete from their profile (e.g. their thinking style, emotional pattern, or core tension). Slightly confronting where true. Do NOT say "embrace your journey" or similar generic phrases.
+- "quote": string, one original short quote (5-12 words) that distills something true about them — not a famous quote, an original one.
+
+Output only the JSON object, nothing else."""
 
 BLUEPRINT_SYSTEM = MASTER_PROMPT + """You are a warm, insightful astrologer and numerologist. You write only valid JSON. No markdown, no code fences.
 Keep each field concise: 1-3 sentences for descriptions."""
@@ -326,11 +508,11 @@ Return exactly one JSON object with these keys only:
 - "sunDescription": string, 1-2 sentences on core personality from their sun sign (personalized, warm)
 - "moonDescription": string, 1-2 sentences on emotional self from their moon sign
 - "risingDescription": string, 1-2 sentences on how others see them from rising sign
-- "cosmicTraitsSummary": string, exactly 4 lines in this format (use the exact emoji at the start of each line, then one value per line derived from their chart):
-  Line 1: 🜂 Element: [one of: Water / Earth / Fire / Air — pick the dominant element from their chart]
-  Line 2: ☌ Modality: [one of: Fixed / Mutable / Cardinal — from their sun/moon/rising]
-  Line 3: ♇ Ruling Planet: [e.g. Pluto, Mars, Venus — main ruling planet(s) for their chart]
-  Line 4: 🌠 Most active house: [e.g. 7th – Partnerships — the most emphasized house]
+- "cosmicTraitsSummary": object with these exactly 4 keys:
+    - "element": string (e.g. "Water", "Earth", "Fire", "Air" - the dominant one)
+    - "modality": string (e.g. "Cardinal", "Fixed", "Mutable")
+    - "rulingPlanet": string (e.g. "Mars", "Pluto", "Venus")
+    - "mostActiveHouse": string (e.g. "1st", "8th - Transformations", "10th - Career")
 - "strengths": array of 2-5 short phrases
 - "challenges": array of 2-5 short phrases
 - "avoidThis": array of 2-4 short phrases
@@ -408,7 +590,7 @@ INPUT
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
-- "title": string, Keep title as: "Your Astrology Chart"
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 
 - "coreTraits": array of exactly 3 short trait chips (Cosmic Summary). Derived from the overall chart.
 
@@ -508,7 +690,7 @@ INPUT
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
-- "title": string, KEEP AS: "Your Numerology Profile"
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 
 - "corePattern": string, 3 paragraphs separated by \\n\\n.
 Paragraph 1: How the numbers combine and interact. No abstract traits. Show behavior.
@@ -570,9 +752,9 @@ Computed Scores (0-100):
 Use the data to generate a direct, behavioral interpretation.
 
 Return exactly one JSON object with these keys only:
-- "title": a short catchy title for these results.
-- "summary": 2-3 paragraphs. Focus on what this pattern actually looks like in daily life.
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "shortDescription": a single paragraph (2-3 sentences) summarizing their behavioral tendency.
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "shadowPattern": explain the primary pattern (1 paragraph). Describe concrete behaviors (e.g., "You hold things in until they build up, then either withdraw or get frustrated"). 
 - "secondaryPattern": explain the secondary tendency and its interaction.
 - "howItShowsUp": 1 paragraph describing exactly how they react under pressure or stress in real life.
@@ -591,7 +773,7 @@ CRITICAL RULES:
 Output only the JSON object, nothing else."""
 
 SHADOW_WORK_JSON_KEYS = frozenset({
-    "title", "summary", "shortDescription", "shadowPattern", "secondaryPattern", 
+    "title", "summary", "shortDescription", "oneSentenceInsight", "shadowPattern", "secondaryPattern", 
     "howItShowsUp", "hiddenStrength", "growthEdge", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -642,10 +824,11 @@ User Responses:
 {input_json}
 
 Return exactly one JSON object with these keys. Ensure EVERY key is present:
-1. "title": a short catchy title for these results.
+1. "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 2. "summary": 2-3 paragraphs. Describe exactly what is happening in their mind right now. Use short sentences. Example: "Even when nothing is happening, you still feel like something is unresolved."
 3. "shortDescription": a single paragraph (2-3 sentences) summarizing their immediate state.
-4. "mentalPattern": describe the dominant loop or thought process right now (1 paragraph).
+4. "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
+5. "mentalPattern": describe the dominant loop or thought process right now (1 paragraph).
 5. "emotionalTone": name what they are feeling right now. NO "underlying theme" language (1 paragraph).
 6. "currentImbalance": identify exactly where they are neglecting themselves (Mind/Heart/Body/Spirit) and the friction it causes (1 paragraph).
 7. "hiddenInsight": reveal a less obvious tension they are ignoring (1 paragraph).
@@ -665,7 +848,7 @@ CRITICAL RULES:
 Output only the JSON object, nothing else."""
 
 MIND_MIRROR_JSON_KEYS = frozenset({
-    "title", "summary", "shortDescription", "mentalPattern", "emotionalTone",
+    "title", "summary", "shortDescription", "oneSentenceInsight", "mentalPattern", "emotionalTone",
     "currentImbalance", "hiddenInsight", "growthDirection", "coreTraits",
     "strengths", "challenges", "yourBlueprint", "tryThis", "avoidThis",
 })
@@ -697,7 +880,8 @@ Input Data:
 {input_json}
 
 Return exactly one JSON object with these keys only:
-- "title": the archetype title (e.g., "The Harmonized Mind").
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "coreTraits": array of 3-4 short statements summarizing their state. Max 50 character each.
 - "strengths": array of 3 key strengths.
 - "challenges": array of 3 current areas of friction.
@@ -716,7 +900,7 @@ Avoid clinical or diagnostic language. Output only the JSON object, nothing else
 NB: Interpret through energetic behavior patterns and natural vitality expression."""
 
 ENERGY_ARCHETYPE_JSON_KEYS = frozenset({
-    "title", "coreTraits", "strengths", "challenges", "spiritualInsight",
+    "title", "oneSentenceInsight", "coreTraits", "strengths", "challenges", "spiritualInsight",
     "summary", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -858,7 +1042,7 @@ STYLE
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys)
 
-- "title": Create a short result title, max 4 words. It should feel specific to the chart. Avoid words like Leader, Visionary, Explorer unless truly justified by the data. Never use the word "blueprint".
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "summary": Write 2 short paragraphs separated by \n\n. Paragraph 1: briefly frame using Type / Strategy / Authority / Profile — keep it short. Paragraph 2: move immediately into the strongest gate / channel / center dynamics — this paragraph must already feel unique to this chart.
 - "personalityConscious": Array of 3 to 5 short bullet-style trait lines using mainly personality_traits and strongest personality gates. These sound like qualities the person recognizes in themselves. Keep them specific and behavior-based.
 - "designUnconscious": Array of 3 to 5 short bullet-style trait lines using mainly design_traits and strongest design gates. These sound like automatic behaviors or underlying tendencies others may notice.
@@ -913,7 +1097,7 @@ Input Data (Dimension Percentages):
 {input_json}
 
 Write the following sections (Return exactly one JSON object):
-- "title": A compelling result title.
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "summary": 2 paragraphs. Describe how this mix shows up in real situations. NO report tone (e.g., Avoid "you exhibit a blend..."). Example: "You think things through carefully, but that often slows you down when a quick decision is needed."
 - "shortDescription": (Your Psychological Signature). 2 sentences. Remove polished explanation tone. Make it real. Example: "You come across confident in discussions, but you can also come off too direct when you’re sure you’re right."
 - "coreTraits": An array of 3-4 short statements. Make each one specific and slightly imperfect. (Bad: "You value structure". Good: "You like having a plan, but you can get stuck refining it instead of starting").
@@ -984,8 +1168,8 @@ INPUT
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
-- "title": string, KEEP AS: "Your Starseed Origin"
-
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "originSummary": string, 2-3 sentences. A short, sharp overview of the dominant archetypal energy.
 
 - "cosmicProfile": string, 2 paragraphs separated by \\n\\n.
@@ -1017,7 +1201,7 @@ FINAL CHECK BEFORE ANSWERING:
 """
 
 STARSEED_JSON_KEYS = frozenset({
-    "title", "originSummary", "cosmicProfile", "coreTraits", "strengths", "challenges",
+    "title", "oneSentenceInsight", "originSummary", "cosmicProfile", "coreTraits", "strengths", "challenges",
     "spiritualInsight", "tryThis", "avoidThis",
 })
 
@@ -1046,7 +1230,8 @@ Input Data:
 - All Dimension Scores: {scores}
 
 Write the following sections (Output ONLY valid JSON):
-- "title": A compelling result title highlighting their core driver.
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "shortDescription": (Core Values Map). 2 sentences. Do NOT explain nicely. Show friction in how their values conflict or limit them. Example: "You often choose the safer option, even when a more interesting path is available."
 - "coreTraits": Array of 3 specific, behavioral bullet points showing tension (e.g., "You value autonomy, but you avoid delegating work to keep control").
 - "strengths": Array of 3 key strengths derived from these values, stated as behaviors.
@@ -1064,7 +1249,7 @@ Output only the JSON object, nothing else.
 """
 
 CORE_VALUES_JSON_KEYS = frozenset({
-    "title", "shortDescription", "coreTraits", "strengths", "challenges",
+    "title", "oneSentenceInsight", "shortDescription", "coreTraits", "strengths", "challenges",
     "summary", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1088,7 +1273,7 @@ Input Data:
 - Dimension Scores: {scores}
 
 Requirements (Output ONLY valid JSON):
-- "title": The result title (e.g., "Quiet Containment").
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "overview": 2 paragraphs explaining the person's energetic nature and how they process emotions.
 - "strengths": Array of 3 bullet points summarizing their strengths (short phrases).
 - "challenges": Array of 3 common pitfalls or challenges (short phrases).
@@ -1141,7 +1326,8 @@ Q2 Detail (Optional): {q13}
 
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
-- "title": string
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "summary": string
 - "coreTraits": array of strings
 - "strengths": array of strings
@@ -1157,7 +1343,7 @@ Important Rules:
 """
 
 INNER_CHILD_JSON_KEYS = frozenset({
-    "title", "summary", "coreTraits", "strengths", "challenges",
+    "title", "oneSentenceInsight", "summary", "coreTraits", "strengths", "challenges",
     "energyBlueprint", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1208,7 +1394,8 @@ Q2 Response (Conflict response): {q2}
 
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
-- "title": string
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "overview": string (2 paragraphs)
 - "coreTraits": array of strings
 - "strengths": array of strings
@@ -1220,7 +1407,7 @@ Return exactly one JSON object with these keys:
 """
 
 KARMIC_LESSONS_JSON_KEYS = frozenset({
-    "title", "overview", "coreTraits", "strengths", "challenges",
+    "title", "oneSentenceInsight", "overview", "coreTraits", "strengths", "challenges",
     "spiritualInsight", "energyBlueprint", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1254,9 +1441,9 @@ Q2 Response (Second nature activities): {q2}
 
 Return exactly ONE JSON object with these keys:
 
-- "title": string. A 2–4 word blend label (e.g. "The Builder-Healer").
-
-- "soulNarrative": string, 2 paragraphs separated by \\n\\n. Describe the user's identity blend. Focus on how the two archetypes INTERACT — the creative tension, not a list of traits. Keep it grounded.
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
+- "soulNarrative": string, 2 paragraphs separated by \n\n. Describe the user's identity blend. Focus on how the two archetypes INTERACT — the creative tension, not a list of traits. Keep it grounded.
 
 - "archetypeEchoes": array of exactly 3 strings. Observable personality tendencies — how these archetypes show up in everyday real life.
 
@@ -1275,7 +1462,7 @@ Return exactly ONE JSON object with these keys:
 Output ONLY the JSON object."""
 
 PAST_LIFE_VIBES_JSON_KEYS = frozenset({
-    "title", "soulNarrative", "archetypeEchoes", "ancientGifts", "karmicShadows",
+    "title", "oneSentenceInsight", "soulNarrative", "archetypeEchoes", "ancientGifts", "karmicShadows",
     "pastLifeEchoes", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1318,7 +1505,8 @@ Q2 Response (Current practice): {q2}
 
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
-- "title": string
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "overview": string (2 paragraphs)
 - "strengths": array of strings
 - "challenges": array of strings
@@ -1328,7 +1516,7 @@ Return exactly one JSON object with these keys:
 """
 
 SOMATIC_JSON_KEYS = frozenset({
-    "title", "overview", "strengths", "challenges",
+    "title", "oneSentenceInsight", "overview", "strengths", "challenges",
     "energyBlueprint", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1372,7 +1560,8 @@ Q3 Response (Break awareness speed): {q3}
 
 OUTPUT STRUCTURE:
 Return exactly one JSON object with these keys:
-- "title": string
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
 - "overview": string (2 paragraphs)
 - "strengths": array of strings
 - "challenges": array of strings
@@ -1382,7 +1571,7 @@ Return exactly one JSON object with these keys:
 """
 
 STRESS_BALANCE_JSON_KEYS = frozenset({
-    "title", "overview", "strengths", "challenges",
+    "title", "oneSentenceInsight", "overview", "strengths", "challenges",
     "energyBlueprint", "tryThis", "avoidThis", "extracted_json"
 })
 
@@ -1412,7 +1601,7 @@ State: {alignment_state}
 Decision context: {decision}
 
 Return exactly one JSON object with these keys only:
-- "title": a short reflective title capturing the alignment state (e.g. "A Soul Ready to Move" or "Heart and Mind at Odds").
+- "title": string, a descriptive and punchy 2-3 word phrase that captures the alignment state (e.g., "Observant Empath", "Grounded Strategist").
 - "decisionInsight": string, 2 paragraphs separated by \\n\\n. Help the user understand the interplay of these 4 dimensions without prescribing a choice.
 - "alignmentAnalysis": object with EXACTLY these keys: "mind", "heart", "body", "soul". Each value is 1–2 sentences describing what that dimension's score reveals.
 - "whatThisMeans": string, 1 paragraph. Summarize the overall alignment state and what it suggests about where the user is right now.
@@ -1467,7 +1656,7 @@ INPUT:
 
 WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
 
-- "title": string, KEEP AS: "Your Current Phase"
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the current life phase (e.g., "Observant Transition", "Grounded Shift").
 
 - "phaseDescription": string, 2 paragraphs separated by \\n\\n.
 Paragraph 1: What is happening and what is being activated.
@@ -1504,79 +1693,59 @@ TRANSITS_JSON_KEYS = frozenset({
 })
 
 MBTI_SYSTEM = MASTER_PROMPT + """You are generating an MBTI-based personality analysis.
+The backend has already computed the user's type and dimension intensities.
+Do NOT recalculate or change the type.
 
-CORE RULES
+CORE RULES:
+1. USE DIMENSION INTENSITY:
+   - 90–100% = dominant/rigid tendency
+   - 60–75% = flexible / situational
+   Example: 100% Introversion means a profound need for solitude; 67% Thinking means logic is used but often softened by values.
 
-1. USE DIMENSION INTENSITY
-90–100% = rigid tendency
-60–75% = flexible / situational
-Example:
-- 100% Introversion → strong need for internal processing, drains quickly from interaction
-- 67% Thinking → uses logic but still influenced by emotion
-This MUST change the interpretation.
+2. COGNITIVE FUNCTIONS:
+   Explain how the user's core functions (e.g., Ni, Te, Fi, Se for INTJ) interact in REAL behavior. Use the names of the functions explicitly but keep the explanation grounded in daily action.
 
-2. USE COGNITIVE FUNCTIONS (MANDATORY)
-You MUST explain how the core functions (e.g., Si, Te, Fi, Ne for ISTJ) interact in REAL behavior. Not abstractly.
+3. INTERNAL FRICTION:
+   Identify one specific creative or behavioral tension within this type (e.g., the J/P split if scores are moderate, or the conflict between the dominant and inferior functions).
 
-3. SHOW INTERNAL CONFLICT
-At least one mandatory internal conflict (e.g., structure vs unpredictability, logic vs personal values).
-
-4. NO GENERIC MBTI TEXT
-Do NOT write: “organized”, “practical”, “reliable”, “innovative”.
-Instead: describe decisions, reactions, and thinking patterns.
-
-5. CONNECT SCORES + FUNCTIONS
-Example: High Judging + Si → strong need for predictability. But lower Thinking → may hesitate when logic conflicts with values.
-
-6. MAKE IT FEEL PERSONAL
-It should feel like: “this explains how I operate”, not “this describes my type”.
-
-7. NO SPIRITUAL OR MOTIVATIONAL FLUFF
-Avoid phrases like “trust the process” or “embrace your journey”.
+4. NO GENERIC TEXT:
+   Avoid words like "organized", "practical", "innovative". Describe the *process* of how they organize or innovate.
 
 STYLE:
-- precise
-- psychological
-- grounded
-- sharp
-- no fluff
+- concise and reflective
+- psychologically sharp
+- grounded in observable behavior
+- no motivational or spiritual fluff
 
-You write only valid JSON. No markdown, no code fences. Output only the JSON object, nothing else.
+MODULE FOCUS: MBTI Personality
+Focus only on cognitive processing, decision-making, and social energy orientation.
+Do not restate traits covered in Big Five, Core Values, or astrological modules.
+
+Output only a valid JSON object. No markdown, no fences.
 """
 
-MBTI_USER = """Analyze the user's MBTI Type and dimension scores.
+MBTI_USER = """Analyze the user's MBTI Type and dimension intensities.
 
-INPUT
+INPUT:
 - MBTI Type: {mbti_type}
-- Dimension scores:
+- Dimension Intensity:
 {confidence_lines}
 
-WRITE IN THIS EXACT STRUCTURE (Return ONLY a JSON object with these keys):
-
-- "title": string, KEEP AS: "Your Personality Type"
-
-- "overview": string, 2 paragraphs separated by \\n\\n. Paragraph 1: How this type processes reality through its core functions. Paragraph 2: How the specific dimension scores modify this behavior.
-
-- "coreTraits": array of exactly 3 short sharp behavioral trait chips. Derived from cognitive patterns.
-
-- "strengths": array of exactly 3 short phrases. From real cognitive advantages.
-- "challenges": array of exactly 3 short phrases. From real blind spots.
-
-- "cognitiveStyle": string, 2-3 paragraphs separated by \\n\\n. Paragraph 1: How you process information (Si/Ne or Ni/Se etc.). Paragraph 2: How you make decisions (Te/Fi or Fe/Ti). Paragraph 3: Where friction appears in real life.
-
-- "tryThis": array of exactly 3 practical behavioral adjustments.
-- "avoidThis": array of 2-3 real traps based on the type's rigidity.
-
-FINAL CHECK BEFORE ANSWERING:
-- Does this use the scores intensity?
-- Does this explain thinking patterns, not just traits?
-- Is there real tension/conflict?
-- Could this be copied for another person of the same type? → if yes, rewrite.
+WRITE IN THIS EXACT STRUCTURE (Return exactly one JSON object):
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
+- "oneSentenceInsight": string, 1 sentence very short description (e.g., "Your mind-body link is present but not fully integrated yet").
+- "overview": string, 2-3 short, punchy paragraphs. (P1: How the type processes reality through its dominant functions. P2: How the dimension intensities modify this specific user's expression).
+- "coreTraits": array of exactly 3 descriptive behavioral chips (derived from cognitive patterns).
+- "strengths": array of 3 specific cognitive advantages.
+- "challenges": array of 3 real blind spots or friction points.
+- "summary": string, 2 paragraphs. (P1: The primary internal tension. P2: A reflective insight on their natural rhythm).
+- "tryThis": array of 3 practical, directive actions.
+- "avoidThis": array of 2 repeating behavioral traps.
 """
 
 MBTI_JSON_KEYS = frozenset({
-    "title", "overview", "coreTraits", "strengths", "challenges",
-    "cognitiveStyle", "tryThis", "avoidThis"
+    "title", "oneSentenceInsight", "overview", "coreTraits", "strengths", "challenges",
+    "summary", "tryThis", "avoidThis"
 })
 
 
@@ -1614,7 +1783,7 @@ ZODIAC_ELEMENT_MODALITY_USER = """INPUT:
 - supporting astrology context: {astrology_context}
 
 Return exactly one JSON object with these keys only:
-- "title": string, short and specific
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "energyProfile": string, 2 short paragraphs explaining the interaction and real-life manifestation/tension
 - "coreTraits": array of exactly 3 short recognition patterns
 - "strengths": array of exactly 3 short real-life advantages
@@ -1654,7 +1823,7 @@ Secondary Style: {secondary_style}
 Scores: {scores}
 
 Write the following sections (Return exactly ONE JSON object):
-- "title": Result Title (short, catchy, specific).
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the result/personality (e.g., "Observant Empath", "Grounded Strategist").
 - "overview": (Cognitive Signature). 3 paragraphs. Describe how this actually plays out in real life like an observation. Use short sentences. Avoid repeating the same "emotion vs logic" idea.
     - Paragraph 1: how you think (e.g., "You pick up on how people feel very quickly, sometimes before they say anything.").
     - Paragraph 2: how you decide (e.g., "You then try to factor that into decisions, which can slow you down.").
@@ -1708,7 +1877,7 @@ Integration Score: {integration_score}
 Scores: {scores}
 
 Write the following sections (Return exactly ONE JSON object):
-- "title": Result Title (use the exact Primary Type name passed, e.g. "Unified Synthesizer").
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the integration style (e.g., "Observant Synthesizer", "Grounded Harmony").
 - "overview": string, 2 paragraphs separated by \n\n. Describe their specific mind-heart integration style. How do they balance logic and emotion? Does one override the other?
 - "coreTraits": Array of exactly 3 descriptive behavioral statements. Not single words.
 - "strengths": Array of exactly 3 short bullet points. Concrete and behavioral.
@@ -1766,7 +1935,7 @@ Source: {source}
 33 — The Master Teacher (Master) (Desire: unconditional service, emotional upliftment)
 
 WRITE SECTIONS (Return exactly ONE JSON object):
-- "title": Result Title (Use number meaning, e.g. "The Nurturer").
+- "title": string, a descriptive and punchy 2-3 word phrase that clearly describes the core urge (e.g., "Observant Seeker", "Grounded Nurturer").
 - "coreDesire": string, 2 paragraphs separated by \n\n. Explain what the person deeply wants emotionally, what fulfillment feels like to them, and what drives them internally.
 - "innerMotivations": Array of exactly 3 bullet points. Specific psychological drivers (not surface traits).
 - "shadowExpression": Array of exactly 3 bullet points. How this energy becomes distorted: unmet needs, overcompensation, emotional imbalance.
@@ -1783,3 +1952,27 @@ SOUL_URGE_JSON_KEYS = frozenset({
     "title", "coreDesire", "innerMotivations", "shadowExpression", "fulfillmentPath",
     "tryThis", "avoidThis", "strengths", "challenges", "extracted_json"
 })
+
+SOUL_SNAPSHOT_SYSTEM = MASTER_PROMPT + """You are generating a 'Personality Pulse' or 'Soul Snapshot' for a premium self-discovery app.
+
+This is a high-level, dynamic summary that appears on the user's home screen. It must be sharp, specific, and evolve based on the provided data.
+
+CORE RULES:
+1. SUMMARY: Write exactly one ultra-short descriptive phrase of 5-8 words maximum. Style: "A [adjective] [noun] with [quality]" — e.g. "A grounded intuitive with cosmic insights" or "A strategic empath driven by depth". No full sentences. No period at the end.
+2. SURE THINGS: Distill 3-5 keywords or ultra-short phrases (max 3 words each) that are unmistakable truths about this person based on their test results.
+3. DAILY MESSAGE: Write 2-3 sentences of present-tense insight. It should feel like a direct observation of their current state or a recurring pattern they are likely experiencing today.
+4. QUOTE: Write one original, short quote (5-12 words) that encapsulates their essence or a current growth theme.
+
+Tone: Warm, psychologically sharp, direct, and premium. No generic motivational language. No spiritual fluff.
+You write only valid JSON. No markdown."""
+
+SOUL_SNAPSHOT_USER_TEMPLATE = """User Data:
+{input_data}
+
+Return exactly one JSON object with:
+- 'summary': string (5-8 word descriptive phrase ONLY, e.g. "A grounded intuitive with cosmic insights")
+- 'sure_things': array of 3-5 ultra-short strings (max 3 words each)
+- 'daily_message': string (2-3 sentences)
+- 'daily_quote': string (5-12 words)
+
+Output only the JSON object, strictly conform to the keys above."""
