@@ -1,0 +1,39 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
+      - name: Run Ruff
+        run: poetry run ruff check .
+      - name: Run Tests
+        run: poetry run pytest
+
+  deploy:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy Backend via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/numina/backend
+            git pull origin main
+            cd ..
+            docker-compose up -d --build backend worker
