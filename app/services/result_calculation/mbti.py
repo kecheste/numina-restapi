@@ -30,13 +30,38 @@ _DIMENSION_GROUPS: list[tuple[str, str, list[int]]] = [
     ("J", "P", [10, 11, 12]),
 ]
 
+_OPTION_TO_LETTER: dict[int, dict[str, str]] = {
+    1: {"Spending quiet time alone": "I", "Being around people or social activity": "E"},
+    2: {"Listen more and speak selectively": "I", "Speak easily and engage actively": "E"},
+    3: {"Recharge in solitude": "I", "Do something with others": "E"},
+    4: {"Concepts and possibilities": "N", "Practical details and facts": "S"},
+    5: {"What could be possible": "N", "What is realistically likely": "S"},
+    6: {"Patterns and intuition": "N", "Experience and observable facts": "S"},
+    7: {"Personal values and empathy": "F", "Logic and objective analysis": "T"},
+    8: {"Maintaining harmony and understanding": "F", "Resolving the issue fairly and accurately": "T"},
+    9: {"A person's individual story or circumstances": "F", "A strong logical argument or proof": "T"},
+    10: {"Your schedule is planned and decided": "J", "Your schedule is open and flexible": "P"},
+    11: {"Plan it out and follow steps": "J", "Dive in and adapt as you go": "P"},
+    12: {"Feel slightly stressed and want a new plan": "J", "Adapt easily and go with the flow": "P"},
+}
 
-def _letter_from_option(option_text: str) -> str | None:
-    """Extract single letter in parentheses from option text, e.g. 'Alone (I)' -> 'I'."""
+
+def _letter_from_option(option_text: str, question_id: int | None = None) -> str | None:
+    """
+    Extract single letter in parentheses from option text, e.g. 'Alone (I)' -> 'I'.
+    If no letter is found, fall back to the _OPTION_TO_LETTER map.
+    """
     if not option_text or not isinstance(option_text, str):
         return None
+    
     match = re.search(r"\(([A-Za-z])\)", option_text.strip())
-    return match.group(1).upper() if match else None
+    if match:
+        return match.group(1).upper()
+    
+    if question_id in _OPTION_TO_LETTER:
+        return _OPTION_TO_LETTER[question_id].get(option_text.strip())
+    
+    return None
 
 
 def _parse_answers(answers: list[Any] | dict[str, Any]) -> dict[int, str]:
@@ -90,7 +115,7 @@ def compute_mbti_detailed(
         for qid in question_ids:
             option_text = by_id.get(qid)
             if option_text:
-                letter = _letter_from_option(option_text)
+                letter = _letter_from_option(option_text, qid)
                 if letter == first:
                     x_votes += 1
                 elif letter == second:
